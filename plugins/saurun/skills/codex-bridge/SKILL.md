@@ -20,15 +20,26 @@ Activate when the user says things like:
 
 ## How to Call Codex
 
-**Basic command:**
+**Find the script path first:**
 ```bash
-node "$HOME/.claude/plugins/saurun/skills/codex-bridge/codex-bridge.mjs" "<prompt>"
+# Marketplace install (most users):
+CODEX_BRIDGE="$HOME/.claude/plugins/cache/saurun-marketplace/saurun/*/skills/codex-bridge/codex-bridge.mjs"
+
+# Resolve glob to actual path:
+CODEX_BRIDGE=$(ls -1 $CODEX_BRIDGE 2>/dev/null | head -1)
+```
+
+**Basic command (read-only):**
+```bash
+node "$CODEX_BRIDGE" "<prompt>" --working-dir "<project-path>"
 ```
 
 **With file modification capabilities:**
 ```bash
-node "$HOME/.claude/plugins/saurun/skills/codex-bridge/codex-bridge.mjs" "<prompt>" --full-auto
+node "$CODEX_BRIDGE" "<prompt>" --full-auto --working-dir "<project-path>"
 ```
+
+**CRITICAL:** Always pass `--working-dir` with the project directory so Codex can read files. Without it, Codex runs in its install location and can't access your project files.
 
 ## Decision Logic
 
@@ -53,11 +64,11 @@ When user wants Codex to review a file:
 
 Example:
 ```bash
-node "$HOME/.claude/plugins/saurun/skills/codex-bridge/codex-bridge.mjs" "Review this planning document and provide feedback on feasibility, risks, and suggestions:
+node "$CODEX_BRIDGE" "Review this planning document and provide feedback on feasibility, risks, and suggestions:
 
 ---
 [FILE CONTENT HERE]
----"
+---" --working-dir "/path/to/project"
 ```
 
 ## Response Format

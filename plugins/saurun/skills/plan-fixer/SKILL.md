@@ -348,12 +348,20 @@ This skill uses six sub-agents defined in the `agents/` folder:
 
 ## Codex Integration
 
+**Setup (run once per session):**
+```bash
+# Find codex-bridge script (marketplace install path)
+CODEX_BRIDGE=$(ls -1 "$HOME/.claude/plugins/cache/saurun-marketplace/saurun/"*/skills/codex-bridge/codex-bridge.mjs 2>/dev/null | head -1)
+```
+
+**CRITICAL:** Always pass `--working-dir "<project-path>"` so Codex can read project files.
+
 **Timeout:** Use `--timeout 1200000` (20 minutes) for all Codex calls to allow sufficient processing time.
 
 ### Default Mode: Review Only
 
 ```bash
-node "$HOME/.claude/plugins/saurun/skills/codex-bridge/codex-bridge.mjs" --timeout 1200000 "Analyze this implementation plan for COMPLETENESS GAPS.
+node "$CODEX_BRIDGE" --timeout 1200000 "Analyze this implementation plan for COMPLETENESS GAPS.
 
 IMPORTANT CONTEXT:
 This PLAN.md was CONVERTED from a prose source plan. During conversion:
@@ -393,13 +401,13 @@ If no gaps found, return: []
 ===== PLAN.md (CONVERTED) =====
 [FULL PLAN.md CONTENT]
 ===== END PLAN.md =====
-"
+" --working-dir "$PROJECT_PATH"
 ```
 
 ### Codex-Fix Mode: Review AND Fix
 
 ```bash
-node "$HOME/.claude/plugins/saurun/skills/codex-bridge/codex-bridge.mjs" --timeout 1200000 "Analyze this implementation plan for COMPLETENESS GAPS and FIX them directly.
+node "$CODEX_BRIDGE" --timeout 1200000 "Analyze this implementation plan for COMPLETENESS GAPS and FIX them directly.
 
 IMPORTANT CONTEXT:
 This PLAN.md was CONVERTED from a prose source plan. Content may have been lost.
@@ -435,7 +443,7 @@ PLAN FILE TO EDIT: [filepath]
 ===== PLAN.md (CONVERTED - to be fixed) =====
 [FULL PLAN.md CONTENT]
 ===== END PLAN.md =====
-" --full-auto
+" --full-auto --working-dir "$PROJECT_PATH"
 ```
 
 ## Final Output (returned to parent context)
