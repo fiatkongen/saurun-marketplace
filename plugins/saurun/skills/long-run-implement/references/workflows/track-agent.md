@@ -32,7 +32,6 @@ interrupted → resumed → completed
 ```typescript
 interface TrackSpawnInput {
   agent_id: string;         // From Task tool result
-  agent_type: string;       // e.g., "backend-specialist" or "general-purpose"
   plan_number: string;      // e.g., "02"
   task_group: string;       // e.g., "API Endpoints"
   state_path: string;       // Path to .long-run/
@@ -47,7 +46,6 @@ function trackSpawn(input: TrackSpawnInput): void {
   // Create new entry
   const entry = {
     agent_id: input.agent_id,
-    agent_type: input.agent_type,  // Track which agent type was used
     task_description: `Execute plan ${input.plan_number}: ${input.task_group}`,
     plan: input.plan_number,
     timestamp: new Date().toISOString(),
@@ -56,17 +54,17 @@ function trackSpawn(input: TrackSpawnInput): void {
   };
 
   // Add entry
-  history.entries.push(entry);
+  history.agents.push(entry);
 
-  // Enforce max_entries limit
-  if (history.entries.length > history.max_entries) {
+  // Enforce max_agents limit
+  if (history.agents.length > history.max_agents) {
     // Remove oldest completed entries first
-    const completed = history.entries.filter(e =>
+    const completed = history.agents.filter(e =>
       e.status === 'completed' || e.status === 'failed'
     );
     if (completed.length > 0) {
       const oldest = completed[0];
-      history.entries = history.entries.filter(e => e !== oldest);
+      history.agents = history.agents.filter(e => e !== oldest);
     }
   }
 
@@ -94,7 +92,7 @@ function trackComplete(input: TrackCompleteInput): void {
   const history = JSON.parse(read_file(history_path));
 
   // Find and update entry
-  const entry = history.entries.find(e => e.agent_id === input.agent_id);
+  const entry = history.agents.find(e => e.agent_id === input.agent_id);
   if (entry) {
     entry.status = input.status;
     entry.completion_timestamp = new Date().toISOString();
@@ -116,7 +114,7 @@ function trackInterrupt(agent_id: string, state_path: string): void {
 
   const history = JSON.parse(read_file(history_path));
 
-  const entry = history.entries.find(e => e.agent_id === agent_id);
+  const entry = history.agents.find(e => e.agent_id === agent_id);
   if (entry) {
     entry.status = "interrupted";
     entry.completion_timestamp = new Date().toISOString();
@@ -137,14 +135,14 @@ function trackResume(old_agent_id: string, new_agent_id: string, state_path: str
   const history = JSON.parse(read_file(history_path));
 
   // Mark old as resumed
-  const old_entry = history.entries.find(e => e.agent_id === old_agent_id);
+  const old_entry = history.agents.find(e => e.agent_id === old_agent_id);
   if (old_entry) {
     old_entry.status = "resumed";
     old_entry.resumed_by = new_agent_id;
   }
 
   // Add new entry
-  history.entries.push({
+  history.agents.push({
     agent_id: new_agent_id,
     task_description: old_entry?.task_description || "Resumed execution",
     plan: old_entry?.plan,
@@ -171,7 +169,7 @@ function findActiveAgent(state_path: string): AgentEntry | null {
     const agent_id = read_file(current_id_path).trim();
 
     const history = JSON.parse(read_file(`${state_path}/agent-history.json`));
-    return history.entries.find(e => e.agent_id === agent_id) || null;
+    return history.agents.find(e => e.agent_id === agent_id) || null;
   }
 
   return null;
@@ -185,7 +183,7 @@ function findInterruptedAgent(state_path: string): AgentEntry | null {
   const history = JSON.parse(read_file(`${state_path}/agent-history.json`));
 
   // Find most recent interrupted (not resumed) agent
-  const interrupted = history.entries
+  const interrupted = history.agents
     .filter(e => e.status === 'interrupted' || e.status === 'spawned')
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
@@ -199,7 +197,7 @@ function findInterruptedAgent(state_path: string): AgentEntry | null {
 function getPlanHistory(state_path: string, plan_number: string): AgentEntry[] {
   const history = JSON.parse(read_file(`${state_path}/agent-history.json`));
 
-  return history.entries
+  return history.agents
     .filter(e => e.plan === plan_number)
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 }
@@ -210,11 +208,9 @@ function getPlanHistory(state_path: string, plan_number: string): AgentEntry[] {
 ```json
 {
   "version": "1.0",
-  "max_entries": 50,
-  "entries": [
+  "agents": [
     {
       "agent_id": "a5023ff",
-      "agent_type": "backend-specialist",
       "task_description": "Execute plan 02: API Endpoints",
       "plan": "02",
       "timestamp": "2026-01-15T14:22:10Z",
@@ -223,7 +219,6 @@ function getPlanHistory(state_path: string, plan_number: string): AgentEntry[] {
     },
     {
       "agent_id": "b7134aa",
-      "agent_type": "frontend-specialist",
       "task_description": "Execute plan 03: Frontend",
       "plan": "03",
       "timestamp": "2026-01-15T14:46:00Z",
@@ -232,7 +227,6 @@ function getPlanHistory(state_path: string, plan_number: string): AgentEntry[] {
     },
     {
       "agent_id": "c9245bb",
-      "agent_type": "frontend-specialist",
       "task_description": "Execute plan 03: Frontend",
       "plan": "03",
       "timestamp": "2026-01-15T15:15:00Z",
@@ -244,11 +238,11 @@ function getPlanHistory(state_path: string, plan_number: string): AgentEntry[] {
 }
 ```
 
-## Max Entries Enforcement
+## Max Agents Enforcement
 
-When `entries.length > max_entries`:
+When `agents.length > 50`:
 
-1. Find oldest entry with status `completed` or `failed`
+1. Find oldest agent entry with status `completed` or `failed`
 2. Remove it from array
 3. If no completed/failed entries, remove oldest `interrupted` that has been `resumed`
 4. Never remove `spawned` entries (active agents)

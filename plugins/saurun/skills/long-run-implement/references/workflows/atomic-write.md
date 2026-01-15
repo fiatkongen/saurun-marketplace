@@ -64,7 +64,7 @@ update_json_atomic() {
 
 # Example: Add entry to agent-history.json
 update_json_atomic "agent-history.json" \
-  '.entries += [{"agent_id": "abc123", "status": "spawned"}]'
+  '.agents += [{"agent_id": "abc123", "status": "spawned"}]'
 ```
 
 ## Markdown Update Protocol
@@ -167,14 +167,14 @@ reinitialize_from_summaries() {
   local latest=$(ls -t "$state_path/summaries/"*-SUMMARY.md 2>/dev/null | head -1)
 
   # Rebuild agent-history.json
-  local entries="[]"
+  local agents="[]"
   for summary in "$state_path/summaries/"*-SUMMARY.md; do
     local plan=$(basename "$summary" | cut -d'-' -f1)
-    entries=$(echo "$entries" | jq ". += [{\"plan\": \"$plan\", \"status\": \"completed\"}]")
+    agents=$(echo "$agents" | jq ". += [{\"plan\": \"$plan\", \"status\": \"completed\"}]")
   done
 
   write_atomic "$state_path/agent-history.json" \
-    "{\"version\": \"1.0\", \"max_entries\": 50, \"entries\": $entries}"
+    "{\"version\": \"1.0\", \"agents\": $agents}"
 
   echo "Reconstructed $completed completed plans"
 }

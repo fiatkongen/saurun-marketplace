@@ -1,7 +1,7 @@
-# Phase 2: Transform
+# Phase 2: Prepare Plans
 
 ## Purpose
-Convert tasks.md task groups into executable PLAN.md files.
+Validate, optimize, and split tasks into executable plan files by delegating to the plan-fixer skill.
 
 ## Inputs (from Phase 1)
 - `spec_path`: Path to spec folder
@@ -11,162 +11,163 @@ Convert tasks.md task groups into executable PLAN.md files.
 
 ## Workflow
 
-### Step 1: Parse tasks.md
+### Step 1: Detect Input State
 
 ```
-Read {spec_path}/tasks.md
-Parse structure:
-  - Task groups (### headers)
-  - Dependencies (Dependencies: lines)
-  - Subtasks (- [ ] items)
-  - Acceptance criteria
+IF {spec_path}/.long-run/plans/ contains NN-PLAN.md files:
+  # Already prepared - skip to execution
+  Log: "Plan files already exist, skipping preparation"
+  GOTO Phase 3
 
-Output: Array of task_group objects
+IF {spec_path}/PLAN.md exists:
+  # Unified plan exists - needs splitting only
+  input_mode = "split_only"
+  input_file = PLAN.md
+
+ELSE IF {spec_path}/tasks.md exists:
+  # Raw tasks - needs full processing
+  input_mode = "full"
+  input_file = tasks.md
+
+ELSE:
+  ERROR "No tasks.md or PLAN.md found in spec folder"
 ```
 
-### Step 2: Determine Plan Boundaries
+### Step 2: Run Plan-Fixer
 
 ```
-FOR each task_group:
-  IF subtask count > 5:
-    Split into multiple plans (NN-a, NN-b, etc.)
-  ELSE:
-    One plan per task group
+IF input_mode == "full":
+  # Run all phases (0-4)
+  # Invoke plan-fixer skill with source file
 
-Update STATE.md with total plan count
+  Use Skill tool:
+    skill: "plan-fixer"
+    args: "{spec_path}/tasks.md"
+
+  # Plan-fixer will:
+  #   Phase 0: Structure & format
+  #   Phase 1: Claude review
+  #   Phase 2: Codex validation
+  #   Phase 3: Final polish
+  #   Phase 4: Split into .long-run/plans/
+
+IF input_mode == "split_only":
+  # Run Phase 4 only (plan already optimized)
+  # Use "split only" trigger phrase to activate split-only mode
+
+  Use Skill tool:
+    skill: "plan-fixer"
+    args: "{spec_path}/PLAN.md split only"
+
+  # The "split only" phrase triggers split-only mode which:
+  #   - Skips Phases 0-3 (structure, Claude review, Codex, polish)
+  #   - Runs Phase 4 only (split & initialize)
+  #   - Creates .long-run/ structure from existing PLAN.md
+  #   - Requires input file to already have <task> blocks
 ```
 
-### Step 3: Read Context
+### Step 2.5: Handle Single Task Group
 
 ```
-Read available context files:
-  - {spec_path}/spec.md
-  - {spec_path}/planning/requirements.md
-  - {spec_path}/planning/visuals/ (if exists)
-
-Extract:
-  - Technical approach
-  - File path patterns
-  - Constraints and "do NOT" rules
+IF plan-fixer reports "Single task group detected":
+  # Still have one plan file to execute
+  plans = ["{spec_path}/.long-run/plans/01-PLAN.md"]
+  Log: "Single task group - will execute as one plan"
+  # Continue normally to Step 3
 ```
 
-### Step 4: Transform Each Task Group
+**Note:** Single task group handling is now done IN plan-fixer (Phase 4). It creates the `.long-run/` structure with a single `01-PLAN.md` file. This ensures consistent directory structure regardless of task count.
+
+### Step 3: Verify Output
 
 ```
-FOR each task_group (starting from resume_from if resuming):
+Verify .long-run/plans/ contains expected files:
+  - At least one NN-PLAN.md file
+  - STATE.md exists in .long-run/
+  - Each plan has required sections (<task>, <action>, <verify>, <done>)
 
-  # Skip if already transformed
-  IF {state_path}/plans/{NN}-PLAN.md exists:
-    CONTINUE
-
-  # Transform using workflow
-  result = {{workflows/long-run/transform-task-group}}
-    task_group: task_group
-    spec_path: spec_path
-    context: parsed_context
-
-  IF result.status == "needs_clarification":
-    # Handle clarification
-    Use {{workflows/long-run/clarification-protocol}}
-
-    IF user provides clarification:
-      Retry transformation
-    ELSE IF user chooses skip:
-      Create skipped SUMMARY.md
-      CONTINUE
-    ELSE IF user chooses exit:
-      Save state and STOP
-
-  # Validate enrichment
-  validation = {{workflows/long-run/validate-enrichment}}
-    tasks: result.tasks
-
-  IF validation has critical errors:
-    Trigger clarification protocol
+IF verification fails:
+  Report error with details
+  STOP with status "preparation_failed"
 ```
 
-### Step 5: Validate Dependencies
+### Step 4: Handle --prepare-only Flag
 
 ```
-Build dependency graph from all plans
-Check for circular dependencies
+IF --prepare-only flag is set:
+  Output to user:
+    "✅ Plan preparation complete (--prepare-only mode)
 
-IF cycle detected:
-  Present error: "Circular dependency: {cycle_path}"
-  Offer options to resolve
-  STOP
+     Plans created: {count}
+     Location: {spec_path}/.long-run/plans/
+
+     Review the plans and run again without --prepare-only to execute."
+  STOP (do not proceed to Phase 3)
 ```
 
-### Step 6: Update State
-
-```
-Update STATE.md:
-  - Status: Transforming → Executing
-  - Plan count: {total_plans}
-  - Progress bar
-
-Output to user:
-  "✅ Transformation complete
-
-   Plans created: {count}
-   Location: {state_path}/plans/
-
-   Proceeding to execution phase..."
-```
-
-### Step 7: Output
+### Step 5: Output
 
 ```
 Pass to Phase 3:
-  - plans: Array of plan paths
-  - dependencies: Dependency graph
-  - spec_path
-  - state_path
+  - plans: Array of paths to .long-run/plans/*.md
+  - state_path: {spec_path}/.long-run
+  - dependencies: Dependency graph (extracted from STATE.md)
 ```
 
-## Task Group Parsing
+## Backward Compatibility
 
-### Input Format (tasks.md)
+**Preserve manually created plans:** If someone has manually created `.long-run/plans/` files, do not overwrite them. The existence check in Step 1 ensures this.
+
+**Legacy tasks.md support:** The full plan-fixer pipeline (Phases 0-4) handles tasks.md files that haven't been pre-processed.
+
+## Plan File Format
+
+Each split plan file in `.long-run/plans/{NN}-PLAN.md` should be self-contained:
+
 ```markdown
-#### Task Group 2: API Endpoints
-**Dependencies:** Task Group 1
+<objective>
+{shared objective from unified plan}
+</objective>
 
-- [ ] 2.0 Complete API layer
-  - [ ] 2.1 Write 2-8 focused tests
-  - [ ] 2.2 Create controller
-  - [ ] 2.3 Implement auth
+<context>
+{shared context from unified plan}
+</context>
 
-**Acceptance Criteria:**
-- All CRUD operations work
-- Proper authorization enforced
+<constraints>
+{shared constraints from unified plan}
+</constraints>
+
+<tasks>
+<task type="auto">
+  <name>Task N: {task_name}</name>
+  <files>{files to stage for commit}</files>
+  <action>
+  {specific action steps for this task}
+  </action>
+  <verify>{verification command}</verify>
+  <done>{completion criteria}</done>
+</task>
+</tasks>
 ```
 
-### Parsed Object
-```javascript
-{
-  number: "02",
-  name: "API Endpoints",
-  dependencies: ["01"],
-  subtasks: [
-    { id: "2.0", text: "Complete API layer", children: [...] },
-    { id: "2.1", text: "Write 2-8 focused tests" },
-    { id: "2.2", text: "Create controller" },
-    { id: "2.3", text: "Implement auth" }
-  ],
-  acceptance_criteria: [
-    "All CRUD operations work",
-    "Proper authorization enforced"
-  ]
-}
-```
+**Note:** Each split plan contains only ONE task inside the `<tasks>` wrapper. The `<name>` is a child element, not an attribute. The `type="auto"` indicates autonomous execution (no user approval needed).
 
 ## Error Handling
 
 ```
-ON transformation error:
-  Log error details
-  IF recoverable: Retry
-  IF not recoverable:
-    Mark task group as needs-clarification
-    Trigger clarification protocol
+ON plan-fixer failure:
+  Log detailed error from plan-fixer output
+  Report to user: "Plan preparation failed: {error}"
+  Preserve any partial state for debugging
+  STOP with status "preparation_failed"
+
+ON verification failure:
+  Report specific missing elements:
+    - "Missing NN-PLAN.md files"
+    - "STATE.md not found"
+    - "Plan {N} missing <verify> section"
+  Offer options:
+    1. Re-run plan-fixer
+    2. Manually fix and retry
+    3. Abort
 ```

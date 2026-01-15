@@ -48,23 +48,29 @@ IF {spec_path}/.long-run/ exists:
     Present: "Previous run completed. Start fresh? [y/n]"
 ```
 
-### Step 4: Initialize State (if new)
+### Step 4: Initialize State (Conditional)
 
 ```
-IF no existing state OR user chose fresh start:
-  1. Create directory structure:
-     mkdir -p {spec_path}/.long-run/plans
-     mkdir -p {spec_path}/.long-run/summaries
+# Only create .long-run/ if plans already exist (resume scenario)
+# For fresh start, plan-fixer Phase 4 will create it
 
-  2. Copy templates:
-     - STATE.md from {{templates/long-run-state}}
-     - agent-history.json from {{templates/agent-history.json}}
+IF {spec_path}/.long-run/plans/ contains NN-PLAN.md files:
+  # Resume scenario - .long-run/ already exists
+  Log: "Found existing execution state"
+  # State files already present, no initialization needed
 
-  3. Update STATE.md:
-     - Spec: {spec_path}
-     - Tasks: {spec_path}/tasks.md
-     - Started: {today's date}
-     - Status: Initializing
+ELSE IF {spec_path}/PLAN.md exists OR {spec_path}/tasks.md exists:
+  # Fresh start - let plan-fixer Phase 4 create .long-run/
+  Log: "Plan preparation needed, skipping directory initialization"
+  # Do NOT create .long-run/ here - plan-fixer Phase 4 will:
+  #   - Create .long-run/ directory structure
+  #   - Generate STATE.md with task list
+  #   - Create agent-history.json (empty agents array)
+  #   - Create ISSUES.md
+  #   - Split plans into .long-run/plans/
+
+ELSE:
+  ERROR "No tasks.md or PLAN.md found in spec folder"
 ```
 
 ### Step 5: Pre-Flight Checks

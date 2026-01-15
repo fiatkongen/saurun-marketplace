@@ -160,7 +160,7 @@ cleanup_failed_plan() {
 
   # 1. Mark plan as failed in agent-history.json
   update_json_atomic "$state_path/agent-history.json" \
-    "(.entries[] | select(.plan == \"$plan_number\")).status = \"failed\""
+    "(.agents[] | select(.plan == \"$plan_number\")).status = \"failed\""
 
   # 2. Create failed SUMMARY.md
   cat > "$state_path/summaries/${plan_number}-SUMMARY.md" << EOF
@@ -206,7 +206,7 @@ handle_interrupt() {
   # 2. Update agent-history.json
   if [ -n "$CURRENT_AGENT_ID" ]; then
     update_json_atomic "$STATE_PATH/agent-history.json" \
-      "(.entries[] | select(.agent_id == \"$CURRENT_AGENT_ID\")).status = \"interrupted\""
+      "(.agents[] | select(.agent_id == \"$CURRENT_AGENT_ID\")).status = \"interrupted\""
   fi
 
   # 3. Update STATE.md

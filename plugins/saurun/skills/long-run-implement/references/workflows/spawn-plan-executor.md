@@ -29,38 +29,8 @@ interface SpawnExecutorInput {
   task_group: string;       // e.g., "API Endpoints"
   state_path: string;       // Path to .long-run/ directory
   spec_path: string;        // Path to spec directory
-  assigned_agent: string;   // Agent type from orchestration.yml (default: "general-purpose")
   checkpoint?: Checkpoint;  // Optional checkpoint for resume
   resume_from_task?: number; // Task number to resume from (default: 1)
-}
-```
-
-## Agent Assignment from orchestration.yml
-
-Before spawning, determine the agent type:
-
-```typescript
-function determineAgent(plan_path: string, spec_path: string): string {
-  const orchestration_path = `${spec_path}/orchestration.yml`;
-
-  if (!file_exists(orchestration_path)) {
-    return "general-purpose";
-  }
-
-  const orchestration = parse_yaml(orchestration_path);
-  const plan_content = read_file(plan_path);
-  const task_group_name = extract_frontmatter(plan_content, "task_group");
-
-  // Find matching task group
-  const task_group = orchestration.task_groups?.find(g => g.name === task_group_name);
-
-  if (task_group?.claude_code_subagent) {
-    Log: `Using agent '${task_group.claude_code_subagent}' for task group '${task_group_name}'`;
-    return task_group.claude_code_subagent;
-  }
-
-  Log: `No agent assigned for task group '${task_group_name}', using general-purpose`;
-  return "general-purpose";
 }
 ```
 
@@ -153,7 +123,7 @@ Begin execution now.
 // SPAWN FRESH SUBAGENT via Task tool
 // This creates a NEW agent with fresh 200k context!
 const result = Task({
-  subagent_type: input.assigned_agent,  // From orchestration.yml or "general-purpose"
+  subagent_type: "general-purpose",
   description: `Execute plan ${input.plan_number}: ${input.task_group}`,
   prompt: buildExecutorPrompt(input)
 });
@@ -171,7 +141,6 @@ history.agents.push({
   task_description: `Execute plan ${input.plan_number}`,
   plan: input.plan_number,
   task_group: input.task_group,
-  agent_type: input.assigned_agent,  // Track which agent type was used
   timestamp: new Date().toISOString(),
   status: "spawned"
 });
@@ -284,7 +253,7 @@ if (file_exists(current_agent_file)) {
   // Try to resume
   const result = Task({
     resume: interrupted_agent_id,
-    subagent_type: input.assigned_agent  // Same agent type as original spawn
+    subagent_type: "general-purpose"
   });
 
   return parseExecutorOutput(await result);

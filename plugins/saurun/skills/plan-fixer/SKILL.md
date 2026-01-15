@@ -14,6 +14,7 @@ Iteratively verify and optimize implementation plans for autonomous agent execut
 2. **Phase 1**: Claude self-review loop (find gaps in structured plan)
 3. **Phase 2**: Codex cross-validation loop
 4. **Phase 3**: Final polish (constraint extraction, size check)
+5. **Phase 4**: Split & Initialize (split into individual plan files for orchestrator)
 
 ## Design Principle: Agent-Oriented Plans
 
@@ -47,31 +48,19 @@ Detect these parameters from the user's request:
 | Parameter | Trigger Phrases | Effect |
 |-----------|-----------------|--------|
 | `codex-fix` | "let Codex fix", "Codex can fix", "Codex should fix", "have Codex fix" | Codex fixes gaps directly using `--full-auto` instead of just reviewing |
-| `orchestration_path` | Path to orchestration.yml | Adds task_group and claude_code_subagent to PLAN.md frontmatter |
-| `task_group_name` | Name of task group (e.g., "authentication-system") | Identifies which task group's agent to use |
+| `--no-split` | "--no-split", "don't split", "no split", "skip split" | Skip Phase 4 (do not create .long-run/ directory structure) |
+| `split-only` | "split only", "phase 4 only", "just split", "only split" | Skip Phases 0-3, run only Phase 4 (for already-optimized plans) |
 
-### Orchestration Parameters
+### Split-Only Mode (split-only: ON)
 
-When called with `orchestration_path` and `task_group_name`, the output PLAN.md will include frontmatter with:
-- `task_group`: The task group name
-- `claude_code_subagent`: The agent assigned to this task group in orchestration.yml
+Use when you have an already-optimized PLAN.md and only need to split it into individual plan files:
+- Skips Phase 0 (structure conversion)
+- Skips Phase 1 (Claude review)
+- Skips Phase 2 (Codex validation)
+- Skips Phase 3 (final polish)
+- Runs Phase 4 only (split & initialize)
 
-This metadata allows downstream consumers (like long-run-implement) to spawn the correct agent.
-
-Example invocation:
-```
-Fix plan: _docs/gsd2/auth-system.md
-orchestration_path: _docs/gsd2/orchestration.yml
-task_group_name: authentication-system
-```
-
-Output PLAN.md will have:
-```yaml
----
-task_group: authentication-system
-claude_code_subagent: backend-specialist
----
-```
+This mode requires the input file to already be in agent-oriented format with `<task>` blocks.
 
 ### Output Behavior
 
@@ -84,16 +73,16 @@ This approach:
 - Non-destructive workflow
 
 **Output location:**
-1. Extract the directory from the source plan path
-2. Write optimized plan to: `<source-dir>/PLAN.md`
-3. Write mapping file to: `<source-dir>/PLAN.mapping.md`
-4. Report: "Generated: <source-dir>/PLAN.md"
+1. Extract the directory and base filename from the source plan path
+2. Write optimized plan to: `<source-dir>/<source-basename>.PLAN.md`
+3. Write mapping file to: `<source-dir>/<source-basename>.PLAN.mapping.md`
+4. Report: "Generated: <source-dir>/<source-basename>.PLAN.md"
 
 **Example:**
 ```
 Input:  _docs/my-feature-idea.md
-Output: _docs/PLAN.md
-        _docs/PLAN.mapping.md
+Output: _docs/my-feature-idea.PLAN.md
+        _docs/my-feature-idea.PLAN.mapping.md
 ```
 
 ### Default Mode (codex-fix: OFF)
@@ -215,28 +204,102 @@ Report: "Phase 2 complete."
 3. Report: "Phase 3 complete. Plan optimized for agent execution."
 ```
 
+### Phase 4: Split & Initialize Long-Run
+
+**Purpose:** Split unified PLAN.md into individual task group files for orchestrator consumption.
+
+**Skip condition:** If user passes `--no-split` flag or plan has only 1 task group.
+
+**Directory determination:**
+- `plan_dir` = directory containing the PLAN.md output file
+- `.long-run/` is created inside `plan_dir`
+- Example: If PLAN.md is at `specs/my-feature/my-feature.PLAN.md`, then `.long-run/` is created at `specs/my-feature/.long-run/`
+
+```
+1. Determine plan_dir from PLAN.md output path
+   plan_dir = parent directory of PLAN.md
+
+2. Parse PLAN.md for task groups (look for <task> blocks)
+   - Count task groups
+   - If count <= 1:
+     - Still create .long-run/ directory structure
+     - Create STATE.md with single task entry
+     - Copy PLAN.md to .long-run/plans/01-PLAN.md (single file)
+     - Create ISSUES.md (empty) and agent-history.json
+     - Report: "Single task group detected, created 1 plan file"
+
+3. Create .long-run/ directory structure:
+   {plan_dir}/
+   └── .long-run/
+       ├── STATE.md
+       ├── ISSUES.md          # Empty, for Rule 5 deviations
+       ├── agent-history.json # { "version": "1.0", "agents": [] }
+       ├── plans/
+       │   ├── 01-PLAN.md
+       │   ├── 02-PLAN.md
+       │   └── ...
+       └── summaries/
+
+4. For each task group:
+   - Extract task content with its context/constraints
+   - Write to .long-run/plans/{NN}-PLAN.md
+   - Include shared <context>, <constraints>, <objective> in each
+
+5. Generate initial state files:
+   - STATE.md with task list, config, and placeholder for start_commit
+   - ISSUES.md (empty file for Rule 5 deviations)
+   - agent-history.json with { "version": "1.0", "agents": [] }
+
+6. Keep unified PLAN.md at plan_dir root (for human reference)
+
+Report: "Phase 4 complete. Created {N} plan files in .long-run/plans/"
+```
+
+### STATE.md Template (Phase 4 Output)
+
+```markdown
+# Execution State: {spec_name}
+
+## Status
+- **Phase:** Ready to Execute
+- **Current Task:** Task 1 - {first_task_name}
+- **Progress:** [░░░░░░░░░░] 0/{total} tasks
+
+## Task Groups
+
+| # | Task Group | Agent | Status |
+|---|------------|-------|--------|
+| 1 | {name} | long-run-executor | Pending |
+...
+
+## Metrics
+- **Started:** {date}
+- **Commits:** 0
+- **Files Modified:** 0
+
+## Rollback Reference
+- **start_commit:** (set by orchestrator on first execution)
+
+## Configuration
+clarification_timeout_minutes: 10
+timeout_per_plan_minutes: 30
+timeout_action: prompt
+```
+
 ## How to Execute
 
 When user asks to verify/fix a plan:
 
 1. **Read the source plan file**
-2. **Determine output location** (same folder as input):
+2. **Check for split-only mode:**
+   - If `split-only` parameter detected:
+     - Verify input has `<task>` blocks (fail if not)
+     - SKIP to Step 8 (Execute Phase 4)
+3. **Determine output location** (same folder as input):
    - Extract directory path from source file (e.g., `_docs/` from `_docs/my-feature.md`)
-   - Create output path: `<source-dir>/PLAN.md`
-   - Mapping file path: `<source-dir>/PLAN.mapping.md`
-
-3. **Extract orchestration metadata** (if orchestration parameters provided):
-   ```
-   IF orchestration_path AND task_group_name provided:
-     a. Read and parse orchestration.yml from orchestration_path
-     b. Find task_group where name == task_group_name
-     c. IF task_group not found:
-        - Log warning: "Task group '{task_group_name}' not found in orchestration.yml"
-        - Continue without frontmatter metadata
-     d. ELSE:
-        - Store claude_code_subagent value for PLAN.md frontmatter
-   ```
-
+   - Extract base filename without extension (e.g., `my-feature` from `my-feature.md`)
+   - Create output path: `<source-dir>/<source-basename>.PLAN.md`
+   - Mapping file path: `<source-dir>/<source-basename>.PLAN.mapping.md`
 4. **Execute Phase 0** (Structure & Conciseness) - with iteration loop:
    ```
    for iteration in 1..3:
@@ -254,8 +317,6 @@ When user asks to verify/fix a plan:
      e. If verifier returns ⚠️ NEEDS REVIEW → log warning, exit loop
    ```
    - All subsequent phases edit new PLAN.md (not the original)
-   - **Frontmatter**: If orchestration metadata was extracted in step 3, the structure-optimizer
-     should include the `task_group` and `claude_code_subagent` frontmatter in the output PLAN.md
 5. **Execute Phase 1** (Claude Self-Review):
    - Use Task tool with `gap-analyzer` agent on PLAN.md
    - Parse response for critical gaps (including vague items from Phase 0)
@@ -270,11 +331,24 @@ When user asks to verify/fix a plan:
 7. **Execute Phase 3** (Final Polish):
    - Spawn `final-polish` agent on PLAN.md
    - Check size constraints, extract constraints, verify structure
-8. **Report completion**:
+8. **Execute Phase 4** (Split & Initialize) - unless `--no-split` flag:
+   - Count task groups in PLAN.md
+   - If only 1 task group: skip Phase 4
+   - Extract plan directory from output path (plan_dir)
+   - Create `.long-run/` directory structure inside plan_dir
+   - For each task group:
+     - Extract task content with shared context/constraints
+     - Write to `.long-run/plans/{NN}-PLAN.md`
+   - Generate STATE.md with task list and default config
+   - Create ISSUES.md (empty file for Rule 5 deviations)
+   - Create agent-history.json with { "version": "1.0", "agents": [] }
+   - Create empty `summaries/` directory
+9. **Report completion**:
    - Show path to generated PLAN.md and PLAN.mapping.md
    - Note original file was preserved
    - Show preservation rate from Phase 0 verification
    - Show iteration count if Phase 0 required multiple passes
+   - Show Phase 4 split results (if applicable)
 
 ## Progress Update Format
 
@@ -283,18 +357,13 @@ Throughout execution, report progress like:
 ```
 📋 Plan Fixer Starting...
 📖 Source: [original filename]
-📁 Output: [source-dir]/PLAN.md
-
-📦 Orchestration (if provided):
-   - Task group: [task_group_name]
-   - Agent: [claude_code_subagent]
-   ✅ Metadata will be added to PLAN.md frontmatter
+📁 Output: [source-dir]/[source-basename].PLAN.md
 
 🔧 Phase 0: Structure & Conciseness
    - Converting to agent-oriented format...
    - Extracted 3 constraints
    - Removed 12 lines of rationale
-   - Writing to: [source-dir]/PLAN.md
+   - Writing to: [source-dir]/[source-basename].PLAN.md
    ✅ Phase 0 complete
 
 🔄 Phase 1: Claude Self-Review
@@ -327,12 +396,22 @@ Throughout execution, report progress like:
    - Extracting remaining constraints...
    ✅ Phase 3 complete
 
+📂 Phase 4: Split & Initialize
+   - Found 3 task groups
+   - Creating .long-run/ directory structure...
+   - Writing 01-PLAN.md (Task Group 1: Setup)
+   - Writing 02-PLAN.md (Task Group 2: Core Features)
+   - Writing 03-PLAN.md (Task Group 3: Integration)
+   - Generating STATE.md...
+   ✅ Phase 4 complete (3 plan files created)
+
 🎉 Plan optimization complete!
    Source: [original filename] (preserved)
-   Output: [source-dir]/PLAN.md
+   Output: [source-dir]/[source-basename].PLAN.md
    Structure: Agent-oriented ✓
    Gaps fixed: 3
    Size: 4 sub-tasks (within limit)
+   Long-run ready: .long-run/plans/ (3 files)
 ```
 
 ## Sub-Agents
@@ -455,7 +534,7 @@ When the skill completes, return this summary to the parent context:
 ║                   PLAN OPTIMIZATION REPORT                   ║
 ╠══════════════════════════════════════════════════════════════╣
 ║ Source: [original filename] (preserved)                      ║
-║ Output: [source-dir]/PLAN.md                                 ║
+║ Output: [source-dir]/[source-basename].PLAN.md               ║
 ║ Status: ✅ OPTIMIZED | ⚠️ NEEDS ATTENTION | ❌ MAX ITERATIONS ║
 ╠══════════════════════════════════════════════════════════════╣
 ║ PHASE 0: Structure & Conciseness                             ║
@@ -482,12 +561,19 @@ When the skill completes, return this summary to the parent context:
 ║ Plan size: 4 sub-tasks (within limit)                        ║
 ║ Constraints section: Complete                                ║
 ╠══════════════════════════════════════════════════════════════╣
+║ PHASE 4: Split & Initialize                                  ║
+╟──────────────────────────────────────────────────────────────╢
+║ Plan files created: 3                                        ║
+║ Location: {plan_dir}/.long-run/plans/                        ║
+║ STATE.md initialized: ✓                                      ║
+╠══════════════════════════════════════════════════════════════╣
 ║ SUMMARY                                                      ║
 ╟──────────────────────────────────────────────────────────────╢
 ║ Structure: Agent-oriented ✓                                  ║
 ║ Gaps fixed: 4 (Claude: 3, Codex: 1)                          ║
 ║ Size: 4 sub-tasks (limit: 5)                                 ║
 ║ Iterations: Phase 1 (3) + Phase 2 (2)                        ║
+║ Long-run ready: ✓                                            ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 

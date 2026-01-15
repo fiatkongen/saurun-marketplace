@@ -1,45 +1,41 @@
-# Long-Run Implementation State
+# Execution State: {spec_name}
 
-## Spec Reference
-Spec: agent-os/specs/[spec-name]/
-Tasks: agent-os/specs/[spec-name]/tasks.md
-Started: [YYYY-MM-DD]
-
-## Current Position
-Plan: [X] of [Y]
-Task Group: [current-group-name]
-Status: [Initializing / Transforming / Executing / Complete]
-Last activity: [YYYY-MM-DD] - [description]
-Progress: [░░░░░░░░░░] 0%
+## Status
+- **Phase:** Ready to Execute
+- **Current Task:** Task 1 - {first_task_name}
+- **Progress:** [░░░░░░░░░░] 0/{total} tasks
 
 **Progress Calculation:** `(completed_plans / total_plans) * 100`
 - Use 10-character bar: each █ = 10%
 - Example: 3/5 plans = 60% = `[██████░░░░] 60%`
 
-## Execution Metrics
-Plans completed: [N]
-Tasks completed: [M]
-Total commits: [K]
-Duration: [X hours Y minutes]
+## Task Groups
+
+| # | Task Group | Agent | Status |
+|---|------------|-------|--------|
+| 1 | {name} | long-run-executor | Pending |
+
+## Metrics
+- **Started:** {date}
+- **Commits:** 0
+- **Files Modified:** 0
 
 ## Rollback Reference
-start_commit: [hash recorded at Phase 1 initialization]
+- **start_commit:** (set by orchestrator on first execution)
 
 ## Accumulated Context
+
 ### Decisions Made
 | Plan | Decision | Rationale |
 |------|----------|-----------|
 
 ### Deferred Issues
-- ISS-XXX: [description] (Plan N)
-
-### Blockers
-None.
+- (none)
 
 ## Session Continuity
-Last session: [YYYY-MM-DD HH:MM]
-Stopped at: [description]
-Resume agent: [agent_id or "None"]
+- **Last session:** (not started)
+- **Stopped at:** (not started)
+- **Resume agent:** None
 
 ## Configuration
 clarification_timeout_minutes: 10

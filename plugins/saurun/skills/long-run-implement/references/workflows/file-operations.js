@@ -3,7 +3,7 @@
  *
  * Usage from workflows:
  *   node -e "require('./file-operations').writeAtomic('path', 'content')"
- *   node -e "require('./file-operations').updateJson('path', d => d.entries.push({...}))"
+ *   node -e "require('./file-operations').updateJson('path', d => d.agents.push({...}))"
  */
 
 const fs = require('fs');

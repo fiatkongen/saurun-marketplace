@@ -1,6 +1,7 @@
 ---
 name: long-run-orchestrator
 description: Orchestrate plan execution by spawning fresh subagents per plan (preserves context quality)
+tools: Task, Write, Read, Bash, Edit, Glob, Grep, AskUserQuestion
 color: blue
 model: inherit
 input:
@@ -33,7 +34,6 @@ By spawning a fresh subagent for each plan, we ensure every plan executes at pea
 2. Read {spec_path}/.long-run/agent-history.json (if exists)
 3. Get list of plans from {spec_path}/.long-run/plans/
 4. Sort plans by number (01, 02, 03...)
-5. Read {spec_path}/orchestration.yml (if exists) for agent assignments
 ```
 
 ### Step 2: For Each Plan
@@ -53,9 +53,6 @@ FOR each plan_path in sorted plans:
   checkpoint_path = {spec_path}/.long-run/plans/{plan_number}-CHECKPOINT.json
   checkpoint = read if exists, else null
 
-  # Determine agent type from orchestration.yml
-  assigned_agent = determineAgent(plan_path, spec_path)
-
   # Spawn fresh subagent
   GOTO Step 3: Spawn Executor
 ```
@@ -72,9 +69,6 @@ const plan_content = read_file(plan_path);
 const spec_content = read_file(`${spec_path}/spec.md`);
 const requirements = read_file(`${spec_path}/planning/requirements.md`) || "";
 
-// Determine agent from orchestration.yml
-const assigned_agent = determineAgentFromOrchestration(plan_content, spec_path);
-
 // Build executor prompt
 const prompt = buildExecutorPrompt({
   plan_content,
@@ -88,37 +82,13 @@ const prompt = buildExecutorPrompt({
 
 // SPAWN FRESH SUBAGENT via Task tool
 const result = Task({
-  subagent_type: assigned_agent,  // From orchestration.yml or "general-purpose"
+  subagent_type: "general-purpose",
   description: `Execute plan ${plan_number}`,
   prompt: prompt
 });
 ```
 
 **The Task tool creates a NEW agent with fresh 200k context!**
-
-### Agent Assignment from orchestration.yml
-
-```typescript
-function determineAgentFromOrchestration(plan_content: string, spec_path: string): string {
-  const orchestration_path = `${spec_path}/orchestration.yml`;
-
-  if (!file_exists(orchestration_path)) {
-    return "general-purpose";
-  }
-
-  const orchestration = parse_yaml(orchestration_path);
-  const task_group_name = extract_frontmatter(plan_content, "task_group");
-
-  // Find matching task group
-  const task_group = orchestration.task_groups?.find(g => g.name === task_group_name);
-
-  if (task_group?.claude_code_subagent) {
-    return task_group.claude_code_subagent;
-  }
-
-  return "general-purpose";
-}
-```
 
 ### Step 4: Track Agent
 
@@ -129,7 +99,6 @@ Before waiting for result:
    {
      "agent_id": result.agent_id,
      "plan": plan_number,
-     "agent_type": assigned_agent,
      "timestamp": ISO timestamp,
      "status": "spawned"
    }
@@ -278,7 +247,7 @@ Begin execution now.
 ## State Files Updated
 
 - `STATE.md` - Progress, current plan, metrics
-- `agent-history.json` - All spawned agents with status and agent_type
+- `agent-history.json` - All spawned agents with status
 - `current-agent-id.txt` - Quick lookup for resume
 - `{plan}-SUMMARY.md` - Created after each plan completes
 - `{plan}-CHECKPOINT.json` - Updated by subagent per task

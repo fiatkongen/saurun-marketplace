@@ -17,7 +17,6 @@ Complete the long-run session and present summary to user.
 
 ```
 Read all SUMMARY.md files from {state_path}/summaries/
-Read agent-history.json from {state_path}/
 
 Aggregate:
   - Total tasks completed
@@ -26,7 +25,6 @@ Aggregate:
   - Deviations applied (Rules 1-3)
   - Issues logged (Rule 5)
   - Decisions made (Rule 4)
-  - Agent assignments per plan (from agent-history.json or SUMMARY.md frontmatter)
 ```
 
 ### Step 2: Calculate Metrics
@@ -46,12 +44,7 @@ metrics = {
   },
   commits: total_commits,
   duration: end_time - start_time,
-  files_modified: unique file list,
-  agent_mapping: [
-    { plan: "01", task_group: "auth-system", agent: "backend-specialist", status: "completed" },
-    { plan: "02", task_group: "api-endpoints", agent: "backend-specialist", status: "completed" },
-    { plan: "03", task_group: "user-dashboard", agent: "frontend-specialist", status: "failed" }
-  ]
+  files_modified: unique file list
 }
 ```
 
@@ -84,16 +77,6 @@ Output to user:
    Tasks:   {tasks_completed}/{tasks_total} completed
    Commits: {commit_count}
    Duration: {duration}
-
-🤖 Agent Execution Summary:
-   {for each plan in agent_mapping}
-   Plan {plan} ({task_group}) → {agent} {status_icon}
-
-   Example:
-   Plan 01 (auth-system)      → backend-specialist ✓
-   Plan 02 (api-endpoints)    → backend-specialist ✓
-   Plan 03 (user-dashboard)   → frontend-specialist ✗
-   Plan 04 (database-setup)   → general-purpose (fallback) ✓
 
 ✅ Completed Plans:
    {list of completed plans with task counts}
@@ -181,27 +164,19 @@ Handle user choice:
 
 ## Plans Executed
 
-### Agent Assignments
-| Plan | Task Group | Agent Used | Status |
-|------|------------|------------|--------|
-| 01 | auth-system | backend-specialist | ✓ Completed |
-| 02 | api-endpoints | backend-specialist | ✓ Completed |
-| 03 | user-dashboard | frontend-specialist | ✗ Failed |
-| 04 | database-setup | general-purpose | ✓ Completed |
-
 ### Completed
-| Plan | Agent | Tasks | Commits | Duration |
-|------|-------|-------|---------|----------|
+| Plan | Tasks | Commits | Duration |
+|------|-------|---------|----------|
 {for each completed plan}
 
 ### Failed
-| Plan | Agent | Failed At | Error |
-|------|-------|-----------|-------|
+| Plan | Failed At | Error |
+|------|-----------|-------|
 {for each failed plan}
 
 ### Skipped
-| Plan | Agent | Reason |
-|------|-------|--------|
+| Plan | Reason |
+|------|--------|
 {for each skipped plan}
 
 ## Deviations Applied

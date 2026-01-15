@@ -2,13 +2,23 @@
 name: long-run-implement
 description: Execute long-running implementation tasks autonomously. Use when user wants to implement a plan, run autonomous implementation, execute tasks with minimal checkpoints, or do long-run execution.
 context: fork
-allowed-tools: Task, Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Task, Read, Write, Edit, Bash, Glob, Grep, Skill
 user-invocable: true
 ---
 
 # Long-Run Implement
 
 Transform task specifications into executable plans and run them autonomously with minimal checkpoints, per-task atomic commits, and full state persistence.
+
+## Usage
+
+```
+/long-run-implement [spec-path] [--prepare-only]
+```
+
+### Flags
+
+- `--prepare-only`: Stop after Phase 2 (plan preparation). Use to review generated plans before execution.
 
 ## When to Use This Skill
 
@@ -21,12 +31,37 @@ Activate when the user says things like:
 ## What This Skill Does
 
 1. **Initialize** - Set up or restore execution state
-2. **Transform** - Convert tasks into enriched PLAN.md files
-3. **Execute** - Run plans sequentially with subagents
+2. **Prepare Plans** - Call plan-fixer to validate, optimize, and split into individual plans
+3. **Execute** - **Spawn fresh subagent per plan** via Task tool (preserves quality)
 4. **Finalize** - Present summary and verification options
+
+## Architecture: Fresh Context Per Plan
+
+**CRITICAL**: This skill spawns a **fresh subagent for each plan** to prevent context degradation.
+
+```
+long-run-implement (orchestrator - stays in main context)
+    │
+    ├── Plan 01 → Task tool → fresh subagent (0% context) → executes → returns
+    │                              ↑
+    │                         200k tokens available
+    │
+    ├── Plan 02 → Task tool → fresh subagent (0% context) → executes → returns
+    │
+    └── Plan 03 → Task tool → fresh subagent (0% context) → executes → returns
+```
+
+Why this matters:
+- **0-30% context**: Peak quality
+- **30-50% context**: Good quality
+- **50-70% context**: Degrading quality
+- **70%+ context**: Poor quality
+
+Each plan executes at peak quality because it starts fresh.
 
 ## Key Features
 
+- **Fresh Context Per Plan** - Each plan spawns a new subagent with 200k tokens at 0%
 - **Minimal Checkpoints** - Only stops for genuine blockers (architectural changes, external actions, unrecoverable errors)
 - **Per-Task Atomic Commits** - Each completed task is committed immediately with conventional commit format
 - **Full Persistence** - All state saved to disk; resume anytime from interruption point
@@ -42,17 +77,18 @@ See [phases/1-initialize.md](phases/1-initialize.md)
 - Initialize .long-run/ directory structure
 - Pre-flight checks (clean working tree)
 
-### Phase 2: Transform
+### Phase 2: Prepare Plans (calls plan-fixer)
 See [phases/2-transform.md](phases/2-transform.md)
 
-- Parse tasks.md structure
-- Enrich each task group with:
-  - Specific file paths
-  - Detailed action steps with "what to avoid and WHY"
-  - Executable verification commands
-  - Measurable done criteria
-- Generate PLAN.md files
-- If too vague: stop and ask for clarification
+- If tasks.md exists and .long-run/plans/ is empty:
+  - Run plan-fixer skill on tasks.md (Phases 0-4)
+  - Plan-fixer validates, fixes, optimizes, and splits into individual plans
+- If PLAN.md exists at root and .long-run/plans/ is empty:
+  - Run plan-fixer Phase 4 only (split existing plan)
+- If .long-run/plans/ already populated:
+  - Skip to Phase 3
+
+**If `--prepare-only` flag is set: STOP here**
 
 ### Phase 3: Execute
 See [phases/3-execute.md](phases/3-execute.md)
@@ -189,6 +225,11 @@ claude_code_subagent: backend-specialist
 ### Templates
 See [references/templates/](references/templates/) for state and checkpoint templates.
 
-## Agent
+## Agents
 
-Uses the `long-run-executor` agent to execute individual PLAN.md files.
+- **long-run-orchestrator** - Stays in main context, spawns subagents per plan, handles responses
+- **long-run-executor** - Spawned as subagent per plan, executes tasks, returns structured output
+
+## Related Commands
+
+- `/long-run-orchestrator` - Execute-only entry point (expects .long-run/plans/ to exist)

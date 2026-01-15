@@ -1,7 +1,6 @@
 ---
 plan: NN
 task_group: [group-name]
-claude_code_subagent: [agent-name or "general-purpose"]
 depends_on: []
 source_tasks: ["N.1", "N.2", "N.3"]
 ---
@@ -17,6 +16,10 @@ Output: [What will be created]
 @agent-os/specs/[spec-name]/spec.md
 @agent-os/specs/[spec-name]/planning/requirements.md
 </context>
+
+<constraints>
+[Constraints extracted from spec - boundaries, rules, limitations]
+</constraints>
 
 <tasks>
 

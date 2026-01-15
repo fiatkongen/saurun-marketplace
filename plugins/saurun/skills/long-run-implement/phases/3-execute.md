@@ -75,33 +75,12 @@ const plan_content = read_file(plan_path);
 const spec_content = read_file(`${spec_path}/spec.md`);
 const requirements = read_file(`${spec_path}/planning/requirements.md`) || "";
 
-// 3. Determine executor agent from orchestration.yml
-const orchestration_path = `${spec_path}/orchestration.yml`;
-let assigned_agent = "general-purpose";
-
-if (file_exists(orchestration_path)) {
-  const orchestration = parse_yaml(orchestration_path);
-  const task_group_name = extract_frontmatter(plan_content, "task_group");
-
-  // Find matching task group
-  const task_group = orchestration.task_groups?.find(g => g.name === task_group_name);
-
-  if (task_group?.claude_code_subagent) {
-    assigned_agent = task_group.claude_code_subagent;
-    Log: `Using agent '${assigned_agent}' for task group '${task_group_name}'`;
-  } else {
-    Log: `No agent assigned for task group '${task_group_name}', using general-purpose`;
-  }
-} else {
-  Log: "No orchestration.yml found, using general-purpose agent";
-}
-
-// 4. Read checkpoint if exists
+// 3. Read checkpoint if exists
 const checkpoint = file_exists(checkpoint_path)
   ? read_file(checkpoint_path)
   : null;
 
-// 5. Build executor prompt (see template below)
+// 4. Build executor prompt (see template below)
 const prompt = buildExecutorPrompt({
   plan_content,
   plan_number,
@@ -113,30 +92,29 @@ const prompt = buildExecutorPrompt({
   resume_from_task
 });
 
-// 6. SPAWN FRESH SUBAGENT via Task tool
+// 5. SPAWN FRESH SUBAGENT via Task tool
 //    This creates a NEW agent with fresh 200k context!
 const result = Task({
-  subagent_type: assigned_agent,  // From orchestration.yml or "general-purpose"
+  subagent_type: "general-purpose",
   description: `Execute plan ${plan_number}: ${task_group_name}`,
   prompt: prompt
 });
 
-// 7. Track the spawned agent
+// 6. Track the spawned agent
 track_agent({
   agent_id: result.agent_id,
   plan: plan_number,
-  agent_type: assigned_agent,
   timestamp: new Date().toISOString(),
   status: "spawned"
 });
 
-// 8. Write transient file for resume lookup
+// 7. Write transient file for resume lookup
 write_file(`${state_path}/current-agent-id.txt`, result.agent_id);
 
-// 9. Wait for completion (Task tool is synchronous)
+// 8. Wait for completion (Task tool is synchronous)
 const output = await result;
 
-// 10. Parse and handle response
+// 9. Parse and handle response
 GOTO Step 3: Handle Response
 ```
 

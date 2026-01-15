@@ -57,26 +57,32 @@ IF STATE.md shows "Stopped at: Awaiting clarification":
 
 ### Step 5: Initialize New State
 ```
-1. Create directory structure:
-   {spec_path}/.long-run/
-   {spec_path}/.long-run/plans/
-   {spec_path}/.long-run/summaries/
+# NOTE: For fresh starts, .long-run/ directory and STATE.md are created
+# by plan-fixer Phase 4, NOT here. This step only applies to resume scenarios.
 
-2. Copy template files:
-   - STATE.md from templates/long-run-state.md
-   - agent-history.json from templates/agent-history.json
+IF resuming from existing .long-run/:
+  # State files already exist, just validate
+  1. Verify {spec_path}/.long-run/STATE.md exists
+  2. Verify {spec_path}/.long-run/agent-history.json exists
+  3. Verify {spec_path}/.long-run/plans/ contains NN-PLAN.md files
 
-3. Update STATE.md with:
-   - Spec path
-   - Tasks path
-   - Started date
-   - Status: "Initializing"
+ELSE (fresh start):
+  # Skip directory/state creation - plan-fixer Phase 4 handles this
+  # Phase 4 will create:
+  #   - .long-run/ directory structure
+  #   - STATE.md (from template: templates/long-run-state.md)
+  #   - agent-history.json (with { "version": "1.0", "agents": [] })
+  #   - ISSUES.md (empty)
+  #   - plans/ with split NN-PLAN.md files
+  #   - summaries/ (empty)
+  Log: "Deferring state initialization to plan-fixer Phase 4"
 
-4. Record start commit:
+# Pre-flight checks (run for both fresh and resume)
+1. Record start commit:
    start_commit = $(git rev-parse HEAD)
-   Write to STATE.md Rollback Reference section
+   # Note: Written to STATE.md after plan-fixer creates it
 
-5. Check for uncommitted changes:
+2. Check for uncommitted changes:
    IF git status --porcelain returns output:
      Present options:
        1. Stash changes (git stash)
