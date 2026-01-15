@@ -1,7 +1,6 @@
 ---
 name: long-run-orchestrator
 description: Orchestrate plan execution by spawning fresh subagents per plan (preserves context quality)
-tools: Task, Write, Read, Bash, Edit, Glob, Grep, AskUserQuestion
 color: blue
 model: inherit
 input:

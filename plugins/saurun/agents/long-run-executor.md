@@ -1,7 +1,6 @@
 ---
 name: long-run-executor
 description: Execute a single PLAN.md with per-task commits and deviation handling (spawned as subagent per plan)
-tools: Write, Read, Bash, Edit, Glob, Grep
 color: purple
 model: inherit
 ---
