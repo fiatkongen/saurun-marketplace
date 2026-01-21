@@ -27,7 +27,6 @@ You receive:
 
 ### Minor (nice to fix)
 - **Formatting inconsistencies**: Mixed bullet styles, heading levels
-- **Trailing whitespace**: Extra spaces, unnecessary blank lines
 - **Incomplete lists**: Single-item lists that should be prose
 
 ## Mode Adjustments

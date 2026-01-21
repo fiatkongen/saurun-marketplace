@@ -28,6 +28,7 @@ Unlike plan-fixer, this skill does NOT restructure or convert the file format. I
 - **Auto-fix**: Inconsistencies, redundancies, formatting
 - **Ask User**: Ambiguities, vague content, unresolved TODOs
 - **Preserve**: Structure, format, intentional style choices
+- **Codex Timeout**: 1200000ms (20 minutes) - MANDATORY, do not use shorter timeouts
 
 ## Parameters
 
@@ -491,11 +492,17 @@ When user asks to polish/improve a document:
 ```bash
 # Find codex-bridge script (marketplace install path)
 CODEX_BRIDGE=$(ls -1 "$HOME/.claude/plugins/cache/saurun-marketplace/saurun/"*/skills/codex-bridge/codex-bridge.mjs 2>/dev/null | head -1)
+
+# MANDATORY: Define timeout constant - DO NOT change this value
+CODEX_TIMEOUT=1200000  # 20 minutes in milliseconds
 ```
 
 **CRITICAL:** Always pass `--working-dir "<project-path>"` so Codex can read project files.
 
-**Timeout:** Use `--timeout 1200000` (20 minutes) for all Codex calls.
+**⚠️ MANDATORY TIMEOUT: Always use `--timeout 1200000` (20 minutes) for ALL Codex calls.**
+- DO NOT use shorter timeouts (e.g., 300000)
+- Codex needs time to analyze documents thoroughly
+- Short timeouts cause premature failures
 
 ### Review Prompt (Default Mode)
 
