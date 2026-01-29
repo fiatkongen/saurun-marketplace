@@ -7,13 +7,38 @@ description: Autonomously execute tasks from a markdown task list with dependenc
 
 Execute tasks from a markdown task list autonomously with intelligent dependency handling, blocker detection, and exponential backoff retry logic.
 
+## Task File Location
+
+**Default location:** `~/tasks.md` (user's home directory)
+
+**Before first execution:**
+- Check if `~/tasks.md` exists using: `test -f ~/tasks.md`
+- If not, create it with the template structure:
+  ```bash
+  cat > ~/tasks.md << 'EOF'
+  ## Pending
+
+  ## In Progress
+
+  ## Completed
+
+  ## Failed
+
+  EOF
+  ```
+- User can specify alternative path, but default is always `~/tasks.md`
+
+**Path expansion:**
+- Always expand `~` to full home directory path using `$HOME` or `os.path.expanduser()` in scripts
+- Example: `~/tasks.md` → `/Users/username/tasks.md`
+
 ## Core Workflow
 
 Execute this sequence continuously until all tasks complete or all remaining tasks are blocked:
 
 ### 1. Read and Parse Task File
 
-Read the markdown task file once per cycle. Expected format:
+Read the markdown task file from `~/tasks.md` (or user-specified path) once per cycle. Expected format:
 ```markdown
 ## Pending
 - Task 1
@@ -145,15 +170,23 @@ If a pending task likely depends on a failed task, add blocker annotation:
 
 ## Helper Scripts (Optional)
 
-Scripts are provided for manual use or debugging:
+Scripts are provided for manual use or debugging. Both default to `~/tasks.md` if no file specified.
 
 **parse_tasks.py:** Analyzes task file, returns next unblocked task
 ```bash
+# Use default ~/tasks.md
+python3 scripts/parse_tasks.py
+
+# Or specify custom file
 python3 scripts/parse_tasks.py <task-file.md>
 ```
 
 **move_task.py:** Moves tasks between sections with annotations
 ```bash
+# Use default ~/tasks.md
+python3 scripts/move_task.py <task-text> <from> <to> [note]
+
+# Or specify custom file
 python3 scripts/move_task.py <file> <task-text> <from> <to> [note]
 ```
 

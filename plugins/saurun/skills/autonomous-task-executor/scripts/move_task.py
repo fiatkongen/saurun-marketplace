@@ -3,6 +3,7 @@
 Move a task between sections in a markdown task file.
 """
 
+import os
 import sys
 from pathlib import Path
 import re
@@ -81,15 +82,32 @@ def move_task(file_path: str, task_text: str, from_section: str, to_section: str
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 5:
-        print("Usage: move_task.py <file> <task_text> <from_section> <to_section> [note]")
+    if len(sys.argv) < 4:
+        print("Usage: move_task.py [file] <task_text> <from_section> <to_section> [note]")
+        print("  If no file specified, uses ~/tasks.md")
+        print("Example: move_task.py 'Run tests' pending in_progress")
         print("Example: move_task.py tasks.md 'Run tests' pending in_progress")
         sys.exit(1)
 
-    file_path = sys.argv[1]
-    task_text = sys.argv[2]
-    from_section = sys.argv[3]
-    to_section = sys.argv[4]
-    note = sys.argv[5] if len(sys.argv) > 5 else None
+    # Check if first argument is a file path or task text
+    # If it contains .md or is an existing file, treat as file path
+    if len(sys.argv) >= 5 and ('.md' in sys.argv[1] or Path(sys.argv[1]).exists()):
+        file_path = sys.argv[1]
+        task_text = sys.argv[2]
+        from_section = sys.argv[3]
+        to_section = sys.argv[4]
+        note = sys.argv[5] if len(sys.argv) > 5 else None
+    else:
+        # Use default path ~/tasks.md
+        file_path = os.path.expanduser("~/tasks.md")
+        task_text = sys.argv[1]
+        from_section = sys.argv[2]
+        to_section = sys.argv[3]
+        note = sys.argv[4] if len(sys.argv) > 4 else None
+        print(f"Using default task file: {file_path}")
+
+    if not Path(file_path).exists():
+        print(f"Error: Task file not found: {file_path}")
+        sys.exit(1)
 
     move_task(file_path, task_text, from_section, to_section, note)

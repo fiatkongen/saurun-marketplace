@@ -3,6 +3,7 @@
 Parse markdown task file and extract structured task information.
 """
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -88,11 +89,23 @@ def find_unblocked_tasks(sections: Dict[str, List[Dict]]) -> List[Dict]:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("Usage: parse_tasks.py <task_file.md>")
+    # Use default path ~/tasks.md if no argument provided
+    if len(sys.argv) > 2:
+        print("Usage: parse_tasks.py [task_file.md]")
+        print("  If no file specified, uses ~/tasks.md")
         sys.exit(1)
 
-    file_path = sys.argv[1]
+    if len(sys.argv) == 2:
+        file_path = sys.argv[1]
+    else:
+        # Default to ~/tasks.md
+        file_path = os.path.expanduser("~/tasks.md")
+        print(f"Using default task file: {file_path}")
+
+    if not Path(file_path).exists():
+        print(f"Error: Task file not found: {file_path}")
+        sys.exit(1)
+
     sections = parse_task_file(file_path)
 
     print("=== Task Summary ===")
