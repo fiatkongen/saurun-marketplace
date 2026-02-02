@@ -1,6 +1,6 @@
 ---
 name: dotnet-tactical-ddd
-description: Use when building .NET 8 backend APIs with business logic beyond simple CRUD. Covers tactical DDD patterns (entities, value objects, aggregates, factories), DTO boundaries, Result<T> error handling, structured logging with Serilog.
+description: Use when building .NET backend APIs with business logic, domain rules, invariants to enforce, or projects expanding beyond simple CRUD
 ---
 
 # .NET Tactical Domain-Driven Design
@@ -10,6 +10,38 @@ description: Use when building .NET 8 backend APIs with business logic beyond si
 **Rich domain models with behavior, not anemic data containers.** Apply tactical DDD patterns to all .NET backend development for maintainable, testable, domain-centric code.
 
 **Core principle:** Domain models encapsulate business rules and invariants. DTOs are immutable data contracts at API boundaries. Manual mapping via extension methods. Never expose domain models in APIs.
+
+## 0. The Dependency Rule (Foundation)
+
+**Dependencies point inward only.** Outer layers depend on inner layers, never the reverse.
+
+```
+Infrastructure → Application → Domain
+   (adapters)     (use cases)    (core)
+```
+
+**Violations to catch:**
+- Domain/ importing `Microsoft.EntityFrameworkCore`, `System.Net.Http`, `Serilog`
+- Controllers calling repositories directly (bypassing Application/ use cases)
+- Entities depending on application services
+- Application/ directly instantiating Infrastructure/ classes (should use DI)
+
+**Verification test:** "Can I run domain logic from unit tests with no database/HTTP/file system?" If yes, boundaries are correct.
+
+## Layer Decision Tree
+
+**Where does this code go?**
+
+| Code Type | Layer | Example |
+|-----------|-------|---------|
+| Pure business logic, no I/O | `Domain/Entities/` or `Domain/ValueObjects/` | `OrderLine.CalculateTotal()` |
+| Business rule across entities | `Domain/Services/` | `IPricingService.CalculateDiscount()` |
+| Orchestrates domain + calls infra | `Application/{UseCase}/Handler` | `CreateOrderHandler` |
+| Interface for external dependency | `Domain/Interfaces/` (if domain needs it)<br>`Application/Common/Interfaces/` (if only app uses) | `IEmailService` interface |
+| Database implementation | `Infrastructure/Persistence/` | `OrderRepository` |
+| HTTP/external API call | `Infrastructure/Services/` | `SmtpEmailService` |
+| Request/Response DTO | `WebApi/DTOs/` | `CreateOrderRequest` |
+| Extension methods for mapping | `WebApi/Extensions/` or `Application/Common/Mapping/` | `ProductMapper.ToDto()` |
 
 ## When to Use
 
@@ -40,18 +72,16 @@ description: Use when building .NET 8 backend APIs with business logic beyond si
 
 ## 1. Value Objects
 
-**What:** Immutable objects identified by values, not identity.
-
-**When:** Measurements, money, quantities, descriptive characteristics.
+Immutable objects identified by values, not identity. Use for measurements, money, quantities, descriptive characteristics.
 
 ```csharp
 // ✅ Good: Immutable with factory validation
 public class Money : ValueObject
 {
-    public decimal Amount { get; } // Readonly
+    public decimal Amount { get; }
     public string Currency { get; }
 
-    private Money(decimal amount, string currency) { // Private
+    private Money(decimal amount, string currency) {
         Amount = amount;
         Currency = currency;
     }
@@ -64,27 +94,32 @@ public class Money : ValueObject
     }
 
     protected override IEnumerable<object> GetEqualityComponents() {
-        yield return Amount; // Value equality
+        yield return Amount;
         yield return Currency;
     }
 }
 
 // ❌ Bad: Mutable, no validation
 public class Money {
-    public decimal Amount { get; set; } // Public setter
+    public decimal Amount { get; set; }
     public string Currency { get; set; }
 }
 ```
 
 ## 2. Entities & Aggregates
 
-**Entities:** Objects with unique identity. **Aggregates:** Transaction boundaries.
+**Entities:** Objects with unique identity. **Aggregates:** Transaction boundaries enforcing invariants.
+
+**Aggregate rules:**
+- Reference other aggregates by ID only (never full entity)
+- Enforce invariants across all child entities
+- Single entry point for modifications
 
 ```csharp
 // ✅ Good: Aggregate with behavior and invariants
 public class Order : AggregateRoot<Guid>
 {
-    public Guid CustomerId { get; private set; } // Reference by ID only
+    public Guid CustomerId { get; private set; }
     public OrderStatus Status { get; private set; }
     private readonly List<OrderLine> _lines = new();
     public IReadOnlyList<OrderLine> Lines => _lines.AsReadOnly();
@@ -112,36 +147,22 @@ public class Order : AggregateRoot<Guid>
         _lines.Add(OrderLine.Create(product.Id, product.Price, quantity));
         return Result.Success();
     }
-
-    public void Complete() {
-        Status = OrderStatus.Completed;
-        AddDomainEvent(new OrderCompletedEvent(Id, GetTotal()));
-    }
-
-    public Money GetTotal() => _lines.Aggregate(
-        Money.Zero("USD"),
-        (sum, line) => sum.Add(line.LineTotal));
 }
 
 // ❌ Bad: Anemic entity with public setters
 public class Order {
     public Guid Id { get; set; }
-    public Guid CustomerId { get; set; } // Public setter bypasses validation
-    public List<OrderLine> Lines { get; set; } // Exposed list
+    public Guid CustomerId { get; set; }
+    public List<OrderLine> Lines { get; set; }
 }
 ```
 
-**Aggregate Rules:**
-- Reference other aggregates by ID only (never full entity)
-- Enforce invariants across all child entities
-- Single entry point for modifications
-
 ## 3. Factories
 
-**Always use factory methods for domain object creation.**
+Always use static factory methods returning `Result<T>`. Private constructors prevent invalid state.
 
 ```csharp
-// ✅ Good: Factory with validation returns Result<T>
+// ✅ Good: Factory with validation
 public class Product : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
@@ -162,32 +183,25 @@ public class Product : AggregateRoot<Guid>
 
         return Result.Success(new Product(Guid.NewGuid(), name, price));
     }
-
-    public Result UpdateName(string name) {
-        if (string.IsNullOrWhiteSpace(name))
-            return Result.Failure("Name required");
-        Name = name;
-        return Result.Success();
-    }
 }
 
 // ❌ Bad: Public constructor allows invalid state
 public class Product {
     public string Name { get; set; }
-    public Product() { } // Allows: new Product() with Name = null
+    public Product() { }
 }
 ```
 
 ## 4. Repositories
 
-**Abstraction for persisting/retrieving aggregates. Acts like a collection.**
+Abstraction per aggregate. Acts like a collection. Use eager loading to avoid N+1 queries.
 
 ```csharp
-// ✅ Good: Specific interface, eager loading, SaveChanges
+// ✅ Good: Specific interface per aggregate
 public interface IOrderRepository {
     Task<Order?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task AddAsync(Order order, CancellationToken ct = default);
-    Task SaveChangesAsync(CancellationToken ct = default); // ACID transaction
+    Task SaveChangesAsync(CancellationToken ct = default);
 }
 
 public class OrderRepository : IOrderRepository {
@@ -195,39 +209,33 @@ public class OrderRepository : IOrderRepository {
 
     public async Task<Order?> GetByIdAsync(Guid id, CancellationToken ct) {
         return await _context.Orders
-            .Include(o => o.Lines) // Eager loading avoids N+1
+            .Include(o => o.Lines) // Eager loading
             .FirstOrDefaultAsync(o => o.Id == id, ct);
     }
 
-    public async Task AddAsync(Order order, CancellationToken ct) {
-        await _context.Orders.AddAsync(order, ct);
-    }
-
     public async Task SaveChangesAsync(CancellationToken ct) {
-        await _context.SaveChangesAsync(ct); // Commits transaction
+        await _context.SaveChangesAsync(ct);
     }
 }
 
-// ❌ Bad: Generic repository forcing same interface
+// ❌ Bad: Generic repository
 public interface IRepository<T> {
-    Task<IEnumerable<T>> GetAllAsync(); // Rarely needed
-    Task UpdateAsync(T entity); // Often not needed
+    Task<IEnumerable<T>> GetAllAsync();
 }
 ```
 
 ## 5. Domain Events
 
-**Immutable records of something that happened (past tense).**
+Immutable records (past tense) decoupling aggregates. Use handlers for cross-aggregate logic.
 
 ```csharp
-// ✅ Good: Immutable, past tense, timestamp
+// ✅ Good: Immutable record, past tense
 public record OrderShippedEvent(
     Guid OrderId,
     Guid CustomerId,
     DateTime OccurredAt
 ) : IDomainEvent;
 
-// Aggregate raising event
 public class Order : AggregateRoot<Guid> {
     public void Ship() {
         Status = OrderStatus.Shipped;
@@ -235,194 +243,99 @@ public class Order : AggregateRoot<Guid> {
     }
 }
 
-// Handler decouples aggregates
 public class AwardLoyaltyPointsHandler : IDomainEventHandler<OrderShippedEvent> {
-    private readonly ICustomerRepository _customerRepo;
-
     public async Task Handle(OrderShippedEvent @event, CancellationToken ct) {
         var customer = await _customerRepo.GetByIdAsync(@event.CustomerId, ct);
-        if (customer == null) return;
-
-        customer.AwardPoints(100);
+        customer?.AwardPoints(100);
         await _customerRepo.SaveChangesAsync(ct);
     }
 }
 
 // ❌ Bad: Mutable, present tense
-public class ShipOrder { // Should be "OrderShipped"
-    public Guid OrderId { get; set; } // Mutable
+public class ShipOrder {
+    public Guid OrderId { get; set; }
 }
 ```
 
 ## 6. DTOs at API Boundaries
 
-**Always use DTOs. Never expose domain models in controllers.**
+Never expose domain models in controllers. Use immutable records with extension methods for mapping.
+
+**Naming:** `CreateXRequest`, `UpdateXRequest`, `XQuery` (requests) | `XDto` (responses)
 
 ```csharp
-// ✅ Good: Immutable records for DTOs
+// DTOs
 public record CreateProductRequest(string Name, decimal Price, string Currency);
-public record UpdateProductRequest(Guid Id, string Name);
 public record ProductDto(Guid Id, string Name, decimal Price, string Currency);
 
-// ✅ Good: Extension methods for mapping
+// Extension methods for mapping
 public static class ProductMapper
 {
     public static ProductDto ToDto(this Product product) => new(
-        product.Id,
-        product.Name,
-        product.Price.Amount,
-        product.Price.Currency
-    );
+        product.Id, product.Name, product.Price.Amount, product.Price.Currency);
 
     public static Result<Product> ToDomain(this CreateProductRequest request)
     {
         var priceResult = Money.Create(request.Price, request.Currency);
         if (priceResult.IsFailure) return Result.Failure<Product>(priceResult.Error);
-
         return Product.Create(request.Name, priceResult.Value);
-    }
-
-    public static Result UpdateFromRequest(this Product product, UpdateProductRequest request)
-    {
-        return product.UpdateName(request.Name);
     }
 }
 
-// ✅ Good: Controller with DTOs and Result<T>
+// Controller
 [HttpPost]
 public async Task<ActionResult<ProductDto>> Create(CreateProductRequest request)
 {
     var result = request.ToDomain();
     if (result.IsFailure) return BadRequest(result.Error);
 
-    var product = result.Value;
-    await _repository.AddAsync(product);
+    await _repository.AddAsync(result.Value);
     await _repository.SaveChangesAsync();
-
-    return CreatedAtAction(nameof(Get), new { id = product.Id }, product.ToDto());
+    return CreatedAtAction(nameof(Get), new { id = result.Value.Id }, result.Value.ToDto());
 }
 
-// ❌ Bad: Exposing domain model
+// ❌ Bad: Domain in API
 [HttpPost]
-public async Task<ActionResult<Product>> Create(Product product) { // Domain in API
-    await _repository.AddAsync(product);
+public async Task<ActionResult<Product>> Create(Product product) {
     return Ok(product);
 }
-
-// ❌ Bad: Inline mapping
-[HttpPost]
-public async Task<IActionResult> Create(CreateRequest req) {
-    var product = new Product { Name = req.Name }; // Direct instantiation
-    return Ok(new ProductDto { Id = product.Id }); // Inline mapping
-}
 ```
 
-**DTO Security:**
+**Security:** DTOs prevent over-posting attacks. Domain controls privileged fields.
+
 ```csharp
-// ❌ Bad: Over-posting attack
-public class User {
-    public string Name { get; set; }
-    public bool IsAdmin { get; set; } // Client can set this
-}
-
-[HttpPost]
-public async Task<IActionResult> Create(User user) { // Dangerous
-    await _repo.AddAsync(user);
-    return Ok();
-}
-
-// ✅ Good: Request DTO only exposes safe fields
+// ✅ Good: Safe DTO
 public record CreateUserRequest(string Name);
 
-[HttpPost]
-public async Task<ActionResult<UserDto>> Create(CreateUserRequest request) {
-    var result = User.Create(request.Name); // IsAdmin controlled by domain
-    if (result.IsFailure) return BadRequest(result.Error);
-
-    await _repo.AddAsync(result.Value);
-    await _repo.SaveChangesAsync();
-    return Ok(result.Value.ToDto());
-}
+// Domain controls IsAdmin, not client
+var result = User.Create(request.Name);
 ```
 
-**DTO Pagination:**
+**Pagination:**
 ```csharp
-// ✅ Good: Query DTO and paginated response
 public record ProductQuery(string? SearchTerm, int PageNumber = 1, int PageSize = 20);
 public record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
-
-[HttpGet]
-public async Task<ActionResult<PagedResult<ProductDto>>> GetAll([FromQuery] ProductQuery query)
-{
-    var (products, total) = await _repo.GetPagedAsync(
-        query.SearchTerm, query.PageNumber, query.PageSize);
-
-    var dtos = products.Select(p => p.ToDto()).ToList();
-    return Ok(new PagedResult<ProductDto>(dtos, total, query.PageNumber, query.PageSize));
-}
 ```
 
-## 7. Structured Logging with Serilog
+## 7. Structured Logging
 
-**Configure Serilog for structured, queryable logs.**
+Use Serilog with structured properties (not string interpolation) for queryable logs.
 
 ```csharp
-// Program.cs - Configure Serilog
-using Serilog;
-using Serilog.Events;
+// Program.cs
+builder.Host.UseSerilog((context, config) => config
+    .MinimumLevel.Information()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/app-.log", rollingInterval: RollingInterval.Day));
 
-builder.Host.UseSerilog((context, configuration) =>
-{
-    configuration
-        .MinimumLevel.Information()
-        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-        .Enrich.FromLogContext()
-        .Enrich.WithMachineName()
-        .Enrich.WithEnvironmentName()
-        .WriteTo.Console(outputTemplate:
-            "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File(
-            "logs/app-.log",
-            rollingInterval: RollingInterval.Day,
-            outputTemplate:
-                "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+// ✅ Good: Structured properties
+_logger.LogInformation(
+    "Creating product {ProductName} with price {Price}",
+    request.Name, request.Price);
 
-    if (context.HostingEnvironment.IsProduction())
-    {
-        configuration.WriteTo.Seq("http://seq:5341"); // Centralized logging
-    }
-});
-
-// ✅ Good: Structured logging with properties
-public class ProductService
-{
-    private readonly ILogger<ProductService> _logger;
-
-    public async Task<Result<Product>> CreateAsync(CreateProductRequest request)
-    {
-        _logger.LogInformation(
-            "Creating product {ProductName} with price {Price} {Currency}",
-            request.Name, request.Price, request.Currency);
-
-        var result = request.ToDomain();
-        if (result.IsFailure)
-        {
-            _logger.LogWarning(
-                "Product creation failed: {Error}",
-                result.Error);
-            return result;
-        }
-
-        var product = result.Value;
-        _logger.LogInformation("Product {ProductId} created successfully", product.Id);
-
-        return Result.Success(product);
-    }
-}
-
-// ❌ Bad: String interpolation loses structure
-_logger.LogInformation($"Creating product {request.Name}"); // Not queryable
+// ❌ Bad: String interpolation
+_logger.LogInformation($"Creating product {request.Name}");
 ```
 
 ## Common Mistakes
