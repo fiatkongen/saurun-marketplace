@@ -9,7 +9,7 @@
     {
       "name": "saurun",
       "description": "Personal Claude Code skills, commands, and agents - codex-bridge, plan-fixer, and more",
-      "version": "1.0.18",
+      "version": "1.0.19",
       "source": "./plugins/saurun"
     }
   ]
