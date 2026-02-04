@@ -244,13 +244,4 @@ BEFORE creating WebApplicationFactory in a test class:
 | Getter/setter tests | "What bug would this catch?" | Test behavior that uses the property |
 | Duplicate factory | "Does shared factory exist?" | Single `CustomWebApplicationFactory` + `IClassFixture` |
 
-## Red Flags
-
-- Assertions check `Received()` instead of outcomes
-- Methods only called in test files
-- Mock setup is >50% of test code
-- Can't explain why mock is needed
-- Mocking "just to be safe"
-- Test named `CanSet*`, `HasInitialized*`, `IsNullable*`
-- `new WebApplicationFactory<Program>()` copy-pasted across files
-- Mocking domain entities or value objects
+**Red Flags:** See SKILL.md Red Flags section for the complete list.

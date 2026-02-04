@@ -234,6 +234,8 @@ BEFORE testing store directly:
 
 ## Red Flags
 
+These flags indicate test quality anti-pattern symptoms (what's wrong with the test). For TDD discipline violations (process problems), see SKILL.md Red Flags.
+
 - `vi.mock` on stores, components, or hooks
 - Assertions on `className`, `style`, or CSS variables
 - Tests with zero `expect()` calls

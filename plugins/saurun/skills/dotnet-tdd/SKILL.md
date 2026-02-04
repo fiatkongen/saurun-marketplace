@@ -1,6 +1,6 @@
 ---
 name: dotnet-tdd
-description: Use when implementing ASP.NET Core + EF Core features or bugfixes with xUnit tests, before writing implementation code.
+description: Use when implementing ASP.NET Core + EF Core features or bugfixes with xUnit + NSubstitute tests, before writing implementation code.
 ---
 
 # .NET Test-Driven Development (TDD)
@@ -57,6 +57,7 @@ Write code before the test? Delete it. Start over.
 **NEVER mock:** Domain entities, value objects, pure functions, domain services with no I/O.
 
 **Use NSubstitute** for all mocking. Not Moq, not FakeItEasy.
+NSubstitute has cleaner syntax without lambda expressions for setup, and avoids Moq's SponsorLink controversy.
 
 ```csharp
 // OK: mocking infrastructure
@@ -80,7 +81,8 @@ var item = new ShoppingItem("Milk", Category.Dairy); // YES.
 
 **No assertion-less tests:** A test with zero assertions is always a bug. It passes silently and catches nothing.
 
-<Bad>
+### BAD: Testing language features
+
 ```csharp
 [Fact]
 public void CanSetProperties()
@@ -91,7 +93,6 @@ public void CanSetProperties()
 }
 ```
 Tests language feature, not behavior. Would never catch a bug.
-</Bad>
 
 ## Red-Green-Refactor
 
@@ -138,6 +139,14 @@ public async Task AddItem_WithValidName_AddsItemToList()
 
 Write simplest code to pass. Don't add features, refactor, or "improve" beyond the test.
 
+```csharp
+// Just enough to make AddItem_WithValidName_AddsItemToList pass:
+public void AddItem(string name, Category category)
+{
+    _items.Add(new ShoppingItem(name, category));
+}
+```
+
 ### REFACTOR
 
 After green only: remove duplication, improve names, extract helpers. Keep all tests green.
@@ -155,6 +164,14 @@ Examples: `AddItem_WithEmptyName_ThrowsArgumentException`, `GetNearbyStores_With
 **Max 3 assertions per test.** More than 3? Split. Use `[Theory]` + `[InlineData]` for parameterized tests.
 
 **Single logical assertion is fine even with multiple Assert calls** (e.g., checking name + category of one added item).
+
+## Test Project Structure
+
+```
+Unit tests: tests/{Project}.Tests/Unit/
+Integration tests: tests/{Project}.Tests/Integration/
+Shared fixtures: tests/{Project}.Tests/Infrastructure/
+```
 
 ## Shared Test Infrastructure
 
@@ -175,6 +192,7 @@ Create ONE shared `CustomWebApplicationFactory` for integration tests. Use SQLit
 | "Need to explore first" | Fine. Throw away exploration, start with TDD. |
 | "Test hard = design unclear" | Listen to test. Hard to test = hard to use. |
 | "TDD will slow me down" | TDD faster than debugging. Pragmatic = test-first. |
+| "The existing codebase has no tests" | That's exactly why you start now. Every new feature gets TDD. Don't inherit technical debt as an excuse. |
 
 ## Red Flags - STOP and Start Over
 

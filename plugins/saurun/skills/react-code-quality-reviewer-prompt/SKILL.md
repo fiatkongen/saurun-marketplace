@@ -15,11 +15,27 @@ Prompt template for dispatching a React code quality review subagent. Core princ
 - When you want to validate test quality beyond basic coverage (behavioral testing, structure, mock boundaries)
 - As the second review pass in a two-pass workflow: spec compliance first, then code quality
 
+Implementers should follow `saurun:react-tdd` to proactively prevent the anti-patterns this reviewer flags.
+
 ## When NOT to Use
 
 - For non-React code — the checklist is React/Vitest/RTL-specific
 - As the first review of a task — run a spec compliance review first to confirm requirements are met
 - For general architecture or design reviews without implementation code to inspect
+
+## Quick Reference
+
+| Section | Focus |
+|---------|-------|
+| Behavioral Testing | Tests catch bugs, not verify structure |
+| Test Structure | Max 3 assertions, naming, Theory usage |
+| Test Infrastructure | RTL render wrapper, MSW handlers |
+| Mock Boundaries | MSW for HTTP only, real Zustand stores |
+| Coverage | Edge cases, error paths, happy+failure |
+| React 19 | useTransition, Suspense, Server Components |
+| Tailwind v4 | CSS-first config, new syntax |
+| Zustand | Real stores, subscription patterns |
+| Accessibility | ARIA, keyboard nav, screen readers |
 
 ## Required Dependency
 
@@ -81,7 +97,7 @@ Task tool (superpowers:code-reviewer):
 
     ### Test Infrastructure
     - [ ] Shared custom render wrapper used (not inline provider wrapping per test)
-    - [ ] Zustand stores reset in `beforeEach` using real store actions (not `setState` for reset)
+    - [ ] Zustand stores reset in `beforeEach` using the store's designated reset action or `useStore.setState(initialState)` — do NOT use `setState` with test values then assert those same values
     - [ ] No test-only props or exports in production components (no `data-testid` when accessible queries work)
     - [ ] MSW `setupServer` in shared setup file, not duplicated per test
     - [ ] `vitest.setup.ts` configures MSW lifecycle (`beforeAll/afterEach/afterAll`)
@@ -101,12 +117,14 @@ Task tool (superpowers:code-reviewer):
     - [ ] All new components/hooks have at least one test
     - [ ] Happy path + at least one failure path per user flow
 
+    <!-- Review these sections when React 19 / Tailwind v4 are no longer the latest major versions -->
     ### React 19 Specifics
     - [ ] `useFormStatus` used correctly (only in child of `<form action>`)
     - [ ] `use()` for promises/context used in render (not in callbacks/effects)
     - [ ] Server Actions properly handled (if applicable)
     - [ ] `useOptimistic` used for optimistic UI updates (if applicable)
 
+    <!-- Review these sections when React 19 / Tailwind v4 are no longer the latest major versions -->
     ### Tailwind v4 Compliance
     - [ ] No v3 CSS variable syntax: `[--var]` → must be `(--var)`
     - [ ] Renamed utilities correct: `shadow`→`shadow-sm`, `rounded`→`rounded-sm`, `blur`→`blur-sm`

@@ -1,6 +1,6 @@
 ---
 name: react-implementer-prompt
-description: Use when dispatching a React frontend subagent from an implementation plan — covers TDD with Vitest/RTL/MSW, Zustand stores, and Tailwind v4 component tasks
+description: Use when dispatching a React frontend subagent from an implementation plan with React 19, Vitest/RTL/MSW, Zustand, and Tailwind v4
 ---
 
 # React Implementer Subagent Prompt Template
@@ -15,7 +15,7 @@ A fill-in prompt template for dispatching React implementer subagents. Ensures e
 
 - Dispatching a subagent for a React frontend implementation task from a plan
 - Breaking an implementation plan into parallelizable units of work
-- Any task requiring TDD, self-review, and structured reporting
+- Any React frontend task requiring TDD, self-review, and structured reporting
 
 ## When NOT to Use
 
@@ -78,11 +78,7 @@ Task tool (saurun:frontend-implementer):
 
     ## TDD Workflow
 
-    **REQUIRED SUB-SKILL:** Follow saurun:react-tdd for the full Red-Green-Refactor cycle.
-    - Write test FIRST, watch it fail, write minimal code, watch it pass, refactor, commit.
-    - Mock API boundaries with MSW. NEVER mock Zustand stores, components, or hooks.
-    - Use `it('should [behavior] when [condition]')` naming.
-    - Max 3 assertions per test. Use `it.each` for parameterized cases.
+    **REQUIRED SUB-SKILL:** Follow saurun:react-tdd for the full Red-Green-Refactor cycle. No shortcuts, no skipping steps.
 
     ## Before Reporting Back: Self-Review
 
@@ -113,7 +109,7 @@ Task tool (saurun:frontend-implementer):
     **Tailwind v4:**
     - Did I use parentheses for CSS variables: `bg-(--var)` not `bg-[--var]`?
     - Did I use v4 utility names: `shadow-sm` not `shadow`, `rounded-sm` not `rounded`?
-    - Did I use `cn()` for class merging?
+    - Did I use `cn()` from project utils (typically `lib/utils.ts` in shadcn/ui projects) for class merging?
 
     If you find issues during self-review, fix them now before reporting.
 

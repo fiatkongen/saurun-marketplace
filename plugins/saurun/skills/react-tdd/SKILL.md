@@ -1,6 +1,6 @@
 ---
 name: react-tdd
-description: Use when implementing React 19 + Vite + TypeScript features or bugfixes with Vitest + React Testing Library tests, before writing implementation code.
+description: Use when implementing React + Vite + TypeScript features or bugfixes with Vitest + React Testing Library tests, before writing implementation code.
 ---
 
 # React Test-Driven Development (TDD)
@@ -100,7 +100,7 @@ vi.mock('./CartItem') // NO. Render real component.
 | `should show empty state when cart has no items` | Empty cart renders product list instead of empty message |
 | `should update total when quantity changes` | Total doesn't recalculate on quantity change |
 
-If you can't fill the "Bug It Catches" column — don't write the test.
+If you can't fill the "Bug It Catches" column — don't write the test. If most rows are low-value, reconsider whether you're testing the right behavioral surface.
 
 ## Red-Green-Refactor
 
@@ -188,70 +188,13 @@ it.each([
 
 ## Custom Render Wrapper
 
-**REQUIRED:** Create ONE shared render wrapper for tests needing providers.
+**REQUIRED:** Create ONE shared render wrapper for tests needing providers. Reset Zustand stores in `beforeEach` — don't mock them.
 
-```tsx
-// src/test/test-utils.tsx
-import { render, type RenderOptions } from '@testing-library/react'
-import { type ReactElement } from 'react'
-import { MemoryRouter } from 'react-router-dom'
-
-function AllProviders({ children }: { children: React.ReactNode }) {
-  return (
-    <MemoryRouter>
-      {children}
-    </MemoryRouter>
-  )
-}
-
-function customRender(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
-  return render(ui, { wrapper: AllProviders, ...options })
-}
-
-export * from '@testing-library/react'
-export { customRender as render }
-```
-
-**For Zustand:** Reset stores in `beforeEach`, don't mock them.
-
-```tsx
-// src/test/setup.ts
-import { beforeEach } from 'vitest'
-import { useCartStore } from '../stores/useCartStore'
-
-beforeEach(() => {
-  useCartStore.getState().clearCart() // Use real store action, not setState
-})
-```
+**REFERENCE:** See references/test-utils-template.tsx for the complete custom render wrapper with providers.
 
 ## MSW Patterns
 
-**Global setup in `vitest.setup.ts`:**
-
-```tsx
-import { beforeAll, afterEach, afterAll } from 'vitest'
-import { server } from './mocks/server'
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
-```
-
-**Per-test overrides for error cases:**
-
-```tsx
-import { server } from '../mocks/server'
-import { http, HttpResponse } from 'msw'
-
-it('should show error when API fails', async () => {
-  server.use(
-    http.get('/api/products/:id', () => HttpResponse.error())
-  )
-  // ...test
-})
-```
-
-**Handler organization:** One `handlers.ts` per API domain, aggregated in `server.ts`.
+**REFERENCE:** See references/msw-patterns.md for MSW setup and per-test override patterns.
 
 ## Self-Review Questions
 
@@ -280,6 +223,8 @@ Before marking any test as done, ask yourself:
 | "Being pragmatic, not dogmatic" | Pragmatic = test-first. Shortcuts = debt. |
 
 ## Red Flags - STOP and Start Over
+
+These flags indicate TDD discipline violations (process problems). For test quality anti-pattern symptoms, see testing-anti-patterns.md Red Flags.
 
 - Code before test / test after implementation
 - Test passes immediately (never saw it fail)

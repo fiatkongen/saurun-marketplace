@@ -1,6 +1,6 @@
 ---
 name: dotnet-code-quality-reviewer-prompt
-description: Use when a .NET implementation task is complete and needs quality-focused code review, especially test quality validation (behavioral tests, assertion counts, mock boundaries, anti-patterns like getter/setter tests)
+description: Use when a .NET/C# implementation task is complete and needs quality-focused code review, especially xUnit test quality (behavioral tests, assertion counts, NSubstitute mock boundaries, anti-patterns like getter/setter tests)
 ---
 
 # .NET Code Quality Reviewer Prompt Template
@@ -23,9 +23,12 @@ Prompt template for dispatching a .NET code quality review subagent. Core princi
 
 ## Required Dependency
 
-**REQUIRED PLUGIN:** `superpowers` -- provides `code-reviewer` agent and `requesting-code-review/code-reviewer.md` base template.
+**REQUIRED PLUGIN:** `superpowers`
 
-The base template handles: git diff inspection, standard review checklist (code quality, architecture, testing, requirements, production readiness), and output format (Strengths, Issues by severity, Recommendations, Assessment with merge verdict). This skill adds .NET test quality criteria via `ADDITIONAL_REVIEW_CRITERIA`.
+- Provides `code-reviewer` agent and `requesting-code-review/code-reviewer.md` base template
+- Base template handles: git diff inspection, standard review checklist (code quality, architecture, testing, requirements, production readiness)
+- Base template output format: Strengths, Issues by severity, Recommendations, Assessment with merge verdict
+- This skill adds .NET test quality criteria via `ADDITIONAL_REVIEW_CRITERIA`
 
 ## Placeholder Variables
 
@@ -47,9 +50,7 @@ The base template handles: git diff inspection, standard review checklist (code 
 
 ## Dispatch Template
 
-**Purpose:** Verify .NET implementation is well-built (clean, tested, maintainable) with special focus on test quality.
-
-**Only dispatch after a spec compliance review passes.** A spec compliance review checks that the implementation meets the plan/requirements. This code quality review checks that the implementation is well-engineered. Run them in order: spec first, quality second.
+Dispatch by calling the Task tool with the `superpowers:code-reviewer` agent, passing these variables:
 
 ```
 Task tool (superpowers:code-reviewer):
@@ -91,6 +92,14 @@ Task tool (superpowers:code-reviewer):
     - [ ] Domain NOT mocked: entities, value objects, pure functions use real instances
     - [ ] NSubstitute used (not Moq, not FakeItEasy) — project convention, adjust if your project differs
     - [ ] Mock setup is <50% of test code
+
+    ### EF Core Patterns
+    - [ ] No N+1 queries — eager load with `.Include()` or use projections (`.Select()`) instead of lazy-loading in loops
+    - [ ] Read-only queries use `.AsNoTracking()` to avoid unnecessary change tracking overhead
+    - [ ] DbContext lifetime is scoped (not singleton/transient) — verify DI registration
+    - [ ] Migrations are clean — no empty migrations, no manual SQL unless justified, migration order matches commit history
+    - [ ] No business logic in migrations — data transforms belong in domain services or one-time scripts
+    - [ ] Queries use server-side evaluation — flag `.ToList()` before `.Where()` or LINQ that forces client evaluation
 
     ### Coverage
     - [ ] Edge cases tested (null, empty, boundary values)
