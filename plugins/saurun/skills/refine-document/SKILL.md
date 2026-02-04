@@ -127,8 +127,15 @@ Report: "Phase 1: Fixed N issues in M iterations"
 ### Phase 2: Codex Cross-Validation
 
 **Setup:**
-```bash
-CODEX_BRIDGE=$(ls -1 "$HOME/.claude/plugins/cache/saurun-marketplace/saurun/"*/skills/codex-bridge/codex-bridge.mjs 2>/dev/null | head -1)
+
+Resolve `CODEX_BRIDGE` path using the Glob tool (NOT bash — `Bash(node:*)` restriction blocks `ls`):
+```
+Glob(pattern="**/saurun/*/skills/codex-bridge/codex-bridge.mjs", path="~/.claude/plugins/cache/saurun-marketplace")
+→ Use the LAST match (highest version number)
+→ Store as CODEX_BRIDGE variable for subsequent node commands
+```
+
+```
 CODEX_TIMEOUT=1200000  # 20 min — MANDATORY, do not shorten
 ```
 
@@ -158,13 +165,16 @@ Report: "Phase 2: Fixed N issues, deferred M to user"
 ```
 
 **Default Codex prompt:**
+
+**CRITICAL: Do NOT embed the full document in the prompt.** Codex truncates long prompts (file-based relay triggers at >7000 chars, and Codex may further truncate file content). Instead, tell Codex the file path and let it read the file directly.
+
 ```bash
-node "$CODEX_BRIDGE" --timeout 1200000 "Review this document for issues that may have been missed.
+node "$CODEX_BRIDGE" --timeout 1200000 "Review the document at [ABSOLUTE_FILE_PATH] for issues that may have been missed.
 
 DOCUMENT TYPE: [file_type]
 MODE: [mode]
 
-LOOK FOR:
+Read the file first, then look for:
 1. Vague instructions (reader must guess intent)
 2. Inconsistent terminology (same concept, different names)
 3. Missing information (referenced but not defined)
@@ -190,12 +200,10 @@ Return JSON array:
 }]
 
 If no issues: []
-
-===== DOCUMENT =====
-[FULL DOCUMENT CONTENT]
-===== END DOCUMENT =====
 " --working-dir "$PROJECT_PATH"
 ```
+
+**Why not embed content?** When the prompt + document > 7000 chars, `codex-bridge.mjs` writes to a temp file and tells Codex to "read .codex-bridge-prompt.txt". But Codex may truncate that file's content (observed: "N tokens truncated"), causing it to review an incomplete document and produce false positives. By giving Codex the real file path, it reads the file directly at full fidelity.
 
 **Codex-fix mode** (when `codex-fix` parameter detected): Add `--full-auto` flag. Codex edits directly. Validate fixes with codex-validator. Revert if invalid.
 
