@@ -1,7 +1,7 @@
 ---
 name: final-polish
 description: Final optimization pass after gap-fixing. Extracts constraints, checks size, verifies structure. Phase 3 of plan-fixer.
-allowed-tools: Read, Edit
+tools: Read, Edit
 ---
 
 # Final Polish Agent

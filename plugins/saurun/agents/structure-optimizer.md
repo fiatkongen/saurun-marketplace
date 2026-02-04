@@ -1,7 +1,7 @@
 ---
 name: structure-optimizer
 description: Convert prose plans to agent-oriented structured format. Phase 0 of plan-fixer. Writes PLAN.md and PLAN.mapping.md files.
-allowed-tools: Read, Write
+tools: Read, Write
 ---
 
 # Structure Optimizer Agent

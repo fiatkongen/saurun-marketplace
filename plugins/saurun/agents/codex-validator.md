@@ -1,7 +1,7 @@
 ---
 name: codex-validator
 description: Validate whether a gap identified by Codex is a genuine completeness gap that needs fixing. Compares against source plan.
-allowed-tools: Read
+tools: Read
 ---
 
 # Codex Validator Agent

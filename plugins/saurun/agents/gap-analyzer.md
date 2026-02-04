@@ -1,7 +1,7 @@
 ---
 name: gap-analyzer
 description: Analyze an implementation plan for completeness gaps from an autonomous agent perspective. Returns structured list of critical gaps found.
-allowed-tools: Read
+tools: Read
 ---
 
 # Gap Analyzer Agent

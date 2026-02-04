@@ -1,7 +1,7 @@
 ---
 name: gap-fixer
 description: Fix a specific completeness gap in an implementation plan by editing the plan directly. Maintains agent-oriented structured format.
-allowed-tools: Read, Edit
+tools: Read, Edit
 ---
 
 # Gap Fixer Agent
