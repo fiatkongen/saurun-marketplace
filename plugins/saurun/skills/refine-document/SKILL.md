@@ -1,6 +1,6 @@
 ---
-name: doc-polisher
-description: Use when user wants to improve, polish, clean up, or fix inconsistencies in a document. Use when user says "polish", "clean up", "make more concise", "fix inconsistencies", or "improve this doc".
+name: refine-document
+description: Use when user wants to improve, polish, clean up, or fix inconsistencies in a document. Use when user says "polish", "refine", "clean up", "make more concise", "fix inconsistencies", or "improve this doc".
 context: fork
 allowed-tools: Task, Read, Write, Edit, Bash(node:*), AskUserQuestion
 user-invocable: true
