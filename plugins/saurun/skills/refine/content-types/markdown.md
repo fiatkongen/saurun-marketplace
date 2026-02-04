@@ -14,7 +14,7 @@
 |------|-------------|----------|--------------|
 | `heading_skip` | Heading level skipped (e.g., h1 -> h3) | Minor | Yes |
 | `orphan_heading` | Heading with no content below it | Major | No |
-| `dead_link` | Internal link to missing section/anchor | Critical | No |
+| `broken_reference` | Internal link to missing section/anchor (extends base `broken_reference` for markdown-specific patterns) | Critical | No |
 | `unclosed_formatting` | Formatting marker without closing pair | Critical | Yes |
 | `mixed_list_markers` | Different markers in the same list | Minor | Yes |
 | `code_block_no_language` | Fenced code block without language tag | Minor | Yes |
@@ -43,9 +43,9 @@ Look for:
 - Heading at end of file with no content after
 - Exception: headings that serve as section dividers by convention (e.g., `## ---`)
 
-### dead_link
+### broken_reference (markdown-specific patterns)
 
-Look for:
+In addition to the base `broken_reference` detection, look for:
 - `[text](#anchor)` where no heading generates that anchor
 - `[text](relative/path.md)` where no such file is referenced elsewhere
 - Anchor format: lowercase, spaces replaced with hyphens, special chars removed
@@ -86,7 +86,7 @@ Look for:
 - Skip `heading_skip` (may be intentional structure)
 - Skip `code_block_no_language` (may be intentional plain text)
 - Skip `mixed_list_markers` (may be intentional visual distinction)
-- Still flag `dead_link` and `unclosed_formatting` (objective errors)
+- Still flag `broken_reference` and `unclosed_formatting` (objective errors)
 
 ## Codex Prompt Extension
 

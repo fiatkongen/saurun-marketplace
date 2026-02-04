@@ -13,7 +13,7 @@
 | Type | Description | Severity | Auto-fixable |
 |------|-------------|----------|--------------|
 | `naming_inconsistency` | Mixed naming conventions (camelCase vs snake_case) | Major | Yes |
-| `stale_comment` | Comment doesn't match the code it describes | Major | No |
+| `stale_comment` | Comment doesn't match the code it describes | Major | No (if unclear whether stale, set auto_fixable=false) |
 | `dead_code` | Unreachable or unused code | Minor | Yes |
 | `missing_type` | No type annotation where expected | Minor | No |
 | `magic_number` | Unexplained numeric literal | Minor | No |

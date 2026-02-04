@@ -1,10 +1,9 @@
 ---
 name: refine
 description: >
-  Use when user wants to improve, polish, clean up, or fix inconsistencies in any text artifact.
-  Use when user says "polish", "refine", "clean up", "make more concise", "fix inconsistencies",
-  "improve this doc", "review this code", "refine config", "refine plan".
-  Supports: markdown, code, plans, configs, and any text file.
+  Use when improving, polishing, cleaning up, or fixing inconsistencies in any text artifact.
+  Use when asked to "polish", "refine", "clean up", "make more concise", "fix inconsistencies",
+  "improve this doc", "review this code", "refine config", or "refine plan".
 context: fork
 allowed-tools: Task, Read, Write, Edit, Bash(node:*), AskUserQuestion, Glob
 user-invocable: true
@@ -20,25 +19,12 @@ Iteratively improve any text artifact through multi-phase review.
 
 ## Phases
 
-```dot
-digraph polish {
-  rankdir=TB;
-  start [label="Read file\nDetect content type & mode" shape=box];
-  p0 [label="Phase 0: Content-Type Resolution\n(load base + type criteria)" shape=box];
-  p1 [label="Phase 1: Self-Review Loop\n(find -> fix -> re-check)" shape=box];
-  p2 [label="Phase 2: Codex Cross-Validation\n(find what Claude missed)" shape=box];
-  p3 [label="Phase 3: User Resolution\n(ambiguities & TODOs)" shape=box];
-  validate [label="Final Validation\n(re-scan for regressions)" shape=box];
-  report [label="Report changes" shape=box];
-
-  start -> p0;
-  p0 -> p1;
-  p1 -> p2;
-  p2 -> p3;
-  p3 -> validate;
-  validate -> report;
-}
-```
+0. **Content-Type Resolution** — detect type, load base + type criteria
+1. **Self-Review Loop** — find issues -> fix -> re-check (max 5 iterations)
+2. **Codex Cross-Validation** — find what Claude missed
+3. **User Resolution** — resolve ambiguities & TODOs via AskUserQuestion
+4. **Final Validation** — re-scan for regressions
+5. **Report** — summarize changes
 
 ## Parameters
 
@@ -52,25 +38,7 @@ Detect from user's request:
 
 ## Issue Categories
 
-Two buckets only:
-
-**Auto-fixable** (no user input needed):
-- Inconsistent terminology (when one term >70% dominant)
-- Redundant content
-- Formatting inconsistency (mixed bullets, heading hierarchy)
-- Broken internal references (when target can be auto-resolved)
-- Trailing whitespace, incomplete lists
-- Inconsistent casing (when authoritative form identifiable)
-
-**Requires user input** (NEVER guess, NEVER fabricate):
-- Vague instructions ("handle appropriately", "configure as needed")
-- Ambiguous scope ("update the configuration" — which one?)
-- Unresolved TODOs/FIXMEs
-- Missing context or definitions
-- Contradictions
-- Inconsistent terminology (when no term >70% dominant)
-
-See `content-types/_base.md` for full universal enumeration. See `content-types/{type}.md` for type-specific issues.
+See `content-types/_base.md` for universal issue types and `content-types/{type}.md` for type-specific issues. The key distinction: **auto-fixable** issues (fix is unambiguous) vs **requires user input** (NEVER guess, NEVER fabricate).
 
 ## Critical Rules
 
@@ -307,6 +275,38 @@ For each issue (sorted by severity):
       "Comment may not match code: '[quote]'"
       Options: ["Update comment", "Remove comment", "Keep as-is"]
 
+    undefined_dependency:
+      "Task depends on undefined resource: '[quote]'"
+      Options: ["Define dependency", "Remove reference", "Keep (resolve later)"]
+
+    missing_files_list:
+      "Task modifies files but doesn't list them: '[quote]'"
+      Options: ["Add file list (describe)", "Keep (resolve later)"]
+
+    unmeasurable_success:
+      "Success criteria can't be objectively measured: '[quote]'"
+      Options: [suggestion, "Rewrite criteria (describe)", "Keep as-is"]
+
+    missing_type:
+      "Missing type annotation: '[quote]'"
+      Options: ["Add type (describe)", "Mark as intentionally untyped", "Keep as-is"]
+
+    missing_required_field:
+      "Required field is missing: '[quote]'"
+      Options: ["Add field with value (describe)", "Remove requirement", "Keep (resolve later)"]
+
+    unused_variable:
+      "Variable defined but never referenced: '[quote]'"
+      Options: ["Remove variable", "Keep (used elsewhere)", "Keep as-is"]
+
+    no_default_value:
+      "Optional field has no default: '[quote]'"
+      Options: ["Add default (describe)", "Keep without default"]
+
+    magic_number:
+      "Unexplained numeric literal: '[quote]'"
+      Options: ["Extract to named constant (describe name)", "Add inline comment", "Keep as-is"]
+
     Apply user's choice via issue-fixer agent
     Record in changes[]
 
@@ -335,6 +335,8 @@ Total: [N] issues fixed (Claude: X, Codex: Y, User: Z)
 ```
 
 Include abbreviated change log: `[phase-iteration-change#] type @ location: before -> after`
+
+See `references/change-log-format.md` for full change entry schema and in-memory structure.
 
 ## Sub-Agents
 
