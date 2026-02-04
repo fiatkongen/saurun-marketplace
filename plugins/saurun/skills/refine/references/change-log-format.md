@@ -36,7 +36,7 @@ Each change is recorded as a JSON object:
 | `phase` | Which phase made this change (1, 2, or 3) |
 | `iteration` | Iteration number within the phase |
 | `timestamp` | When the change was made |
-| `issue_type` | Type from issue-criteria.md enumeration |
+| `issue_type` | Type from issue-criteria enumeration |
 | `location` | Where in the document (line number, section heading) |
 | `action` | Brief description of what was done |
 | `before` | Original text before change |
