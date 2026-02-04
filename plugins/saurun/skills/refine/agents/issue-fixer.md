@@ -61,7 +61,7 @@ For auto-fixable: use `suggestions[0]`. For user-resolved: `user_choice` overrid
 | `unmeasurable_success` | Apply user's revised success criteria. Do NOT invent measurable thresholds. |
 | `missing_type` | Apply user's choice: add type annotation or mark as intentionally untyped. |
 | `missing_required_field` | Apply user's provided value for the required field. Do NOT guess defaults. |
-| `unused_variable` | Remove the unused variable/definition. Verify no cross-file references first. If uncertain, flag to user. |
+| `unused_variable` | Apply user's choice: remove variable or keep. Verify no cross-file references if removing. |
 | `inconsistent_indentation` | Identify dominant indentation style, normalize all to match. |
 | `no_default_value` | Apply user's provided default value. Do NOT invent defaults. |
 
