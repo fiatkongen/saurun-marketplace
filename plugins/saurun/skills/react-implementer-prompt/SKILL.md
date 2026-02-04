@@ -1,6 +1,6 @@
 ---
 name: react-implementer-prompt
-description: Use when breaking a React implementation plan into tasks for subagent execution
+description: Use when dispatching a React frontend subagent from an implementation plan — covers TDD with Vitest/RTL/MSW, Zustand stores, and Tailwind v4 component tasks
 ---
 
 # React Implementer Subagent Prompt Template
@@ -29,6 +29,7 @@ A fill-in prompt template for dispatching React implementer subagents. Ensures e
 - **Vague context** — saying "you know the project" instead of specifying component names, store shape, and existing patterns.
 - **Forgetting working directory** — subagent starts in wrong directory, wastes cycles figuring out project structure.
 - **Saying "mock the store"** — violates `react-tdd` mock boundary rule. Subagent must use real Zustand stores with MSW for API boundaries.
+- **Not specifying expected test failures** — if you know what the RED step should look like, tell the subagent so it can verify.
 - **Omitting dependencies between tasks** — not mentioning that Task 2 depends on types introduced in Task 1.
 
 ## Template

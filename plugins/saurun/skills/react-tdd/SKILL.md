@@ -297,56 +297,7 @@ Before marking any test as done, ask yourself:
 
 ## Testing Anti-Patterns
 
-### CanSetProperties (React equivalent)
-
-```tsx
-// BAD: Tests React rendering, not behavior
-it('renders with correct class', () => {
-  render(<Button variant="primary" />)
-  expect(screen.getByRole('button')).toHaveClass('bg-blue-500')
-})
-```
-
-Tests CSS, not behavior. Delete.
-
-### MockVerifyOnly
-
-```tsx
-// BAD: Tests mock was called, not behavior
-it('calls addItem on click', () => {
-  const mockAdd = vi.fn()
-  vi.mock('../stores/useCartStore', () => ({ useCartStore: () => ({ addItem: mockAdd }) }))
-  render(<AddToCartButton productId="1" />)
-  fireEvent.click(screen.getByRole('button'))
-  expect(mockAdd).toHaveBeenCalledWith(/* ... */) // Testing mock!
-})
-```
-
-Use real store. Assert real state changed.
-
-### Assertionless
-
-```tsx
-// BAD: Passes silently, catches nothing
-it('renders without crashing', () => {
-  render(<CartPage />)
-})
-```
-
-Always has at least one meaningful assertion.
-
-### StatusCodeOnly (API test equivalent)
-
-```tsx
-// BAD: Only checks fetch was called, not result
-it('fetches product', async () => {
-  render(<AddToCartButton productId="1" />)
-  await userEvent.click(screen.getByRole('button'))
-  // No assertion on what happened after fetch!
-})
-```
-
-Assert the UI change or store state after the API call completes.
+**REFERENCE:** See testing-anti-patterns.md for the full list of anti-patterns with examples and gate functions.
 
 ## When Stuck
 

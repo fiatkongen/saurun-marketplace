@@ -43,10 +43,9 @@ The base template handles: git diff inspection, standard review checklist (code 
 - **Applying to non-React code** — checklist is Vitest/RTL/MSW-specific. Will produce false positives on other stacks.
 - **Forgetting placeholder variables** — template breaks if `BASE_SHA`/`HEAD_SHA` are left as placeholders. Get actual SHAs from `git log`.
 - **Missing superpowers plugin** — dispatch targets `superpowers:code-reviewer`. Task tool call fails without it.
+- **MSW/Vitest as universal rule** — checklist assumes MSW + Vitest + RTL. Adjust if your project uses Jest + nock or other test tooling.
 
 ## Dispatch Template
-
-**Purpose:** Verify React implementation is well-built (clean, tested, maintainable) with special focus on test quality.
 
 **Only dispatch after a spec compliance review passes.** A spec compliance review checks that the implementation meets the plan/requirements. This code quality review checks that the implementation is well-engineered. Run them in order: spec first, quality second.
 
@@ -95,6 +94,12 @@ Task tool (superpowers:code-reviewer):
     - [ ] Custom hooks NOT mocked — test through component rendering
     - [ ] `vi.mock` used ONLY for browser APIs (`window.location`, `IntersectionObserver`, timers)
     - [ ] Mock setup is <50% of test code
+
+    ### Coverage
+    - [ ] Edge cases tested (null, undefined, empty arrays, boundary values)
+    - [ ] Error paths tested (API failures, invalid input, not found)
+    - [ ] All new components/hooks have at least one test
+    - [ ] Happy path + at least one failure path per user flow
 
     ### React 19 Specifics
     - [ ] `useFormStatus` used correctly (only in child of `<form action>`)
