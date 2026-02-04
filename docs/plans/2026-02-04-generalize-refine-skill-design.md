@@ -45,7 +45,7 @@ user-invocable: true
 
 ## Skill Structure
 
-```
+```text
 skills/refine/
 ├── SKILL.md                    # Engine — 3-phase loop, content-agnostic
 ├── agents/
@@ -63,25 +63,28 @@ skills/refine/
 └── test-fixtures/
     ├── markdown-fixture.md     # Current test-fixture.md
     ├── code-fixture.ts         # (future)
-    └── plan-fixture.md         # (future)
+    ├── plan-fixture.md         # (future)
+    └── config-fixture.yaml     # (future)
 ```
 
 ## Content-Type Detection
 
 Resolution order:
 
-1. **User explicit** — `/refine plan` or `/refine code` overrides detection
-2. **File extension** — `.md/.mdx` -> markdown, `.ts/.js/.cs/.py/.go/.rs/.java` -> code, `.yaml/.yml/.json/.toml` -> config
-3. **Content heuristics** — `.md` file containing 3+ `<task>` tags at line start (outside code blocks) -> plan
-4. **Fallback** — no match -> `_base.md` only (universal issues, no type-specific)
+1. **User explicit** — `/refine plan` or `/refine code` overrides all detection
+2. **File extension + heuristics** — map extension first, then apply heuristics that can override:
+   - `.md` -> markdown (default), BUT if file contains 3+ `<task>` tags at line start outside code blocks -> plan (overrides markdown)
+   - `.ts/.js/.cs/.py/.go/.rs/.java` -> code
+   - `.yaml/.yml/.json/.toml` -> config
+3. **Fallback** — no match -> `_base.md` only (universal issues, no type-specific)
 
-**Deprecated:** The current `prose` file type is merged into the fallback path (base-only). Plain prose files get universal issue detection without type-specific rules. If prose-specific rules are needed later, add `content-types/prose.md`.
+**Deprecated:** The current `prose` content type is merged into the fallback path (base-only). Plain prose files get universal issue detection without type-specific rules. If prose-specific rules are needed later, add `content-types/prose.md`.
 
 ## Base + Type Inheritance
 
 No runtime merge logic. The engine passes both files as context to the issue-finder agent:
 
-```
+```text
 issue-finder receives:
   1. _base.md content (always)
   2. {detected-type}.md content (if matched)
@@ -94,9 +97,10 @@ Type files follow these explicit rules:
 
 - **CAN** add new issue types not in base (e.g., `heading_skip` for markdown)
 - **CAN** override severity of base issues (e.g., `trailing_whitespace` -> Critical for config files)
-- **CAN** override auto-fixable status of base issues
+- **CAN** override auto-fixable status of base issues (both true->false and false->true, with documented reason)
 - **CANNOT** suppress or remove base issue types entirely — every base issue is always checked
 - Severity escalation (Minor -> Critical) is allowed. Severity reduction (Critical -> Minor) requires a documented reason in the override section.
+- Auto-fixable changes in either direction require a documented reason in the override section.
 
 ## Engine Changes (SKILL.md)
 
@@ -120,20 +124,20 @@ Type files follow these explicit rules:
    - Pass both to all subsequent agent spawns
 
 2. **Agent spawn calls gain criteria parameters:**
-   ```
+   ```text
    Task(subagent_type="general-purpose", prompt=<issue-finder prompt
      + file_path + content_type + mode
-     + base_criteria_content
-     + type_criteria_content>)
+     + base_criteria
+     + type_criteria>)
    ```
 
 3. **Codex prompt becomes templated** — see [Codex Prompt Assembly](#codex-prompt-assembly) below.
 
 4. **Report format:**
-   ```
+   ```text
    File: [name]  Content-Type: [markdown]  Mode: [default]
    ```
-   The redundant `Type` field is removed. `Content-Type` is the single term.
+   The `Type` field is renamed to `Content-Type` for consistency with the new terminology.
 
 ## Codex Prompt Assembly
 
@@ -141,7 +145,7 @@ The engine assembles the Codex prompt from two sources:
 
 **`_base.md` contains a `## Codex Prompt` section** with the universal "LOOK FOR" list:
 
-```
+```text
 LOOK FOR:
 1. Vague instructions (reader must guess intent)
 2. Inconsistent terminology (same concept, different names)
@@ -150,13 +154,14 @@ LOOK FOR:
 5. Unclear scope (ambiguous boundaries)
 6. Broken references (links to non-existent things)
 7. Unresolved placeholders (TODOs, TBDs)
+8. Inconsistent casing (same term in different cases: API vs Api vs api)
 ```
 
 **Each content-type file has a `## Codex Prompt Extension` section** with type-specific items.
 
 **Assembly rule: concatenation.** The engine appends the type extension after the base list:
 
-```
+```text
 LOOK FOR:
 {items from _base.md Codex Prompt section}
 {items from {type}.md Codex Prompt Extension section, numbered continuing from base}
@@ -165,11 +170,13 @@ DO NOT FLAG:
 {standard exclusions from _base.md}
 ```
 
-Type files **extend** the base prompt. They cannot remove base items. If a type needs to suppress a base check, it adds a "DO NOT FLAG" item in its extension instead.
+Type files **extend** the base prompt. They cannot remove base LOOK FOR items from the prompt text. If a type needs Codex to skip a base check, it adds a "DO NOT FLAG" item in its extension — this suppresses the check in the Codex prompt only. The issue-finder agent still applies all base criteria regardless of Codex prompt suppression.
+
+The JSON return format schema (type enum, field definitions, severity values) is appended after DO NOT FLAG. This schema is hardcoded in the engine, not part of the content-type files — it applies universally.
 
 **Assembled example for markdown:**
 
-```
+```text
 LOOK FOR:
 1. Vague instructions (reader must guess intent)
 2. Inconsistent terminology (same concept, different names)
@@ -203,7 +210,7 @@ The current issue-finder has hardcoded sections: "Issue Types and Severity", "Mo
 
 **Current prompt structure (removed sections marked with ~~):**
 
-```
+```text
 ## Input
 - file_path, file_type, mode
 
@@ -220,7 +227,7 @@ The current issue-finder has hardcoded sections: "Issue Types and Severity", "Mo
 
 **New prompt structure:**
 
-```
+```text
 ## Input (expanded)
 - file_path: Path to the file
 - content_type: Detected content type (markdown, code, plan, config, base-only)
@@ -233,7 +240,7 @@ You are given two criteria documents that define what to look for.
 - base_criteria defines universal issue types, severities, auto-fixable rules, and detection patterns
 - type_criteria (if present) adds type-specific issues and may override base severities/auto-fixable rules
 - When type_criteria overrides a base rule, the type-specific version wins
-- Apply mode adjustments from both criteria documents
+- Apply mode adjustments from both criteria documents. If base and type specify conflicting adjustments for the same issue type, type wins.
 
 ## Analysis Protocol
 1. Read the entire file
@@ -251,7 +258,7 @@ You are given two criteria documents that define what to look for.
 
 ### issue-fixer — Strategy Extensions
 
-The current fix strategies table covers document issues. New strategies for code/config/plan types:
+The current fix strategies table covers document issues. New strategies for code/config/plan/markdown types:
 
 | Type | Strategy |
 |------|----------|
@@ -265,6 +272,7 @@ The current fix strategies table covers document issues. New strategies for code
 | type_mismatch | Set auto_fixable=false — user must confirm intended type. |
 | missing_verification | Set auto_fixable=false — user must provide verification steps. |
 | vague_action | Set auto_fixable=false — user must specify concrete action. |
+| inconsistent_casing | Identify correct casing from authoritative source (official name, first usage). Normalize all occurrences. |
 
 Existing document strategies (inconsistent_terminology, redundant_content, etc.) remain unchanged.
 
@@ -293,7 +301,7 @@ Each file follows this standard structure:
 ## Detection
 - Extensions: [list]
 - Heuristics: [description or "None"]
-- Override keyword: [user-facing name]
+- Override keyword: [name the user types after `/refine` to force this content type, e.g., "plan" for `/refine plan`]
 
 ## Issue Types
 
@@ -341,9 +349,9 @@ Universal issues extracted from current `references/issue-criteria.md`:
 - trailing_whitespace (Minor, auto-fixable)
 - incomplete_list (Minor, auto-fixable)
 
-Plus: issue type enum, universal detection patterns, base mode adjustments, base Codex prompt section.
+Plus: issue type enum (including `inconsistent_casing`, which must be added to the formal enum during migration), universal detection patterns, base mode adjustments, base Codex prompt section.
 
-**Note:** `missing_context` is included in both the base criteria and the issue-finder agent input. The current refine-document has an inconsistency where `missing_context` appears in `issue-criteria.md` but not in the issue-finder prompt. This is reconciled during migration — `_base.md` is the single source of truth.
+**Note:** `missing_context` appears in both `issue-criteria.md` and `issue-finder.md`. During migration, `_base.md` becomes the single source of truth for all issue type definitions.
 
 ## Terminology
 
@@ -372,9 +380,10 @@ Migration happens in a single atomic commit. If issues are found post-migration,
 10. Move `references/change-log-format.md` to new location, update any internal references
 11. Move `test-fixture.md` -> `test-fixtures/markdown-fixture.md`
 12. Delete `refine-document/` directory
-13. Update plugin manifest references (plugin.json skill paths)
+13. Delete `references/issue-criteria.md` (superseded by `_base.md` + content-type files)
+14. Update plugin manifest references (plugin.json skill paths)
 
-**Rollback:** Steps 1-12 happen in a single commit. If `refine` has issues, `git revert <commit>` restores `refine-document` exactly.
+**Rollback:** Steps 1-14 happen in a single commit. If `refine` has issues, `git revert <commit>` restores `refine-document` exactly.
 
 ## Testing
 
@@ -390,13 +399,7 @@ Each content type should be validated before the migration is considered complet
 
 ## Extensibility
 
-Adding a new content type requires one file:
-
-1. Create `content-types/{type}.md` following the standard format
-2. Define type-specific issue types, severity, auto-fixable rules
-3. Add detection patterns
-4. Add Codex prompt extension
-5. Done. No engine or agent changes needed.
+Adding a new content type requires creating one file: `content-types/{type}.md` following the standard format (which includes issue types, detection patterns, and Codex prompt extension). No engine or agent changes needed.
 
 ## Future Consideration: plan-fixer Integration
 
