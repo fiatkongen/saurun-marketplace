@@ -18,8 +18,7 @@ import { randomUUID } from 'crypto';
 
 const isWindows = process.platform === 'win32';
 
-// CLI argument length limit (Windows: 8191, use 7000 for safety margin)
-const CLI_ARG_LIMIT = 7000;
+// No CLI argument length limit needed — all prompts delivered via stdin
 
 /**
  * Call Codex CLI with a prompt and return the response
@@ -63,15 +62,12 @@ export async function callCodex(prompt, options = {}) {
     const tempFile = join(tmpdir(), `codex-response-${randomUUID()}.txt`);
     args.push('--output-last-message', tempFile);
 
-    // Use file-based input only for long prompts (exceeds CLI limit)
-    let promptFile = null;
-    if (prompt.length > CLI_ARG_LIMIT) {
-        promptFile = join(workingDir || process.cwd(), '.codex-bridge-prompt.txt');
-        writeFileSync(promptFile, prompt, 'utf8');
-        args.push('Read the instructions in .codex-bridge-prompt.txt and respond accordingly. The file contains the full prompt/task.');
-    } else {
-        args.push(prompt);
-    }
+    // Always use stdin for prompt delivery.
+    // - Bypasses CLI argument length limits (no 7000 char cutoff)
+    // - No temp file relay (avoids Codex wasting tokens on ls/cat to find/read files)
+    // - Prompt arrives directly without agent interpretation or truncation risk
+    // Codex CLI reads from stdin when '-' is passed as the prompt argument.
+    args.push('-');
 
     return new Promise((resolve, reject) => {
         const chunks = [];
@@ -99,6 +95,12 @@ export async function callCodex(prompt, options = {}) {
             });
         }
 
+        // Write prompt to stdin and close it
+        const promptTokenEstimate = Math.ceil(prompt.length / 4);
+        process.stderr.write(`[codex-bridge] prompt: ${prompt.length} chars (~${promptTokenEstimate} tokens), delivery: stdin\n`);
+        proc.stdin.write(prompt);
+        proc.stdin.end();
+
         const timeoutId = setTimeout(() => {
             proc.kill('SIGTERM');
             reject(new Error(`Codex CLI timed out after ${timeout}ms`));
@@ -118,14 +120,11 @@ export async function callCodex(prompt, options = {}) {
             const stdout = Buffer.concat(chunks).toString('utf8');
             const stderr = Buffer.concat(errorChunks).toString('utf8');
 
-            // Cleanup temp files
+            // Cleanup temp response file
             const cleanup = () => {
                 try {
                     if (existsSync(tempFile)) {
                         unlinkSync(tempFile);
-                    }
-                    if (promptFile && existsSync(promptFile)) {
-                        unlinkSync(promptFile);
                     }
                 } catch (e) {
                     // Ignore cleanup errors
@@ -155,6 +154,24 @@ export async function callCodex(prompt, options = {}) {
                         }
                     })
                     .filter(Boolean);
+
+                // Check for truncation in command outputs
+                for (const event of events) {
+                    if (event.type === 'item.completed' && event.item?.type === 'command_execution') {
+                        const output = event.item.aggregated_output || '';
+                        const truncMatch = output.match(/(\d+)\s+tokens?\s+truncated/i);
+                        if (truncMatch) {
+                            process.stderr.write(`[codex-bridge] WARNING: Codex truncated ${truncMatch[1]} tokens from command output: ${event.item.command?.slice(0, 80)}\n`);
+                        }
+                    }
+                }
+
+                // Extract usage stats
+                const turnCompleted = events.find(e => e.type === 'turn.completed');
+                if (turnCompleted?.usage) {
+                    const u = turnCompleted.usage;
+                    process.stderr.write(`[codex-bridge] usage: input=${u.input_tokens}, cached=${u.cached_input_tokens || 0}, output=${u.output_tokens}\n`);
+                }
 
                 // Get response from temp file or parse from events
                 let response = '';

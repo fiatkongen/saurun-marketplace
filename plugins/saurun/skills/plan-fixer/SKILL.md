@@ -428,12 +428,9 @@ This skill uses six sub-agents defined in the `agents/` folder:
 ## Codex Integration
 
 **Setup (run once per session):**
-
-Resolve `CODEX_BRIDGE` path using the Glob tool (NOT bash — `Bash(node:*)` restriction blocks `ls`):
-```
-Glob(pattern="**/saurun/*/skills/codex-bridge/codex-bridge.mjs", path="~/.claude/plugins/cache/saurun-marketplace")
-→ Use the LAST match (highest version number)
-→ Store as CODEX_BRIDGE variable for subsequent node commands
+```bash
+# Find codex-bridge script (marketplace install path)
+CODEX_BRIDGE=$(ls -1 "$HOME/.claude/plugins/cache/saurun-marketplace/saurun/"*/skills/codex-bridge/codex-bridge.mjs 2>/dev/null | head -1)
 ```
 
 **CRITICAL:** Always pass `--working-dir "<project-path>"` so Codex can read project files.
@@ -442,23 +439,17 @@ Glob(pattern="**/saurun/*/skills/codex-bridge/codex-bridge.mjs", path="~/.claude
 
 ### Default Mode: Review Only
 
-**CRITICAL: Do NOT embed file contents in the prompt.** Codex truncates long prompts (observed: "N tokens truncated"), causing it to review incomplete content and produce false positives. Pass file paths and let Codex read them directly.
-
 ```bash
-node "$CODEX_BRIDGE" --timeout 1200000 "Analyze the implementation plan for COMPLETENESS GAPS.
-
-SOURCE PLAN (original): [ABSOLUTE_PATH_TO_SOURCE_PLAN]
-CONVERTED PLAN: [ABSOLUTE_PATH_TO_PLAN_MD]
-
-Read BOTH files first, then analyze.
+node "$CODEX_BRIDGE" --timeout 1200000 "Analyze this implementation plan for COMPLETENESS GAPS.
 
 IMPORTANT CONTEXT:
-This PLAN.md was CONVERTED from the source plan. During conversion:
+This PLAN.md was CONVERTED from a prose source plan. During conversion:
 - Prose was restructured into <task>/<action>/<verify>/<done> format
 - 'Why' explanations were removed (intentional)
 - Requirements, edge cases, and constraints should have been preserved
 
 Your job: Find gaps that would cause an autonomous coding agent to fail.
+You have access to BOTH the converted PLAN.md AND the original source plan.
 
 LOOK FOR:
 1. CONVERSION LOSSES - compare source to PLAN.md:
@@ -481,23 +472,25 @@ Return a JSON array of gaps found:
 [{\"gap\": \"description\", \"severity\": \"critical|minor\", \"location\": \"section\", \"likely_type\": \"conversion_loss|genuine_gap\", \"source_quote\": \"quote from source if conversion_loss\"}]
 
 If no gaps found, return: []
+
+===== SOURCE PLAN (ORIGINAL) =====
+[FULL SOURCE PLAN CONTENT]
+===== END SOURCE PLAN =====
+
+===== PLAN.md (CONVERTED) =====
+[FULL PLAN.md CONTENT]
+===== END PLAN.md =====
 " --working-dir "$PROJECT_PATH"
 ```
 
 ### Codex-Fix Mode: Review AND Fix
 
-**CRITICAL: Do NOT embed file contents in the prompt.** Pass file paths instead.
-
 ```bash
-node "$CODEX_BRIDGE" --timeout 1200000 "Analyze the implementation plan for COMPLETENESS GAPS and FIX them directly.
-
-SOURCE PLAN (original, for reference): [ABSOLUTE_PATH_TO_SOURCE_PLAN]
-PLAN FILE TO EDIT: [ABSOLUTE_PATH_TO_PLAN_MD]
-
-Read BOTH files first, then analyze and fix.
+node "$CODEX_BRIDGE" --timeout 1200000 "Analyze this implementation plan for COMPLETENESS GAPS and FIX them directly.
 
 IMPORTANT CONTEXT:
-This PLAN.md was CONVERTED from the source plan. Content may have been lost.
+This PLAN.md was CONVERTED from a prose source plan. Content may have been lost.
+You have access to BOTH the original source plan AND the converted PLAN.md.
 
 LOOK FOR AND FIX:
 1. CONVERSION LOSSES - compare source to PLAN.md and restore:
@@ -519,6 +512,16 @@ After fixing, return a JSON summary:
 [{\"gap\": \"description\", \"fix\": \"what was added/changed\", \"location\": \"section\", \"type\": \"conversion_loss|genuine_gap\", \"source_quote\": \"original text if restoration\"}]
 
 If no gaps found, return: []
+
+PLAN FILE TO EDIT: [filepath]
+
+===== SOURCE PLAN (ORIGINAL - for reference) =====
+[FULL SOURCE PLAN CONTENT]
+===== END SOURCE PLAN =====
+
+===== PLAN.md (CONVERTED - to be fixed) =====
+[FULL PLAN.md CONTENT]
+===== END PLAN.md =====
 " --full-auto --working-dir "$PROJECT_PATH"
 ```
 

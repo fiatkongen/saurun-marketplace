@@ -166,15 +166,15 @@ Report: "Phase 2: Fixed N issues, deferred M to user"
 
 **Default Codex prompt:**
 
-**CRITICAL: Do NOT embed the full document in the prompt.** Codex truncates long prompts (file-based relay triggers at >7000 chars, and Codex may further truncate file content). Instead, tell Codex the file path and let it read the file directly.
+Embed the full document content directly in the prompt. The codex-bridge delivers all prompts via stdin (no CLI arg limit, no file relay), so Codex receives the complete content without truncation.
 
 ```bash
-node "$CODEX_BRIDGE" --timeout 1200000 "Review the document at [ABSOLUTE_FILE_PATH] for issues that may have been missed.
+node "$CODEX_BRIDGE" --timeout 1200000 "Review this document for issues that may have been missed.
 
 DOCUMENT TYPE: [file_type]
 MODE: [mode]
 
-Read the file first, then look for:
+LOOK FOR:
 1. Vague instructions (reader must guess intent)
 2. Inconsistent terminology (same concept, different names)
 3. Missing information (referenced but not defined)
@@ -200,10 +200,14 @@ Return JSON array:
 }]
 
 If no issues: []
+
+===== DOCUMENT =====
+[FULL DOCUMENT CONTENT]
+===== END DOCUMENT =====
 " --working-dir "$PROJECT_PATH"
 ```
 
-**Why not embed content?** When the prompt + document > 7000 chars, `codex-bridge.mjs` writes to a temp file and tells Codex to "read .codex-bridge-prompt.txt". But Codex may truncate that file's content (observed: "N tokens truncated"), causing it to review an incomplete document and produce false positives. By giving Codex the real file path, it reads the file directly at full fidelity.
+**Debugging:** codex-bridge logs to stderr: prompt size, delivery method, token usage, and any truncation warnings. Check stderr output if findings seem wrong.
 
 **Codex-fix mode** (when `codex-fix` parameter detected): Add `--full-auto` flag. Codex edits directly. Validate fixes with codex-validator. Revert if invalid.
 
