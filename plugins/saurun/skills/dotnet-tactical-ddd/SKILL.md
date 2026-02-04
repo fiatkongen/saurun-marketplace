@@ -1,6 +1,6 @@
 ---
 name: dotnet-tactical-ddd
-description: Use when building .NET backend APIs with business logic, domain rules, invariants to enforce, or projects expanding beyond simple CRUD
+description: Use when building .NET backend APIs with business logic, domain rules, invariants to enforce, or projects expanding beyond simple CRUD. Symptoms - anemic models with public setters, domain logic in controllers, AutoMapper bypassing validation, primitives instead of value objects
 ---
 
 # .NET Tactical Domain-Driven Design
@@ -10,6 +10,8 @@ description: Use when building .NET backend APIs with business logic, domain rul
 **Rich domain models with behavior, not anemic data containers.** Apply tactical DDD patterns to all .NET backend development for maintainable, testable, domain-centric code.
 
 **Core principle:** Domain models encapsulate business rules and invariants. DTOs are immutable data contracts at API boundaries. Manual mapping via extension methods. Never expose domain models in APIs.
+
+**Base classes:** See [base-classes.cs](base-classes.cs) for `Result<T>`, `ValueObject`, `AggregateRoot<T>`, `IDomainEvent` implementations. Copy into your `Domain/` project.
 
 ## 0. The Dependency Rule (Foundation)
 
@@ -72,10 +74,8 @@ Infrastructure → Application → Domain
 
 ## 1. Value Objects
 
-Immutable objects identified by values, not identity. Use for measurements, money, quantities, descriptive characteristics.
-
 ```csharp
-// ✅ Good: Immutable with factory validation
+// ✅ Good: Immutable, private ctor, factory with Result<T>
 public class Money : ValueObject
 {
     public decimal Amount { get; }
@@ -108,12 +108,7 @@ public class Money {
 
 ## 2. Entities & Aggregates
 
-**Entities:** Objects with unique identity. **Aggregates:** Transaction boundaries enforcing invariants.
-
-**Aggregate rules:**
-- Reference other aggregates by ID only (never full entity)
-- Enforce invariants across all child entities
-- Single entry point for modifications
+Aggregate rules: reference other aggregates by ID only, enforce invariants, single entry point for modifications.
 
 ```csharp
 // ✅ Good: Aggregate with behavior and invariants
@@ -124,6 +119,7 @@ public class Order : AggregateRoot<Guid>
     private readonly List<OrderLine> _lines = new();
     public IReadOnlyList<OrderLine> Lines => _lines.AsReadOnly();
 
+    private Order() { } // EF Core
     private Order(Guid id, Guid customerId) : base(id) {
         CustomerId = customerId;
         Status = OrderStatus.Pending;
@@ -134,7 +130,7 @@ public class Order : AggregateRoot<Guid>
             return Result.Failure<Order>("Customer ID required");
 
         var order = new Order(Guid.NewGuid(), customerId);
-        order.AddDomainEvent(new OrderCreatedEvent(order.Id, customerId));
+        order.AddDomainEvent(new OrderCreatedEvent(order.Id, customerId, DateTime.UtcNow));
         return Result.Success(order);
     }
 
@@ -159,7 +155,7 @@ public class Order {
 
 ## 3. Factories
 
-Always use static factory methods returning `Result<T>`. Private constructors prevent invalid state.
+Static factory methods returning `Result<T>`. Private constructors prevent invalid state.
 
 ```csharp
 // ✅ Good: Factory with validation
@@ -194,7 +190,7 @@ public class Product {
 
 ## 4. Repositories
 
-Abstraction per aggregate. Acts like a collection. Use eager loading to avoid N+1 queries.
+One interface per aggregate. Eager load to avoid N+1.
 
 ```csharp
 // ✅ Good: Specific interface per aggregate
@@ -224,7 +220,59 @@ public interface IRepository<T> {
 }
 ```
 
-## 5. Domain Events
+## 5. EF Core Configuration
+
+Private setters and private collections require explicit EF Core configuration. Without this, runtime errors occur.
+
+```csharp
+// Infrastructure/Persistence/Configurations/OrderConfiguration.cs
+public class OrderConfiguration : IEntityTypeConfiguration<Order>
+{
+    public void Configure(EntityTypeBuilder<Order> builder)
+    {
+        builder.HasKey(o => o.Id);
+
+        // Private collection: tell EF about the backing field
+        builder.HasMany(o => o.Lines)
+            .WithOne()
+            .HasForeignKey("OrderId");
+        builder.Navigation(o => o.Lines)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+        // SetField only needed if backing field doesn't follow _camelCase convention:
+        // builder.Metadata.FindNavigation(nameof(Order.Lines))!.SetField("_myCustomField");
+
+        // Value object as owned type (if Order had a TotalPrice property)
+        // builder.OwnsOne(o => o.TotalPrice, p => {
+        //     p.Property(m => m.Amount).HasColumnName("TotalAmount");
+        //     p.Property(m => m.Currency).HasColumnName("TotalCurrency");
+        // });
+
+        // Enum stored as string
+        builder.Property(o => o.Status)
+            .HasConversion<string>();
+    }
+}
+
+// Value object owned type pattern (Money on OrderLine):
+public class OrderLineConfiguration : IEntityTypeConfiguration<OrderLine>
+{
+    public void Configure(EntityTypeBuilder<OrderLine> builder)
+    {
+        builder.OwnsOne(l => l.Price, p => {
+            p.Property(m => m.Amount).HasColumnName("Price");
+            p.Property(m => m.Currency).HasColumnName("PriceCurrency");
+        });
+    }
+}
+```
+
+**EF Core rules:**
+- Private collections need `UsePropertyAccessMode(PropertyAccessMode.Field)` (+ `SetField()` only for non-convention field names)
+- Value objects use `OwnsOne()` - maps to columns in parent table
+- All entities need parameterless `protected` constructor for EF (see base-classes.cs)
+- Register configs: `modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);`
+
+## 6. Domain Events
 
 Immutable records (past tense) decoupling aggregates. Use handlers for cross-aggregate logic.
 
@@ -257,11 +305,9 @@ public class ShipOrder {
 }
 ```
 
-## 6. DTOs at API Boundaries
+## 7. DTOs at API Boundaries
 
-Never expose domain models in controllers. Use immutable records with extension methods for mapping.
-
-**Naming:** `CreateXRequest`, `UpdateXRequest`, `XQuery` (requests) | `XDto` (responses)
+Never expose domain models in controllers. Immutable records + extension methods for mapping.
 
 ```csharp
 // DTOs
@@ -317,53 +363,85 @@ public record ProductQuery(string? SearchTerm, int PageNumber = 1, int PageSize 
 public record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
 ```
 
-## 7. Structured Logging
+## 8. Update/Mutation Pattern
 
-Use Serilog with structured properties (not string interpolation) for queryable logs.
+Entity behavior methods + `UpdateFromRequest` extension method. Never direct property assignment.
 
 ```csharp
-// Program.cs
-builder.Host.UseSerilog((context, config) => config
-    .MinimumLevel.Information()
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/app-.log", rollingInterval: RollingInterval.Day));
+// DTO
+public record UpdateProductRequest(string Name, decimal Price, string Currency);
 
-// ✅ Good: Structured properties
-_logger.LogInformation(
-    "Creating product {ProductName} with price {Price}",
-    request.Name, request.Price);
+// Entity behavior method
+public class Product : AggregateRoot<Guid>
+{
+    // ... existing fields and Create factory ...
 
-// ❌ Bad: String interpolation
-_logger.LogInformation($"Creating product {request.Name}");
+    public Result UpdateName(string name) {
+        if (string.IsNullOrWhiteSpace(name))
+            return Result.Failure("Name required");
+        if (name.Length > 200)
+            return Result.Failure("Name too long");
+        Name = name;
+        AddDomainEvent(new ProductUpdatedEvent(Id, DateTime.UtcNow));
+        return Result.Success();
+    }
+
+    public Result UpdatePrice(Money price) {
+        if (price.Amount <= 0)
+            return Result.Failure("Price must be positive");
+        Price = price;
+        return Result.Success();
+    }
+}
+
+// Extension method orchestrates the update (same ProductMapper class from Section 7)
+public static class ProductMapper
+{
+    // ... existing ToDto, ToDomain ...
+
+    public static Result UpdateFromRequest(this Product product, UpdateProductRequest request)
+    {
+        var nameResult = product.UpdateName(request.Name);
+        if (nameResult.IsFailure) return nameResult;
+
+        var priceResult = Money.Create(request.Price, request.Currency);
+        if (priceResult.IsFailure) return Result.Failure(priceResult.Error);
+
+        return product.UpdatePrice(priceResult.Value);
+    }
+}
+
+// Controller
+[HttpPut("{id:guid}")]
+public async Task<ActionResult<ProductDto>> Update(Guid id, UpdateProductRequest request)
+{
+    var product = await _repository.GetByIdAsync(id);
+    if (product is null) return NotFound();
+
+    var result = product.UpdateFromRequest(request);
+    if (result.IsFailure) return BadRequest(result.Error);
+
+    await _repository.SaveChangesAsync();
+    return Ok(product.ToDto());
+}
 ```
 
-## Common Mistakes
-
-| Mistake | Fix |
-|---------|-----|
-| Public setters on entities | Private setters + behavior methods |
-| Primitives for domain concepts | Value objects (`Money`, `EmailAddress`) |
-| `new Product()` direct instantiation | `Product.Create()` factory method |
-| Throwing exceptions for validation | Return `Result<T>` |
-| Exposing domain models in API | Use DTOs with manual mapping |
-| Inline DTO mapping | Extension methods (`ToDto()`, `ToDomain()`) |
-| Generic `IRepository<T>` | Specific interfaces per aggregate |
-| DbContext in controllers | Repository pattern |
-| Bidirectional navigation | Reference by ID only |
+**Key rules:** Entity owns validation. Extension method orchestrates. Controller handles HTTP concerns only.
 
 ## Red Flags - STOP and Fix
 
-These indicate violation of tactical DDD:
-
-- Public setters on domain entities
-- `decimal` instead of `Money` value object
-- `new Product { Name = ... }` object initializer
-- Domain models in controller parameters/returns
-- Inline DTO mapping in controllers
-- `throw new Exception()` for business rule violations
-- DbContext injected into controllers
-- Full entity references across aggregates
+| Violation | Fix |
+|-----------|-----|
+| Public setters on domain entities | Private setters + behavior methods |
+| `decimal` instead of `Money` | Value objects for domain concepts |
+| `new Product { Name = ... }` initializer | `Product.Create()` factory method |
+| `throw new Exception()` for business rules | Return `Result<T>` |
+| Domain models in controller params/returns | DTOs with manual mapping |
+| Inline DTO mapping in controllers | Extension methods (`ToDto()`, `ToDomain()`) |
+| Generic `IRepository<T>` | Specific interfaces per aggregate |
+| DbContext injected into controllers | Repository pattern |
+| Full entity references across aggregates | Reference by ID only |
+| No EF Core config for private fields | `UsePropertyAccessMode` + `SetField` |
 
 **When you see these: Refactor immediately. These are architectural violations.**
 
@@ -371,15 +449,12 @@ These indicate violation of tactical DDD:
 
 | Excuse | Reality |
 |--------|---------|
-| "It's just a simple bool flag" | Simple fields require encapsulation, behavior methods, domain events |
-| "This is too simple for tactical DDD" | Tactical DDD scales down - simple domains just have fewer patterns |
-| "Time pressure - skip the patterns" | Patterns prevent future bugs. Shortcuts create technical debt. |
+| "Too simple for DDD" / "Just CRUD" | DDD scales down. If uncertain, ask the user — most domains grow complex. |
+| "Time pressure - skip patterns" | Patterns prevent future bugs. Shortcuts create more debt than they save. |
 | "Public setters are standard C#" | In DTOs yes, in domain models no. Encapsulation is non-negotiable. |
 | "AutoMapper is industry standard" | Manual mapping gives control. AutoMapper bypasses factories and validation. |
-| "Just CRUD, no business logic" | If truly just CRUD, user should confirm. Most "simple" domains grow complex. |
-| "PM says 5 minutes, can't do full DDD" | Communicate reality. Bad architecture costs more time later. |
 
-**All of these mean: Apply tactical DDD correctly. These rationalizations lead to anemic domain models.**
+**All of these mean: Apply tactical DDD correctly.**
 
 ## Project Structure
 
@@ -407,27 +482,18 @@ Solution.sln
     └── Extensions/
 ```
 
-## Summary
+## Naming Conventions
 
-**Key Principles:**
-1. **Encapsulation** - Hide state, expose behavior
-2. **Immutability** - Value objects are immutable
-3. **Validation** - Always validate at creation (factories)
-4. **Rich Models** - Behavior in entities, not just data
-5. **Result<T>** - Railway-oriented error handling
-6. **DTO Boundaries** - Never expose domain models
-7. **Manual Mapping** - Extension methods, no AutoMapper
-8. **Aggregate Boundaries** - Reference by ID only
-9. **Specific Repositories** - Not generic, eager load, SaveChanges
-10. **Domain Events** - Decouple aggregates
-
-**Naming Conventions:**
 - Requests: `CreateXRequest`, `UpdateXRequest`, `XQuery`
 - Responses: `XDto`, `XDetailDto`, `XSummaryDto`
 - Domain: `X` (entity), no suffixes
+- Events: `XCreatedEvent`, `XUpdatedEvent` (past tense)
+- Mappers: `XMapper.ToDto()`, `XMapper.ToDomain()`, `XMapper.UpdateFromRequest()`
 
-**Common Patterns:**
-- `CreateProductRequest` → `ToDomain()` → `Product.Create()` → `Result<Product>`
-- `Product` → `ToDto()` → `ProductDto`
-- `UpdateProductRequest` → `UpdateFromRequest()` → `Result`
-- Log with structured properties, not string interpolation
+## Common Flows
+
+```
+Create: CreateProductRequest → ToDomain() → Product.Create() → Result<Product> → AddAsync → SaveChanges
+Read:   GetByIdAsync → product.ToDto() → ProductDto
+Update: GetByIdAsync → product.UpdateFromRequest(request) → Result → SaveChanges
+```
