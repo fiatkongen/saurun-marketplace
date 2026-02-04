@@ -35,7 +35,7 @@ Opacity modifiers work with parentheses syntax:
 
 ### Setting CSS Variables Per Variant
 
-**`theme()` is gone for arbitrary values.** Use `var(--color-*)` directly. Tailwind v4 exposes all theme values as CSS variables: `--color-blue-500`, `--spacing-4`, `--radius-lg`, etc.
+**`theme()` is deprecated.** Use `var(--color-*)` directly. Tailwind v4 exposes all theme values as CSS variables: `--color-blue-500`, `--spacing-4`, `--radius-lg`, etc.
 
 **Option A: data-attribute + CSS (preferred for many variants):**
 
@@ -93,7 +93,7 @@ const variants = cva("base", {
 
 **WRONG — `theme()` in arbitrary properties does not work in v4:**
 ```tsx
-"[--accent:theme(colors.blue.500)]"  // BREAKS — theme() removed for arbitrary values
+"[--accent:theme(colors.blue.500)]"  // BREAKS — use var(--color-blue-500) instead
 ```
 
 ### Renamed Utilities
@@ -106,23 +106,36 @@ const variants = cva("base", {
 | `shadow-sm` | `shadow-xs` | |
 | `rounded` | `rounded-sm` | **Easy to miss — `rounded` looks valid but maps to a different size** |
 | `rounded-sm` | `rounded-xs` | |
-| `blur` | `blur-sm` | |
+| `blur` | `blur-sm` | **Easy to miss** |
 | `blur-sm` | `blur-xs` | |
+| `backdrop-blur` | `backdrop-blur-sm` | |
+| `backdrop-blur-sm` | `backdrop-blur-xs` | |
 | `drop-shadow` | `drop-shadow-sm` | |
 | `drop-shadow-sm` | `drop-shadow-xs` | |
 | `ring` | `ring-3` | Default ring width changed from 3px to 1px |
 | `outline-none` | `outline-hidden` | `outline-none` now actually sets `outline-style: none` |
 
-### Removed Utilities (No Direct Rename)
+### Deprecated Utilities (Avoid in New Code)
+
+| v3 (DEPRECATED) | v4 Replacement |
+|-----------------|----------------|
+| `ring-offset-*` | **Use `outline` + `outline-offset-*`** for ring-with-gap effect |
+| `ring-offset-color-*` | **Use `outline-*` color utilities** |
+| `!text-red-500` (prefix `!`) | `text-red-500!` — important modifier moved to suffix |
+
+`ring-offset-*` still works for backward compatibility but is undocumented in v4. Use `outline` + `outline-offset` for new code.
+
+### Removed Utilities
 
 | v3 (REMOVED) | v4 Replacement |
 |--------------|----------------|
-| `ring-offset-*` | **Use `outline` + `outline-offset-*`** for ring-with-gap effect |
-| `ring-offset-color-*` | **Use `outline-*` color utilities** |
 | `bg-opacity-*` | Opacity modifiers: `bg-black/50` |
 | `text-opacity-*` | Opacity modifiers: `text-black/50` |
+| `ring-opacity-*` | Opacity modifiers: `ring-black/50` |
 
-**`ring-offset-*` is NOT `ring-inset`.** `ring-inset` was a v3 modifier for inset rings. In v4, inset rings/shadows have their own utilities (see below).
+### v3 `ring-inset` → v4 `inset-ring-*`
+
+`ring-inset` was a v3 modifier for inset rings. It is **replaced by `inset-ring-*`** — a dedicated utility namespace in v4 (see below).
 
 ### Inset Shadows and Rings (New in v4)
 
@@ -159,17 +172,20 @@ const variants = cva("base", {
 }
 ```
 
+Use `@theme inline` when your theme variables reference other `var()` values — it inlines the resolved value into utility classes instead of referencing the theme variable, avoiding CSS variable resolution issues. Use plain `@theme` for static values like `--color-brand: oklch(0.7 0.15 200);`.
+
 **v4 auto-generates CSS variables for all theme values.** Use these directly instead of `theme()`:
 
 | Theme value | CSS variable pattern | Example |
 |-------------|---------------------|---------|
 | Colors | `--color-{name}-{shade}` | `var(--color-blue-500)` |
 | Spacing | `--spacing-{value}` | `var(--spacing-4)` |
+| Fonts | `--font-{name}` | `var(--font-sans)` |
 | Radii | `--radius-{size}` | `var(--radius-lg)` |
 | Shadows | `--shadow-{size}` | `var(--shadow-sm)` |
 | Breakpoints | `--breakpoint-{name}` | `var(--breakpoint-xl)` |
 
-**`theme()` still exists** but ONLY for contexts where CSS variables don't work (media queries). Uses new syntax: `theme(--breakpoint-xl)` not `theme(screens.xl)`. **Never use `theme()` in arbitrary values or class strings.**
+**`theme()` is deprecated** but still works for contexts where CSS variables don't work (media queries). Uses new syntax: `theme(--breakpoint-xl)` not `theme(screens.xl)`. **Never use `theme()` in arbitrary values or class strings.**
 
 ### Container Queries (Built-in)
 
@@ -187,6 +203,13 @@ const variants = cva("base", {
 ## Component Patterns
 
 ### Always Use `cn()` for Class Merging
+
+```tsx
+// lib/utils.ts — canonical cn() implementation
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)) }
+```
 
 ```tsx
 import { cn } from "@/lib/utils"
@@ -264,13 +287,22 @@ function Button({ asChild = false, ...props }: ButtonProps) {
 ### Forms: react-hook-form + zod
 
 ```tsx
-const schema = z.object({ email: z.string().email() })
+const schema = z.object({ email: z.string().email(), name: z.string().min(2) })
 type FormData = z.infer<typeof schema>
 
 const form = useForm<FormData>({ resolver: zodResolver(schema) })
-```
 
-Use shadcn `<FormField>` / `<FormItem>` / `<FormControl>` / `<FormMessage>` for consistent field rendering.
+// Compose with shadcn form primitives:
+<Form {...form}>
+  <FormField control={form.control} name="email" render={({ field }) => (
+    <FormItem>
+      <FormLabel>Email</FormLabel>
+      <FormControl><Input placeholder="you@example.com" {...field} /></FormControl>
+      <FormMessage />
+    </FormItem>
+  )} />
+</Form>
+```
 
 ### Loading & Error States
 
@@ -316,7 +348,8 @@ components/
 | `rounded-sm` for subtle rounding | `rounded-xs` — sm shifted to xs in v4 |
 | `rounded` for default rounding | `rounded-sm` — defaults shifted down |
 | `ring` for 3px ring | `ring-3` — default ring width is now 1px |
-| `ring-offset-2` for ring with gap | `outline-2 outline-offset-2` — ring-offset removed |
+| `ring-offset-2` for ring with gap | `outline-2 outline-offset-2` — ring-offset deprecated |
+| `!text-red-500` important prefix | `text-red-500!` — modifier moved to suffix |
 | `shadow-inset` for inner shadow | `inset-shadow-sm` — separate utility namespace in v4 |
 | `outline-none` to hide outline | `outline-hidden` — `outline-none` now sets `outline-style: none` |
 | `` className={`base ${x}`} `` | `className={cn("base", x)}` |
@@ -331,11 +364,12 @@ components/
 **STOP and fix if you see any of these in your output:**
 
 - Square brackets around CSS variables: `[--anything]` → use `(--anything)`
-- `theme()` in arbitrary values or class strings → use `var(--color-*)` directly
+- `theme()` in arbitrary values or class strings → deprecated; use `var(--color-*)` directly
 - `[--var:theme(colors.x.y)]` — doubly wrong: brackets AND theme()
-- `shadow-sm` / `rounded-sm` / `blur-sm` when you mean the SMALLEST size → use `-xs`
-- `shadow` / `rounded` / `blur` as bare utilities → they shifted down, now use `-sm`
-- `ring-offset-*` utilities → removed; use `outline-*` + `outline-offset-*`
+- `shadow-sm` / `rounded-sm` / `blur-sm` / `drop-shadow-sm` when you mean the SMALLEST size → use `-xs`
+- `shadow` / `rounded` / `blur` / `drop-shadow` / `backdrop-blur` as bare utilities → they shifted down, now use `-sm`
+- `ring-offset-*` utilities → deprecated; use `outline-*` + `outline-offset-*`
+- `!text-red-500` (prefix `!`) → `text-red-500!` — important modifier moved to suffix
 - `shadow-inset` → use `inset-shadow-*` (separate namespace in v4)
 - `ring` expecting 3px width → use `ring-3` (default is now 1px)
 - `outline-none` for hiding outlines → use `outline-hidden`
