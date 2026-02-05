@@ -11,6 +11,8 @@ description: >
 
   INPUT FORMAT: Idea string + optional "Preferences: ..." suffix (e.g., "Build X. Preferences: Danish market, mobile-first").
 
+  PROJECT LOCATION: Always ~/repos/playground/{project-name}/. Location-independent — invoke from anywhere.
+
   COMMITMENT: Long-running (30+ min), creates _docs/specs/, _docs/plans/, .god-agent/, modifies CLAUDE.md. Resumable via STATE.md if interrupted.
 user-invocable: true
 argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-first"
@@ -28,25 +30,27 @@ Before anything else:
 
 1. **Parse input.** Extract the idea and any inline preferences (look for "Preferences:" in the input string).
 
-2. **Detect mode.**
-   - `CLAUDE.md` exists in working directory → **Extension Mode** (build in current directory)
-   - No `CLAUDE.md` → **Greenfield Mode** (create new project)
-
-3. **Greenfield project location.** (Greenfield only)
-   - Default location: `~/repos/playground/{project-name}/`
+2. **Derive project path.**
    - Derive `{project-name}` from the idea (kebab-case, e.g., "recipe sharing app" → `recipe-app`)
-   - Create the directory if it doesn't exist
-   - `cd` into it before proceeding
-   - **Never ask the user where to create the project** — use the default location
+   - Target path: `~/repos/playground/{project-name}/`
+   - **Never ask the user where to create the project** — always use this location
 
-4. **Check for resume.** If `.god-agent/STATE.md` exists:
+3. **Detect mode.**
+   - Target folder exists → **Extension Mode** (project already started, extend it)
+   - Target folder does not exist → **Greenfield Mode** (create new project)
+
+4. **Enter project directory.**
+   - Greenfield: Create the directory, then `cd` into it
+   - Extension: `cd` into the existing directory
+
+5. **Check for resume.** If `.god-agent/STATE.md` exists:
    - Read it
    - Find last completed phase
    - Read that phase's output artifact
    - Log `[RESUMED] from Phase {X}` in STATE.md
    - Skip to the next incomplete phase (or sub-position within a phase)
 
-5. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
+6. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
 
    Required skills (verified lazily when each phase first uses them):
    - `superpowers:brainstorming` (Phase 0)
@@ -65,7 +69,7 @@ Before anything else:
    - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`)
    - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`)
 
-6. **Read context layers** (in priority order):
+7. **Read context layers** (in priority order):
 
    | Layer | Source | When |
    |-------|--------|------|
@@ -73,7 +77,7 @@ Before anything else:
    | Project context | `CLAUDE.md`, `_docs/`, `agent-os/` | Extension mode only |
    | Stack defaults | .NET 9, React 19, Tailwind v4, Zustand, SQLite | Always (hardcoded) |
 
-7. **Write initial STATE.md** to `.god-agent/STATE.md` (see STATE.md Protocol below).
+8. **Write initial STATE.md** to `.god-agent/STATE.md` (see STATE.md Protocol below).
 
 ---
 
