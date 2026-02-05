@@ -1,7 +1,7 @@
 ---
 name: god-agent
 description: >
-  Autonomous end-to-end development pipeline. Takes an idea and delivers working, tested, committed code through 6 phases (scaffold → spec → architecture → plans → implementation → e2e testing).
+  Autonomous end-to-end development pipeline. Takes an idea and delivers working, tested, committed code through 8 phases (scaffold → spec → architecture → plans → implementation → integration → e2e testing → design polish).
 
   USE FOR: Greenfield apps, major features requiring both backend + frontend work.
 
@@ -20,9 +20,9 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
-**Version: 1.0.32** — Pre-E2E commit checkpoint
+**Version: 1.0.33** — Visual style integration
 
-> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.32 (pre-E2E commit checkpoint)"
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.33 (visual style integration)"
 
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
@@ -61,6 +61,7 @@ Before anything else:
 
    Required skills (verified lazily when each phase first uses them):
    - `superpowers:brainstorming` (Phase 0)
+   - `ui-ux-pro-max` (Phase 0 — style selection)
    - `saurun:dotnet-tactical-ddd` (Phase 1)
    - `saurun:react-frontend-patterns` (Phase 1)
    - `saurun:dotnet-writing-plans` (Phase 2 — backend)
@@ -72,6 +73,7 @@ Before anything else:
    - `superpowers:finishing-a-development-branch` (Phase 4)
    - `superpowers:verification-before-completion` (Phase 4)
    - `saurun:e2e-test` (Phase 5)
+   - `nanobanana` (Phase 6 — asset generation)
    - `claude-md-management:revise-claude-md` (Post-Completion)
 
    Required agents (Phase 3 implementers — have skills pre-loaded):
@@ -104,7 +106,7 @@ After each phase completes, the **controller** (not the subagent) validates the 
 
 ## Step 2: Execute Phases
 
-Run phases -1 through 5 sequentially. After each phase: update STATE.md, run gate check. If gate fails: re-dispatch with feedback (up to 2 retries). If still failing: log to STATE.md and STOP. Note: Phase 5 is informational and doesn't block completion.
+Run phases -1 through 6 sequentially. After each phase: update STATE.md, run gate check. If gate fails: re-dispatch with feedback (up to 2 retries). If still failing: log to STATE.md and STOP. Note: Phases 5 and 6 are informational and don't block completion.
 
 ---
 
@@ -330,6 +332,18 @@ Q&A LOG TEMPLATE:
 **A:** {answer}
 **Source:** {source}
 
+### 9. Visual Style
+**Q:** What visual style fits this product?
+**A:** {Derived from product context or user input}
+**Source:** {Injected context | Derived from Q1-Q3}
+**Reasoning:** {Why this style fits the product/users}
+
+Style derivation examples:
+- Recipe app for families → "warm friendly approachable"
+- Fintech dashboard → "professional clean data-focused"
+- Kids education → "playful colorful rounded"
+- Luxury spa booking → "elegant minimal soft"
+
 ## Additional Questions
 {Any other questions that arose during brainstorming, with answers and sources}
 
@@ -377,6 +391,41 @@ Approaches considered but not taken, with reasons.
 """)
 ```
 
+**After Phase 0 subagent completes, controller runs style selection:**
+
+```
+# Extension mode check
+If design-system/MASTER.md exists:
+  Log "[STYLE] Reusing existing design system"
+  Skip style generation
+Else:
+  # Extract style keywords from Q&A log
+  Read .god-agent/brainstorm-qa.md
+  Extract Q9 answer → style_keywords
+
+  # If Q9 was derived (not from user input), use product context
+  If style_keywords is generic:
+    Combine: {product_type from Q3} + {industry from Q1} + {users from Q2}
+    → style_keywords
+
+  # Run ui-ux-pro-max
+  Invoke Skill tool: ui-ux-pro-max
+  Run: python3 {skill_path}/scripts/search.py \
+    "{style_keywords}" \
+    --design-system --persist -p "{project_name}"
+
+  # Fallback if derivation fails
+  If ui-ux-pro-max fails or produces empty result:
+    Use default: "modern minimal clean"
+    Log assumption to STATE.md
+
+# Update CLAUDE.md
+Add to CLAUDE.md:
+  ## Visual Style
+  Style: {style_name from MASTER.md}
+  Design System: design-system/MASTER.md
+```
+
 **Gate 0 Checklist:**
 - [ ] Spec file exists at `_docs/specs/{DATE}-{feature}.md`
 - [ ] Section "## Problem" exists and is not empty
@@ -392,8 +441,10 @@ Approaches considered but not taken, with reasons.
 - [ ] Section "## Risks & Mitigations" table has at least 2 rows
 - [ ] No obvious contradictions between In Scope and Out of Scope
 - [ ] Q&A log exists at `.god-agent/brainstorm-qa.md`
-- [ ] Q&A log has answers for all 8 standard questions
+- [ ] Q&A log has answers for all **9** standard questions
 - [ ] Each Q&A entry has a Source field (Injected context | Project context | Stack defaults | Assumption)
+- [ ] `design-system/MASTER.md` exists (greenfield) OR was already present (extension)
+- [ ] CLAUDE.md has `## Visual Style` section
 
 **On failure:** Re-dispatch phase subagent with prompt including:
 "Previous attempt failed Gate 0. Issues: {list unchecked items}. Fix these specific issues."
@@ -616,6 +667,18 @@ Array order is execution order. The .NET + React stack has predictable, near-lin
 Read MANIFEST.json -> plans array defines execution order
 Read architecture doc ONCE (for contract extraction)
 
+# Extract style summary for frontend tasks (read once)
+If design-system/MASTER.md exists:
+  Extract from MASTER.md:
+    - Style name (e.g., "Scandinavian Minimal")
+    - Primary color hex
+    - Secondary/accent color hex
+    - Background color hex
+    - Heading font
+    - Body font
+    - Mood keywords (e.g., "warm, friendly, approachable")
+  Store as style_summary for frontend dispatches
+
 For each plan (in array order):
   Read the plan file, extract all tasks
   For each task:
@@ -627,6 +690,7 @@ For each plan (in array order):
     3. Dispatch IMPLEMENTER subagent (see agent routing below)
        - Use specialized agent: saurun:backend-implementer or saurun:frontend-implementer
        - Provide: task name, extracted contract, file paths, behaviors
+       - For frontend tasks: include style_summary + placeholder convention
        - Skills are pre-loaded by the agent (no skill-loading instructions needed)
        - If implementer asks questions -> answer from Phase 0/1 context
     4. Dispatch REVIEWER subagent (single-pass, combined spec + quality review)
@@ -680,6 +744,12 @@ Task(subagent_type="saurun:frontend-implementer", prompt="""
 
 TASK: {task name from plan}
 
+DESIGN SYSTEM:
+- Style: {style_name}
+- Colors: Primary {primary_hex}, Accent {accent_hex}, Background {bg_hex}
+- Typography: {heading_font} / {body_font}
+- Mood: {mood_keywords}
+
 CONTRACT (from Architecture doc):
 - Component: AddItemForm { listId: string, onItemAdded: (item: ShoppingItemDto) => void }
 - ShoppingItemDto { id, name, category, isChecked, addedAt }
@@ -693,6 +763,13 @@ BEHAVIORS:
 - Submitting valid input calls onItemAdded with new item
 - Empty name shows validation error
 - Displays loading state while submitting
+
+PLACEHOLDER CONVENTION:
+When the design needs images/illustrations, use placeholder elements:
+- Hero images: <div data-asset="hero-{name}" className="bg-gray-200 aspect-video" />
+- Illustrations: <div data-asset="illustration-{name}" className="bg-gray-100 w-64 h-64" />
+- Icons (custom): <span data-asset="icon-{name}" />
+Do NOT spend time sourcing real images. Phase 6 generates all visual assets.
 
 PREVIOUS TASK OUTCOMES: {summary of completed tasks in this plan}
 """)
@@ -826,6 +903,13 @@ Key decisions from Phase 1.
 | Test | Category | Error Summary |
 |------|----------|---------------|
 
+## Generated Assets
+- **Style applied:** {style_name}
+- **Heroes:** {count} generated
+- **Illustrations:** {count} generated
+- **Marketing assets:** OG image, favicon
+- **Manual needed:** {list any that failed}
+
 ## Assumptions Made
 All assumptions from STATE.md Assumptions Log.
 
@@ -899,7 +983,124 @@ URL (if applicable)
 **Update Completion Report:**
 Add E2E results section (see updated template below).
 
-**Note:** This phase is **informational** — it produces valuable artifacts (demo videos, test coverage) but doesn't block pipeline completion. If all tests fail after fix attempts, log the results and continue to Post-Completion.
+**Note:** This phase is **informational** — it produces valuable artifacts (demo videos, test coverage) but doesn't block pipeline completion. If all tests fail after fix attempts, log the results and continue to Phase 6.
+
+---
+
+### Phase 6: Design Polish (Asset Generation)
+
+**Skip if:** Extension mode AND no new UI components were added in Phase 3.
+
+**Runs as:** Controller dispatches design-polish subagent.
+
+**Dispatch subagent:**
+
+```
+Task(subagent_type="general-purpose", prompt="""
+{AUTONOMOUS_PREAMBLE}
+
+You are executing Phase 6 (Design Polish) of the god-agent pipeline.
+
+SKILL TO LOAD: nanobanana (use Skill tool)
+
+INPUTS:
+- Design system: design-system/MASTER.md
+- Product spec: {spec_path}
+- STATE.md: {state contents}
+
+STEPS:
+
+1. **Asset Inventory (Spec-Driven)**
+
+   Analyze the spec to determine needed assets:
+
+   | Asset Type | Source |
+   |------------|--------|
+   | Hero images | Spec "## Solution" + landing page |
+   | Empty states | Spec "## User Flows" — what shows when no data |
+   | Error states | Standard: 404, 500, network error |
+   | Success states | Features that complete actions |
+   | Marketing | OG image (1200x630), favicon (32/192/512px) |
+
+   Write inventory to `_docs/design-polish/asset-inventory.md`
+
+2. **Find Placeholders**
+
+   Search frontend/src/ for data-asset attributes:
+   - Collect all `data-asset="{type}-{name}"` occurrences
+   - Map each to an asset in inventory
+   - Flag any placeholders without matching inventory item
+
+3. **Generate Assets**
+
+   For each asset in inventory:
+   a. Read MASTER.md for style context (colors, mood, aesthetic)
+   b. Construct prompt:
+      "{style_name} aesthetic. {mood_keywords} mood.
+       Colors: {palette}.
+       Generate: {asset_description}.
+       Dimensions: {width}x{height}.
+       Format: PNG transparent (illustrations) / JPG (photos).
+       Context: {product_description} for {target_users}."
+   c. Invoke nanobanana with prompt
+   d. Save to frontend/public/assets/{category}/{filename}
+   e. Verify file exists and has correct dimensions
+   f. Log to _docs/design-polish/generation-log.md
+   g. If fails after 2 retries → mark "manual needed", continue
+
+4. **Wire Assets to Components**
+
+   For each placeholder found in step 2:
+   - Find the generated asset
+   - Replace placeholder div with img tag:
+     <img src="/assets/{category}/{filename}" alt="{description}" className="..." />
+
+   Update index.html:
+   - <meta property="og:image" content="/assets/marketing/og-image.jpg" />
+   - <link rel="icon" href="/assets/icons/favicon-32.png" />
+
+5. **Verify**
+
+   - Run: cd frontend && npx playwright test
+   - Check for remaining placeholders: grep -r "data-asset=" frontend/src/
+   - If E2E fails → debug and fix (up to 2 attempts)
+
+OUTPUT:
+- _docs/design-polish/asset-inventory.md
+- _docs/design-polish/generation-log.md
+- frontend/public/assets/ populated
+- Components updated with real images
+- E2E still passing
+""")
+```
+
+**Asset directory structure:**
+```
+frontend/public/assets/
+├── heroes/
+│   └── landing-hero.jpg
+├── illustrations/
+│   ├── empty-state.png
+│   ├── error-state.png
+│   └── success-state.png
+├── icons/
+│   ├── favicon-32.png
+│   ├── favicon-192.png
+│   └── favicon-512.png
+└── marketing/
+    └── og-image.jpg
+```
+
+**Gate 6 Checklist (informational — doesn't block completion):**
+- [ ] Asset inventory at `_docs/design-polish/asset-inventory.md`
+- [ ] Generation log at `_docs/design-polish/generation-log.md`
+- [ ] All hero images generated (or marked manual)
+- [ ] All illustration assets generated (or marked manual)
+- [ ] OG image + favicon generated
+- [ ] No `data-asset=` placeholders remaining in code
+- [ ] E2E tests still pass
+
+**Update STATE.md:** Phase 6 complete, add asset summary.
 
 ---
 
@@ -944,12 +1145,18 @@ Written to `.god-agent/STATE.md`. Updated after every phase completion AND after
 | 3. Execution | Pending | — | — |
 | 4. Integration | Pending | — | — |
 | 5. E2E Testing | Pending | — | — |
+| 6. Design Polish | Pending | — | — |
 
 ## E2E Summary
 - **Passed:** —
 - **Auto-fixed:** —
 - **Unresolved:** —
 - **Category breakdown:** —
+
+## Asset Generation Summary
+- **Style:** —
+- **Generated:** — assets
+- **Manual needed:** — (list in generation-log.md)
 
 ## Current Position
 - **Phase:** -1
