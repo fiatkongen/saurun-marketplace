@@ -179,3 +179,30 @@ If you catch yourself doing any of these, stop and apply the correct pattern:
 ## Provider Setup
 
 See [references/provider-setup.tsx](references/provider-setup.tsx) for the complete app provider stack.
+
+## E2E Testing Support
+
+**MANDATORY:** All interactive elements MUST have `data-testid` attributes.
+
+Naming convention: `{component}-{element}-{action?}`
+
+Examples:
+```tsx
+<button data-testid="recipe-form-submit">Save</button>
+<input data-testid="recipe-form-title" />
+<div data-testid="recipe-card-{id}">...</div>
+```
+
+For lists/collections, include the ID:
+```tsx
+data-testid="recipe-card-123"
+data-testid="shopping-item-456"
+```
+
+**Interactive elements requiring `data-testid`:**
+- All buttons, links, and clickable elements
+- Form inputs (text, select, checkbox, radio)
+- Cards and list items that can be interacted with
+- Modals, dialogs, and their controls
+- Navigation items
+- Toast notifications and alerts

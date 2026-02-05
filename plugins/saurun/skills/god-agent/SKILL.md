@@ -1,7 +1,7 @@
 ---
 name: god-agent
 description: >
-  Autonomous end-to-end development pipeline. Takes an idea and delivers working, tested, committed code through 5 phases (scaffold → spec → architecture → plans → implementation).
+  Autonomous end-to-end development pipeline. Takes an idea and delivers working, tested, committed code through 6 phases (scaffold → spec → architecture → plans → implementation → e2e testing).
 
   USE FOR: Greenfield apps, major features requiring both backend + frontend work.
 
@@ -20,9 +20,9 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
-**Version: 1.0.30** — Post-completion knowledge capture via revise-claude-md
+**Version: 1.0.31** — E2E testing phase with Playwright and auto-fix
 
-> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.30 (post-completion knowledge capture)"
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.31 (E2E testing phase)"
 
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
@@ -71,6 +71,7 @@ Before anything else:
    - `superpowers:systematic-debugging` (Phase 3)
    - `superpowers:finishing-a-development-branch` (Phase 4)
    - `superpowers:verification-before-completion` (Phase 4)
+   - `saurun:e2e-test` (Phase 5)
    - `claude-md-management:revise-claude-md` (Post-Completion)
 
    Required agents (Phase 3 implementers — have skills pre-loaded):
@@ -103,7 +104,7 @@ After each phase completes, the **controller** (not the subagent) validates the 
 
 ## Step 2: Execute Phases
 
-Run phases -1 through 4 sequentially. After each phase: update STATE.md, run gate check. If gate fails: re-dispatch with feedback (up to 2 retries). If still failing: log to STATE.md and STOP.
+Run phases -1 through 5 sequentially. After each phase: update STATE.md, run gate check. If gate fails: re-dispatch with feedback (up to 2 retries). If still failing: log to STATE.md and STOP. Note: Phase 5 is informational and doesn't block completion.
 
 ---
 
@@ -186,7 +187,37 @@ Run phases -1 through 4 sequentially. After each phase: update STATE.md, run gat
    ```
    ```
 
-4. Git init + initial commit:
+4. Create minimal backend with health endpoint:
+   ```bash
+   cd backend && dotnet new web -n Api
+   ```
+
+   Update `backend/Api/Program.cs`:
+   ```csharp
+   var builder = WebApplication.CreateBuilder(args);
+
+   builder.Services.AddCors(options =>
+   {
+       options.AddDefaultPolicy(policy =>
+           policy.AllowAnyOrigin()
+                 .AllowAnyHeader()
+                 .AllowAnyMethod());
+   });
+
+   var app = builder.Build();
+   app.UseCors();
+
+   app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
+   app.Run();
+   ```
+
+   This provides:
+   - `/health` endpoint for E2E test startup detection
+   - Permissive CORS for dev (Phase 3 will configure properly)
+   - Minimal foundation for Phase 3 backend implementation
+
+5. Git init + initial commit:
    ```bash
    git init
    git add .
@@ -199,6 +230,7 @@ Run phases -1 through 4 sequentially. After each phase: update STATE.md, run gat
 - [ ] Directory `_docs/` exists
 - [ ] File `CLAUDE.md` exists
 - [ ] File `.gitignore` exists
+- [ ] File `backend/Api/Program.cs` exists with `/health` endpoint
 - [ ] Git repo initialized (`.git/` exists)
 - [ ] At least one commit exists (`git log` succeeds)
 
@@ -781,6 +813,19 @@ Key decisions from Phase 1.
 - Backend: X tests, 0 failures
 - Frontend: Y tests, 0 failures
 
+## E2E Test Results
+- **Flows tested:** {n}
+- **Passed:** {n} | **Auto-fixed:** {n} | **Unresolved:** {n}
+- **Demo videos:** [View all](./../e2e-results/videos/)
+- **Full report:** [E2E Report](./../e2e-results/report.md)
+
+### Auto-Fixed Issues
+1. {Test name} — {description} in `{file}:{line}`
+
+### Unresolved Failures
+| Test | Category | Error Summary |
+|------|----------|---------------|
+
 ## Assumptions Made
 All assumptions from STATE.md Assumptions Log.
 
@@ -807,7 +852,48 @@ URL (if applicable)
 **On failure:** Re-dispatch phase subagent with prompt including:
 "Previous attempt failed Gate 4. Issues: {list unchecked items}. Fix these specific issues."
 
-**Write final STATE.md.**
+**Update STATE.md:** Phase 4 complete.
+
+---
+
+### Phase 5: E2E Testing (Informational)
+
+**Runs as:** Controller executes directly (orchestrates the E2E test flow).
+
+**Load skill:** `saurun:e2e-test` via the Skill tool — follow its process.
+
+**Input from prior phases:**
+- Spec file path from STATE.md (Phase 0) — contains User Flows
+- Architecture doc for component paths (Phase 1)
+
+**Steps:**
+1. Load `saurun:e2e-test` skill
+2. Follow the skill's execution flow:
+   - Find spec file, extract User Flows
+   - Generate Playwright test files
+   - Start backend + frontend
+   - Run Playwright tests
+   - Process failures with auto-fix loop (up to 3 attempts per test)
+   - Generate report to `_docs/e2e-results/report.md`
+   - Teardown servers
+
+**Gate 5 Checklist (informational — doesn't block completion):**
+- [ ] E2E test files exist in `frontend/e2e/*.spec.ts`
+- [ ] All User Flows from spec have corresponding test files
+- [ ] Playwright ran successfully (process completed, regardless of test results)
+- [ ] Report exists at `_docs/e2e-results/report.md`
+- [ ] Videos exist for all tests that ran
+- [ ] Fix attempts logged for any failures that were auto-fixed
+- [ ] Unresolved failures have screenshots + traces in `_docs/e2e-results/failures/`
+
+**Update STATE.md:**
+- Add Phase 5 row to Phase Tracker with status (Complete/Partial)
+- Add `## E2E Summary` section with pass/fix/fail counts
+
+**Update Completion Report:**
+Add E2E results section (see updated template below).
+
+**Note:** This phase is **informational** — it produces valuable artifacts (demo videos, test coverage) but doesn't block pipeline completion. If all tests fail after fix attempts, log the results and continue to Post-Completion.
 
 ---
 
@@ -851,6 +937,13 @@ Written to `.god-agent/STATE.md`. Updated after every phase completion AND after
 | 2. Planning | Pending | — | — |
 | 3. Execution | Pending | — | — |
 | 4. Integration | Pending | — | — |
+| 5. E2E Testing | Pending | — | — |
+
+## E2E Summary
+- **Passed:** —
+- **Auto-fixed:** —
+- **Unresolved:** —
+- **Category breakdown:** —
 
 ## Current Position
 - **Phase:** -1

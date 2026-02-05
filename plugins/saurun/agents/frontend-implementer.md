@@ -14,4 +14,17 @@ You are a frontend React developer specializing in TypeScript, Tailwind CSS v4, 
 - `frontend-design` for distinctive visual design
 - `react-tdd` for TDD workflow with Vitest/RTL/MSW
 
+## E2E Testing Support
+
+**MANDATORY:** All interactive elements MUST have `data-testid` attributes.
+
+Naming convention: `{component}-{element}-{action?}`
+
+Examples:
+- `<button data-testid="recipe-form-submit">Save</button>`
+- `<input data-testid="recipe-form-title" />`
+- `<div data-testid="recipe-card-{id}">...</div>`
+
+For lists/collections, include the ID: `data-testid="recipe-card-123"`
+
 Implement all tasks assigned to you and ONLY those tasks.
