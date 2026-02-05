@@ -214,6 +214,11 @@ After each phase completes, the **controller** (not the subagent) validates the 
 - Backend: .NET 9, ASP.NET Core, EF Core 9, SQLite
 - Frontend: React 19, Vite, TypeScript, Tailwind CSS v4, Zustand
 
+## Implementation Status
+<!-- Updated by god-agent after each feature completion -->
+
+*No features implemented yet.*
+
 ## Commands
 
 ### Backend
@@ -237,10 +242,10 @@ cd frontend && npm test
 - [ ] Directory `backend/` exists
 - [ ] Directory `frontend/` exists
 - [ ] Directory `_docs/` exists
-- [ ] File `CLAUDE.md` exists (placeholder OK, populated after Phase 0)
+- [ ] File `CLAUDE.md` exists
 - [ ] File `.gitignore` exists
-- [ ] Git repo initialized (`.git/` directory exists)
-- [ ] At least one commit exists (`git log` returns a commit)
+- [ ] Git repo initialized (`.git/` exists)
+- [ ] At least one commit exists (`git log` succeeds)
 
 **On failure:** Re-dispatch with: `"Gate -1 failed: {unchecked items}. Fix these."`
 
@@ -368,17 +373,19 @@ After subagent completes, controller verifies:
 - [ ] Spec file exists at `_docs/specs/{DATE}-{feature}.md`
 - [ ] Section "## Problem" exists and is not empty
 - [ ] Section "## Solution" exists and is not empty
-- [ ] Section "## Scope" has both "### In Scope" and "### Out of Scope" subsections
+- [ ] Section "## Scope" has "### In Scope" with at least 1 item
+- [ ] Section "## Scope" has "### Out of Scope" with at least 1 item
 - [ ] Section "## Entities" lists at least 1 entity
-- [ ] Section "## User Flows" has at least 1 flow
+- [ ] Section "## User Flows" describes at least 1 flow
 - [ ] Section "## API Surface" exists and is not empty
 - [ ] Section "## Tech Decisions" exists and is not empty
-- [ ] Section "## Decisions & Rationale" has at least 3 entries
+- [ ] Section "## Decisions & Rationale" has at least 3 numbered entries
 - [ ] Section "## Rejected Alternatives" has at least 2 entries with reasoning
 - [ ] Section "## Risks & Mitigations" table has at least 2 rows
-- [ ] No contradictions between In Scope and Out of Scope items
+- [ ] No obvious contradictions between In Scope and Out of Scope
 
-**On failure:** Re-dispatch with: `"Gate 0 failed: {unchecked items}. Fix these."`
+**On failure:** Re-dispatch phase subagent with prompt including:
+"Previous attempt failed Gate 0. Issues: {list unchecked items}. Fix these specific issues."
 
 ---
 
@@ -386,7 +393,7 @@ After subagent completes, controller verifies:
 
 **Purpose:** Turn product spec into concrete technical decisions. Answers **how**, not **what**.
 
-**Runs as:** Subagent via `Task(subagent_type="general-purpose")` with `dotnet-tactical-ddd` + `react-tailwind-v4-components` loaded + autonomous preamble.
+**Runs as:** Subagent via `Task(subagent_type="general-purpose")` with `dotnet-tactical-ddd` + `react-frontend-patterns` loaded + autonomous preamble.
 
 ### Backend Decisions (via dotnet-tactical-ddd)
 
@@ -396,7 +403,7 @@ After subagent completes, controller verifies:
 - Auth strategy, real-time needs (SignalR), API shape
 - Value objects, aggregate boundaries, domain events
 
-### Frontend Decisions (via react-tailwind-v4-components)
+### Frontend Decisions (via react-frontend-patterns)
 
 - Component tree derived from user flows
 - State management: Zustand stores mapped from entities
@@ -435,7 +442,7 @@ STATE: {STATE.md contents}
 
 SKILLS TO LOAD (use Skill tool):
 1. dotnet-tactical-ddd — for backend architecture decisions
-2. react-tailwind-v4-components — for frontend architecture decisions
+2. react-frontend-patterns — for frontend architecture decisions
 
 OUTPUT REQUIREMENTS:
 1. Write architecture doc to _docs/specs/YYYY-MM-DD-{feature}-architecture.md
@@ -472,19 +479,17 @@ SignalR, background jobs, caching, external APIs, etc.
 ### Gate 1 Checklist
 
 - [ ] Architecture doc exists at `_docs/specs/{DATE}-{feature}-architecture.md`
-- [ ] Section "## Entity Model" exists and is not empty
-- [ ] Every entity from the spec is listed in Entity Model
-- [ ] Each entity has a rich/anemic classification
-- [ ] Section "## API Contract" exists with at least 1 endpoint per user flow
-- [ ] Section "## Component Tree" exists with at least 1 page per user flow
+- [ ] Section "## Entity Model" classifies each entity from spec as rich or anemic
+- [ ] Section "## API Contract" has at least 1 endpoint per user flow from spec
+- [ ] Section "## Component Tree" has at least 1 page per user flow
 - [ ] Section "## Data Flow" exists and is not empty
 - [ ] Section "## Infrastructure Decisions" exists
-- [ ] Section "## Test Layer Map" exists as a table
-- [ ] Test Layer Map has an entry for every entity
-- [ ] No misclassification: anemic entities do not have "Domain" test layer
-- [ ] No misclassification: rich entities have "Domain" or "Unit" test layer
+- [ ] Section "## Test Layer Map" has entry for every entity
+- [ ] Rich entities have domain-level tests specified
+- [ ] Anemic entities have integration-level tests specified (not domain)
 
-**On failure:** Re-dispatch with: `"Gate 1 failed: {unchecked items}. Fix these."`
+**On failure:** Re-dispatch phase subagent with prompt including:
+"Previous attempt failed Gate 1. Issues: {list unchecked items}. Fix these specific issues."
 
 ---
 
@@ -588,22 +593,23 @@ Array order is execution order. The .NET + React stack has predictable, near-lin
 
 ### Gate 2 Checklist (per plan)
 
-- [ ] Plan file exists at `_docs/plans/{DATE}-{unit_name}.md`
-- [ ] Every task has explicit file paths (no vague "update the controller")
-- [ ] Every task specifies TDD workflow (test first, then implement)
-- [ ] No getter/setter tests for anemic entities
+- [ ] Plan file exists at expected path
+- [ ] Every task has explicit file paths (`Create:`, `Modify:`, `Test:`)
+- [ ] Every task includes TDD workflow (test first)
+- [ ] No getter/setter tests specified for anemic entities
 - [ ] Test names follow `MethodName_Scenario_Expected` convention
 - [ ] "What bugs do these tests catch?" table exists and has at least 1 row
 
 ### Gate 2 Checklist (MANIFEST.json)
 
-- [ ] File `_docs/plans/MANIFEST.json` exists
-- [ ] `plans` array contains all applicable work units
-- [ ] Plans are in correct execution order (backend plans before frontend plans)
-- [ ] Each plan entry has `id` and `path` fields
-- [ ] Each `path` references an existing file
+- [ ] File exists at `_docs/plans/MANIFEST.json`
+- [ ] Contains `plans` array with at least 1 entry
+- [ ] Each entry has `id` and `path` fields
+- [ ] Plans are in correct execution order (backend before frontend)
+- [ ] All referenced plan files exist
 
-**On failure:** Re-dispatch the failing plan's subagent with: `"Gate 2 failed for {plan_name}: {unchecked items}. Fix these."`
+**On failure:** Re-dispatch the failing plan's subagent with prompt including:
+"Previous attempt failed Gate 2 for {plan_name}. Issues: {list unchecked items}. Fix these specific issues."
 
 ---
 
@@ -663,20 +669,19 @@ For each plan (in order):
 
 | Plan Type | Implementer Skills | Review Criteria Source |
 |-----------|-------------------|------------------------|
-| Backend domain | `dotnet-tdd`, `dotnet-tactical-ddd` | `saurun:dotnet-code-quality-reviewer-prompt` |
-| Backend API | `dotnet-tdd`, `dotnet-tactical-ddd` | `saurun:dotnet-code-quality-reviewer-prompt` |
-| Backend SignalR | `dotnet-tdd` | `saurun:dotnet-code-quality-reviewer-prompt` |
-| Frontend state | `react-tdd`, `react-tailwind-v4-components` | `saurun:react-code-quality-reviewer-prompt` |
-| Frontend pages | `react-tdd`, `react-tailwind-v4-components`, `frontend-design` | `saurun:react-code-quality-reviewer-prompt` |
-| Integration | Both backend + frontend skills | Both criteria templates |
+| Backend domain | `dotnet-tdd`, `dotnet-tactical-ddd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
+| Backend API | `dotnet-tdd`, `dotnet-tactical-ddd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
+| Backend SignalR | `dotnet-tdd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
+| Frontend state | `react-tdd`, `react-tailwind-v4-components` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
+| Frontend pages | `react-tdd`, `react-tailwind-v4-components`, `frontend-design` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
+| Integration | Both backend + frontend skills | Reviewer loads both criteria skills |
 
 **How Quality Criteria Are Used:**
-The skills `saurun:dotnet-code-quality-reviewer-prompt` and `saurun:react-code-quality-reviewer-prompt` are **criteria templates** — not directly invocable reviewers. The god-agent:
-1. Loads the appropriate criteria template skill for the task type
-2. Extracts the `ADDITIONAL_REVIEW_CRITERIA` section
-3. Pastes it into the unified review prompt sent to `superpowers:code-reviewer`
+The skills `saurun:dotnet-code-quality-reviewer-prompt` and `saurun:react-code-quality-reviewer-prompt` are **criteria skills** that the reviewer loads directly. The god-agent:
+1. Dispatches the reviewer with instructions to load the appropriate criteria skill
+2. The reviewer loads the skill via the Skill tool and follows its criteria
 
-This enables a single reviewer dispatch that covers both spec compliance and stack-specific code quality in one pass.
+This enables a single reviewer dispatch that covers both spec compliance and stack-specific code quality in one pass, with the reviewer having direct access to the full criteria skill content.
 
 ### Implementer Dispatch
 
@@ -744,13 +749,17 @@ WHAT WAS IMPLEMENTED:
 
 DIFF: Compare {BASE_SHA}..{HEAD_SHA}
 
-{ADDITIONAL_REVIEW_CRITERIA from the appropriate criteria template skill}
+**Load the appropriate criteria skill for stack-specific review guidance:**
+- Backend tasks: Load `saurun:dotnet-code-quality-reviewer-prompt` via Skill tool
+- Frontend tasks: Load `saurun:react-code-quality-reviewer-prompt` via Skill tool
+
+Follow the ADDITIONAL_REVIEW_CRITERIA from the loaded skill.
 """)
 ```
 
-The `ADDITIONAL_REVIEW_CRITERIA` is loaded from:
-- Backend tasks: `saurun:dotnet-code-quality-reviewer-prompt`
-- Frontend tasks: `saurun:react-code-quality-reviewer-prompt`
+The reviewer loads the appropriate criteria skill directly:
+- Backend tasks: reviewer loads `saurun:dotnet-code-quality-reviewer-prompt`
+- Frontend tasks: reviewer loads `saurun:react-code-quality-reviewer-prompt`
 
 ### Failure Escalation
 
@@ -771,12 +780,11 @@ Still failing after 2 debugging retries → STOP
 ### Gate 3 Checklist
 
 After all plans in MANIFEST.json have been executed:
-- [ ] Every plan in MANIFEST.json has status "Complete" in STATE.md Phase Tracker
-- [ ] Backend tests pass: `dotnet test backend/ --verbosity minimal` returns 0 failures
-- [ ] Frontend tests pass (if frontend exists): `npm test` returns 0 failures
-- [ ] STATE.md Failures table has no unresolved entries (all have Resolution)
-- [ ] Git log contains at least 1 commit per plan executed
-- [ ] Git working tree is clean: `git status --porcelain` returns empty
+- [ ] Every plan in MANIFEST.json has status "Complete" in STATE.md
+- [ ] `dotnet test backend/` passes with 0 failures
+- [ ] `npm test` passes with 0 failures (if frontend exists)
+- [ ] No unresolved entries in STATE.md Failures table
+- [ ] Git working tree is clean (no uncommitted changes)
 
 **On failure:** Identify which plan/task failed, dispatch `superpowers:systematic-debugging` with failure details, then re-run gate.
 
@@ -850,18 +858,19 @@ URL (if applicable)
 
 ### Gate 4 Checklist
 
-- [ ] Backend tests pass: `dotnet test backend/` returns 0 failures
-- [ ] Backend builds: `dotnet build backend/` succeeds
-- [ ] Frontend tests pass (if exists): `npm test` returns 0 failures
-- [ ] Frontend builds (if exists): `npm run build` succeeds
+- [ ] `dotnet test backend/` passes
+- [ ] `dotnet build backend/` succeeds
+- [ ] `npm test` passes (if frontend exists)
+- [ ] `npm run build` succeeds (if frontend exists)
 - [ ] Completion report exists at `_docs/reports/{DATE}-{feature}-report.md`
-- [ ] Completion report has all sections populated (What Was Built, Architecture Decisions, Plans Executed, Test Results, Assumptions Made, Issues Encountered)
-- [ ] STATE.md Failures table has no unresolved entries
-- [ ] Git working tree is clean: `git status --porcelain` returns empty
-- [ ] CLAUDE.md "## Implementation Status" section lists newly implemented features
-- [ ] STATE.md Security Log has no violations (or all violations have Justification)
+- [ ] Completion report has all sections populated
+- [ ] No unresolved failures in STATE.md
+- [ ] Git working tree is clean
+- [ ] CLAUDE.md `## Implementation Status` section lists newly implemented features
+- [ ] No security violations in STATE.md Security Log
 
-**On failure:** Re-dispatch integration subagent with: `"Gate 4 failed: {unchecked items}. Fix these."`
+**On failure:** Re-dispatch phase subagent with prompt including:
+"Previous attempt failed Gate 4. Issues: {list unchecked items}. Fix these specific issues."
 
 ---
 
@@ -873,10 +882,9 @@ URL (if applicable)
 |-------|-------|-------|
 | `superpowers:brainstorming` | superpowers plugin | 0 |
 | `saurun:dotnet-tactical-ddd` | saurun | 1 |
-| `saurun:react-tailwind-v4-components` | saurun | 1 |
+| `saurun:react-frontend-patterns` | saurun | 1 |
+| `saurun:react-tailwind-v4-components` | saurun | 3 |
 | `saurun:dotnet-writing-plans` | saurun | 2 |
-
-> **Note:** Phase 3 skills (`dotnet-tdd`, `react-tdd`, `dotnet-tactical-ddd`, `react-tailwind-v4-components`, `frontend-design`) are pre-loaded by the specialized agents (`saurun:backend-implementer`, `saurun:frontend-implementer`), so they don't need explicit loading in Phase 3 prompts.
 | `saurun:react-writing-plans` | saurun | 2 |
 | `superpowers:subagent-driven-development` | superpowers plugin | 3 |
 | `saurun:dotnet-tdd` | saurun | 3 |
@@ -889,6 +897,8 @@ URL (if applicable)
 | `superpowers:verification-before-completion` | superpowers plugin | 4 |
 | `superpowers:finishing-a-development-branch` | superpowers plugin | 4 |
 | `frontend-design:frontend-design` | frontend-design plugin (Anthropic) | 3 |
+
+> **Note:** Phase 3 skills (`dotnet-tdd`, `react-tdd`, `dotnet-tactical-ddd`, `react-tailwind-v4-components`, `frontend-design`) are pre-loaded by the specialized agents (`saurun:backend-implementer`, `saurun:frontend-implementer`), so they don't need explicit loading in Phase 3 prompts.
 
 ### God-Agent Skill Location
 
@@ -1044,7 +1054,7 @@ USER INPUT: /god-agent "idea" [--context "constraints"]
 ┌──────────────────────────────────────────────────┐
 │  PHASE 1: ARCHITECTURE                           │
 │  Subagent: dotnet-tactical-ddd                   │
-│          + react-tailwind-v4-components          │
+│          + react-frontend-patterns               │
 │          + autonomous preamble                   │
 │                                                  │
 │  Entity model (rich vs anemic)                   │
