@@ -21,6 +21,18 @@ Prompt template for dispatching a .NET code quality review subagent. Core princi
 - As the first review of a task -- run a spec compliance review first to confirm requirements are met before checking code quality
 - For general architecture or design reviews without implementation code to inspect
 
+## Quick Reference
+
+| Section | Focus |
+|---------|-------|
+| Behavioral Testing | Tests catch bugs, not verify structure |
+| Test Structure | Max 3 assertions, naming, Theory/InlineData usage |
+| Test Infrastructure | CustomWebApplicationFactory, IClassFixture, SQLite |
+| Mock Boundaries | NSubstitute for infrastructure only, no domain mocks |
+| EF Core Patterns | N+1 queries, AsNoTracking, DbContext lifetime |
+| Coverage | Edge cases, error paths, happy+failure |
+| Anti-Patterns | CanSetProperties, MockVerifyOnly, DomainMock, etc. |
+
 ## Required Dependency
 
 **REQUIRED PLUGIN:** `superpowers`
@@ -49,6 +61,8 @@ Prompt template for dispatching a .NET code quality review subagent. Core princi
 - **NSubstitute as universal rule** -- checklist mandates NSubstitute as a project convention. Adjust if your project uses Moq or FakeItEasy.
 
 ## Dispatch Template
+
+**Only dispatch after a spec compliance review passes.** A spec compliance review checks that the implementation meets the plan/requirements. This code quality review checks that the implementation is well-engineered. Run them in order: spec first, quality second.
 
 Dispatch by calling the Task tool with the `superpowers:code-reviewer` agent, passing these variables:
 

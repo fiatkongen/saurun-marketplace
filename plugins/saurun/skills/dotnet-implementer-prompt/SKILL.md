@@ -61,7 +61,7 @@ If the task description above is ambiguous or missing acceptance criteria, ask f
 ### 4. Your Job
 
 1. Implement exactly what the task specifies
-2. **REQUIRED:** Follow `saurun:dotnet-tdd` for the full Red-Green-Refactor cycle. No shortcuts, no skipping steps.
+2. **REQUIRED SUB-SKILL:** Follow `saurun:dotnet-tdd` strictly. No exceptions.
 3. Verify implementation works: `dotnet test`
 4. Commit your work
 5. Self-review (see below)
@@ -99,9 +99,57 @@ If you find issues during self-review, fix them now before reporting.
 - Self-review findings (if any)
 - Any issues or concerns
 
+## Template (Quick Copy)
+
+The following shows the prompt structure to pass to the Task tool when dispatching a subagent. This is conceptual prompt structure, not literal tool syntax.
+
+```
+Task tool (saurun:backend-implementer):
+  description: "Implement [task name]"
+  prompt: |
+    You are implementing [task name].
+
+    ## Task Description
+    [PASTE FULL TASK TEXT HERE - subagent cannot read plan files]
+
+    ## Context
+    [Project, bounded context, layer (Domain/Application/Infrastructure/API)]
+    [Existing entities, patterns, handlers to follow]
+    [Inter-task dependencies if any]
+
+    ## Before You Begin
+    If the task description above is ambiguous or missing acceptance criteria,
+    ask for clarification before starting. Otherwise, proceed immediately.
+
+    ## Your Job
+    1. Implement exactly what the task specifies
+    2. **REQUIRED SUB-SKILL:** Follow saurun:dotnet-tdd strictly. No exceptions.
+    3. Verify implementation works: `dotnet test`
+    4. Commit your work
+    5. Self-review (see below)
+    6. Report back
+
+    Work from: [absolute path to backend root]
+
+    While you work: if you encounter something unexpected or unclear, ask
+    questions. Don't guess or make assumptions.
+
+    ## Before Reporting Back: Self-Review
+    [Include full self-review checklist from guide]
+
+    ## Report Format
+    - What you implemented
+    - What you tested and test results
+    - Files changed
+    - Self-review findings (if any)
+    - Any issues or concerns
+```
+
 ## Concrete Example
 
 Below is a fully filled-in dispatch prompt for a realistic .NET task. Use this as your model.
+
+The following shows the prompt structure to pass to the Task tool when dispatching a subagent. This is conceptual prompt structure, not literal tool syntax.
 
 ```
 Task tool (saurun:backend-implementer):
@@ -140,8 +188,7 @@ Task tool (saurun:backend-implementer):
     ## Your Job
 
     1. Implement exactly what the task specifies
-    2. **REQUIRED:** Follow saurun:dotnet-tdd for the full Red-Green-Refactor
-       cycle. No shortcuts, no skipping steps.
+    2. **REQUIRED SUB-SKILL:** Follow saurun:dotnet-tdd strictly. No exceptions.
     3. Verify implementation works: `dotnet test`
     4. Commit your work
     5. Self-review (see below)

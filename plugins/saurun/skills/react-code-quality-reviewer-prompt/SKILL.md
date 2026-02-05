@@ -28,11 +28,11 @@ Implementers should follow `saurun:react-tdd` to proactively prevent the anti-pa
 | Section | Focus |
 |---------|-------|
 | Behavioral Testing | Tests catch bugs, not verify structure |
-| Test Structure | Max 3 assertions, naming, Theory usage |
+| Test Structure | Max 3 assertions, naming, it.each usage |
 | Test Infrastructure | RTL render wrapper, MSW handlers |
 | Mock Boundaries | MSW for HTTP only, real Zustand stores |
 | Coverage | Edge cases, error paths, happy+failure |
-| React 19 | useTransition, Suspense, Server Components |
+| React 19 | useFormStatus, use(), Server Actions, useOptimistic |
 | Tailwind v4 | CSS-first config, new syntax |
 | Zustand | Real stores, subscription patterns |
 | Accessibility | ARIA, keyboard nav, screen readers |
@@ -64,6 +64,8 @@ The base template handles: git diff inspection, standard review checklist (code 
 ## Dispatch Template
 
 **Only dispatch after a spec compliance review passes.** A spec compliance review checks that the implementation meets the plan/requirements. This code quality review checks that the implementation is well-engineered. Run them in order: spec first, quality second.
+
+Dispatch by calling the Task tool with `superpowers:code-reviewer`, passing these variables:
 
 ```
 Task tool (superpowers:code-reviewer):

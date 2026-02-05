@@ -1,4 +1,6 @@
-// src/test/test-utils.tsx
+// =============================================================================
+// FILE: src/test/test-utils.tsx
+// =============================================================================
 import { render, type RenderOptions } from '@testing-library/react'
 import { type ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
@@ -18,9 +20,9 @@ function customRender(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>
 export * from '@testing-library/react'
 export { customRender as render }
 
-// ---
-// Zustand store reset (src/test/setup.ts):
-//
+// =============================================================================
+// FILE: src/test/setup.ts (or vitest.setup.ts)
+// =============================================================================
 // import { beforeEach } from 'vitest'
 // import { useCartStore } from '../stores/useCartStore'
 //

@@ -34,6 +34,8 @@ A fill-in prompt template for dispatching React implementer subagents. Ensures e
 
 ## Template
 
+The following shows the prompt structure to pass to the Task tool when dispatching a subagent:
+
 ```
 Task tool (saurun:frontend-implementer):
   description: "Implement Task N: [task name]"
