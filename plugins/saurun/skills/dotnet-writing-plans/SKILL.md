@@ -88,13 +88,13 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 - Test: `Tests/Api/ShoppingListEndpointsTests.cs`
 
 **Behaviors:**
-- Valid input → returns created ShoppingItemDto with 201
-- Empty name → returns 400 with validation error
-- Invalid category → returns 400 with validation error
-- List not found → returns 404
+- Valid input → 201 with ShoppingItemDto
+- Validates per Architecture §API Contract
 
 **Dependencies:** Task 2 (ShoppingList entity), Task 4 (DbContext)
 ```
+
+> **Note:** 401/404 for auth/invalid-id are omitted — standard patterns assumed. Validation rules reference architecture, not repeated.
 
 ### Infrastructure Task
 
@@ -134,6 +134,13 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 | Step-by-step TDD instructions | TDD skill handles workflow |
 | Expected failure messages | TDD skill handles verification |
 | "What bugs does this catch?" table | Behaviors implicitly define bug coverage |
+| Validation rules | Architecture §API Contract defines these — just reference it |
+| DTO field lists | Architecture §API Contract defines these — just reference it |
+| Standard auth behaviors (`401 for unauthed`) | Universal pattern — assumed for all `[Authorize]` endpoints |
+| Standard `404 for invalid ID` | Universal pattern — assumed for all `{id}` routes |
+| Mapper descriptions like "maps X to Y" | Obvious from naming convention |
+
+**Token budget:** Plans for autonomous agents, not humans. Every repeated pattern wastes tokens. If architecture defines it, reference it — don't repeat it.
 
 ## Test Infrastructure Task
 
@@ -164,6 +171,11 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 | Missing file paths | Every task MUST list exact Create/Modify/Test paths |
 | Tasks too large (>3 files) | Split into smaller tasks |
 | No test infrastructure in Task 1 | `CustomWebApplicationFactory` + helpers MUST be Task 1 |
+| Repeating validation rules from architecture | Just write `Validates per Architecture §API Contract` |
+| Listing DTO fields | Reference architecture — `AuthResponse per Architecture §DTOs` |
+| Writing "when not authenticated → 401" for every endpoint | Omit — assumed for `[Authorize]` endpoints |
+| Writing "invalid id → 404" for every endpoint | Omit — assumed for `{id}` routes |
+| Describing what mappers do | `CategoryMapper` obviously maps Category → omit |
 
 ## Completion
 

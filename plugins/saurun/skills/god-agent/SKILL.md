@@ -20,9 +20,9 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
-**Version: 1.0.29** — Concise architecture output (no redundancy, method signatures only)
+**Version: 1.0.30** — Post-completion knowledge capture via revise-claude-md
 
-> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.29 (concise architecture output)"
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.30 (post-completion knowledge capture)"
 
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
@@ -71,6 +71,7 @@ Before anything else:
    - `superpowers:systematic-debugging` (Phase 3)
    - `superpowers:finishing-a-development-branch` (Phase 4)
    - `superpowers:verification-before-completion` (Phase 4)
+   - `claude-md-management:revise-claude-md` (Post-Completion)
 
    Required agents (Phase 3 implementers — have skills pre-loaded):
    - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`)
@@ -806,7 +807,25 @@ URL (if applicable)
 **On failure:** Re-dispatch phase subagent with prompt including:
 "Previous attempt failed Gate 4. Issues: {list unchecked items}. Fix these specific issues."
 
-**Write final STATE.md.** Done.
+**Write final STATE.md.**
+
+---
+
+### Post-Completion: Knowledge Capture
+
+After Phase 4 gate passes and STATE.md is finalized, the **controller** runs one final step:
+
+**Invoke skill:** `claude-md-management:revise-claude-md`
+
+This captures learnings from the god-agent session into the project's CLAUDE.md:
+- Patterns that worked well
+- Gotchas encountered during implementation
+- Architecture decisions worth preserving
+- Stack-specific conventions established
+
+This step is **non-blocking** — if it fails, log to STATE.md and continue. The pipeline is considered complete regardless.
+
+**Done.**
 
 ---
 

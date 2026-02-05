@@ -64,79 +64,183 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 
 ## Frontend Task Examples
 
-### Component Task
+### Form Component (validation grouped by field)
 
 ```markdown
-### Task 3: AddItemForm component
+### Task 3: RegisterForm component
 
-**Implements:** AddItemForm (Architecture §Component Tree)
+**Implements:** RegisterForm (Architecture §Components - Auth)
 
 **Files:**
-- Create: `src/components/AddItemForm.tsx`
-- Test: `src/components/__tests__/AddItemForm.test.tsx`
+- Create: `src/components/auth/RegisterForm.tsx`
+- Test: `src/components/auth/__tests__/RegisterForm.test.tsx`
 
 **Behaviors:**
-- Submitting valid input calls onItemAdded with new item
-- Empty name shows validation error
-- Displays loading state while submitting
-- Disables submit button when form invalid
+- Email: required, valid format
+- Password: required, min 8, uppercase + lowercase + digit
+- DisplayName: required, 2-50 chars
+- Valid submit calls onSubmit with RegisterRequest
+- Invalid submit shows field errors
 ```
 
-### Store Task
+### Complex Form (many fields)
 
 ```markdown
-### Task 2: useListStore Zustand store
+### Task 12: RecipeForm component
 
-**Implements:** useListStore (Architecture §Stores)
+**Implements:** RecipeForm (Architecture §Components - Recipe Form)
 
 **Files:**
-- Create: `src/stores/listStore.ts`
-- Test: `src/stores/__tests__/listStore.test.ts`
+- Create: `src/components/recipe-form/RecipeForm.tsx`
+- Test: `src/components/recipe-form/__tests__/RecipeForm.test.tsx`
 
 **Behaviors:**
-- fetchLists populates lists array from API
-- createList adds new list and returns it
-- deleteList removes list from array
-- Handles API errors by setting error state
+- Title: required, 1-200 chars
+- Description: required, 1-2000 chars
+- Servings: required, 1-100
+- PrepTime/CookTime: required, 0-1440 min
+- CategoryId: required, must exist
+- Ingredients: min 1 item (validated by IngredientInput)
+- Steps: min 1 item (validated by StepInput)
+- Populates fields from initialData when editing
+- Valid submit calls onSubmit with CreateRecipeRequest
+
+**Dependencies:** Task 9-11 (form sub-components)
 ```
 
-### Page Task
+### Display Component (concise)
 
 ```markdown
-### Task 5: ListDetailPage
+### Task 5: RecipeCard component
 
-**Implements:** /lists/{id} → ListDetailPage (Architecture §Pages)
+**Implements:** RecipeCard (Architecture §Components - Recipe)
 
 **Files:**
-- Create: `src/pages/ListDetailPage.tsx`
-- Test: `src/pages/__tests__/ListDetailPage.test.tsx`
+- Create: `src/components/recipe/RecipeCard.tsx`
+- Test: `src/components/recipe/__tests__/RecipeCard.test.tsx`
 
 **Behaviors:**
+- Displays image, title, time, and author from RecipeListItemDto
+- Click navigates to /opskrift/{id}
+- Save button calls onSave when authenticated
+```
+
+### Page (concise with edge cases)
+
+```markdown
+### Task 8: RecipeDetailPage
+
+**Implements:** /opskrift/{id} → RecipeDetailPage (Architecture §Pages)
+
+**Files:**
+- Create: `src/pages/RecipeDetailPage.tsx`
+- Test: `src/pages/__tests__/RecipeDetailPage.test.tsx`
+
+**Behaviors:**
+- Fetches and renders RecipeDetail component
+- 404 when recipe not found
+- Owner sees edit/delete buttons
+
+**Dependencies:** Task 6 (RecipeDetail)
+```
+
+### Store (state transitions)
+
+```markdown
+### Task 2: useAuthStore
+
+**Implements:** useAuthStore (Architecture §Stores)
+
+**Files:**
+- Create: `src/stores/authStore.ts`
+- Test: `src/stores/__tests__/authStore.test.ts`
+
+**Behaviors:**
+- login stores user/token and persists to localStorage
+- logout clears state and localStorage
+- isAuthenticated derived from token presence
+```
+
+## Conciseness Rules
+
+**Plans are for autonomous agents, not humans. Every word costs tokens.**
+
+### The Core Rule
+
+**If it needs a test case, it needs a behavior line.**
+
+This distinguishes testable behaviors (KEEP) from implementation details (DELETE).
+
+### What to KEEP (Testable Behaviors)
+
+These become test cases — always include them:
+
+| Category | Examples |
+|----------|----------|
+| **Validation rules** | "Email must be valid format", "Password min 8 chars with uppercase + lowercase + digit" |
+| **Error states** | "API error shows toast", "404 shows not found message" |
+| **User interactions with outcomes** | "Submit calls onSave with form data", "Delete removes item from list" |
+| **Edge cases** | "Empty list shows EmptyState", "Unauthorized redirects to login" |
+| **Business logic** | "Servings adjustment scales ingredient amounts", "Owner sees edit button" |
+
+### What to DELETE (Implementation Details)
+
+These are NOT test cases — never include them:
+
+| Category | Examples |
+|----------|----------|
+| **CSS/styling** | "Applies centered flex layout", "Uses red accent for errors" |
+| **Animation** | "Animates open/close smoothly", "Fades in on mount" |
+| **Standard React patterns** | "Accepts className prop", "Forwards ref" |
+| **Accessibility (unless custom)** | "Button has proper role", "Input has aria-label" |
+| **Generic UX** | "Disables button when loading", "Shows spinner while pending" |
+
+### Form Validation: Group by Field
+
+**List each field's validation constraints on ONE line.** Don't split min/max into separate behaviors.
+
+```markdown
+# ❌ TOO VERBOSE (splits constraints into separate lines)
+**Behaviors:**
+- Title field: required, shows error when empty
+- Title field: max 200 chars, shows error when exceeded
+- Description field: required, shows error when empty
+- Description field: max 2000 chars, shows error when exceeded
+
+# ❌ TOO CONCISE (agent won't know what to test)
+**Behaviors:**
+- Shows validation errors per field requirements
+
+# ✓ CORRECT (one line per field, all constraints grouped)
+**Behaviors:**
+- Title: required, 1-200 chars
+- Description: required, 1-2000 chars
+- Password: required, min 8, uppercase + lowercase + digit
+- Valid submit calls onSubmit with request DTO
+- Invalid submit shows field errors
+```
+
+**Note:** "Shows error when X" is implied — just list the constraint.
+
+### Combining Non-Validation Behaviors
+
+For non-form components, combine related states:
+
+```markdown
+# ❌ VERBOSE
 - Shows loading spinner while fetching
-- Displays list name and items when loaded
-- Shows error message when list not found
-- AddItemForm adds items to the list
+- Displays data when loaded
+- Shows error message on failure
 
-**Dependencies:** Task 2 (useListStore), Task 3 (AddItemForm)
+# ✓ COMBINED
+- Handles loading/error/success states
+- Renders data per architecture DTO
 ```
 
-### API Hook Task
-
-```markdown
-### Task 4: useListQuery hook
-
-**Implements:** useListQuery (Architecture §API Hooks)
-
-**Files:**
-- Create: `src/hooks/useListQuery.ts`
-- Test: `src/hooks/__tests__/useListQuery.test.ts`
-
-**Behaviors:**
-- Returns loading state initially
-- Returns list data when API succeeds
-- Returns error when API fails
-- Refetches on listId change
-```
+### Hard Limits
+- **Forms:** 1 behavior per field + 2-3 for submit/populate = roughly (field count + 3)
+- **Other components:** Max 4 behaviors
+- If over limit → split task or combine related behaviors
 
 ## What Plans Include
 
@@ -144,7 +248,7 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 |---------|----------|
 | Exact file paths (Create/Modify/Test) | ✓ |
 | Contract reference (`Implements:`) | ✓ |
-| Behaviors (one line each) | ✓ |
+| Behaviors (1 per field for forms, max 4 for others) | ✓ |
 | Task dependencies | When applicable |
 
 ## What Plans Do NOT Include
@@ -154,8 +258,11 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 | Full test code | TDD skill generates tests from behaviors |
 | Full implementation code | Implementer writes from contract + behaviors |
 | Step-by-step TDD instructions | TDD skill handles workflow |
-| Expected failure messages | TDD skill handles verification |
-| "What bugs does this catch?" table | Behaviors implicitly define bug coverage |
+| CSS/styling details | Not testable — implementer decides |
+| Animation/transition details | Not testable — implementer decides |
+| Standard React patterns | "Accepts className", "Accessible button" implied |
+| Generic UX behaviors | "Disables button when loading" implied |
+| Summary tables | Unnecessary for agent execution |
 
 ## Test Infrastructure Task
 
@@ -193,11 +300,16 @@ Plans are **architectural blueprints**, not copy-paste code. Each task reference
 |---------|-----|
 | Writing full test/implementation code | Just list behaviors — TDD skill writes code |
 | Forgetting `Implements:` reference | Every task MUST reference architecture contract |
-| Vague behaviors like "handles errors" | Be specific: "Shows error message when API returns 500" |
+| Vague behaviors like "handles errors" | Be specific: "API error shows toast message" |
 | Missing file paths | Every task MUST list exact Create/Modify/Test paths |
 | Tasks too large (>3 files) | Split into smaller tasks |
 | No test infrastructure in Task 1 | `renderWithProviders` + MSW setup MUST be Task 1 |
 | Square bracket CSS vars | Use `bg-(--var)` NOT `bg-[--var]` |
+| **Splitting field constraints** | Group all constraints for a field on ONE line: "Title: required, 1-200 chars" |
+| **Collapsing ALL validation** | Each field needs its own behavior line |
+| **Implementation details as behaviors** | "Applies flex layout" → delete (not testable) |
+| **Stating obvious patterns** | Delete "accepts className", "disables when loading" |
+| **Summary tables at end** | Delete — unnecessary for agent execution |
 
 ## Completion
 
