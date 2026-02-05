@@ -45,7 +45,7 @@ Before anything else:
 
    Required agents (Phase 3 implementers — have skills pre-loaded):
    - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`)
-   - `saurun:frontend-implementer` (has `react-tailwind-v4-components` + `frontend-design` + `react-tdd`)
+   - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`)
 
 5. **Read context layers** (in priority order):
 
@@ -542,8 +542,8 @@ The reviewer is instructed to load the skill and follow its criteria, rather tha
 | Backend domain | `saurun:backend-implementer` | `dotnet-tactical-ddd`, `dotnet-tdd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
 | Backend API | `saurun:backend-implementer` | `dotnet-tactical-ddd`, `dotnet-tdd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
 | Backend SignalR | `saurun:backend-implementer` | `dotnet-tactical-ddd`, `dotnet-tdd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
-| Frontend state | `saurun:frontend-implementer` | `react-tailwind-v4-components`, `frontend-design`, `react-tdd` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
-| Frontend pages | `saurun:frontend-implementer` | `react-tailwind-v4-components`, `frontend-design`, `react-tdd` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
+| Frontend state | `saurun:frontend-implementer` | `react-frontend-patterns`, `react-tailwind-v4-components`, `frontend-design`, `react-tdd` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
+| Frontend pages | `saurun:frontend-implementer` | `react-frontend-patterns`, `react-tailwind-v4-components`, `frontend-design`, `react-tdd` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
 | Integration | Both agents | All skills (via agents) | Reviewer loads both criteria skills |
 
 **Failure escalation:**

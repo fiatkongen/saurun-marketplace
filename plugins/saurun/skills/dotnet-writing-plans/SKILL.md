@@ -47,6 +47,17 @@ Write bite-sized tasks with exact file paths, complete code, and explicit test s
 - NEVER spec mocking for: domain entities, value objects, pure functions
 - Always specify NSubstitute
 
+### "What Bug Does This Catch?" Table
+
+Every plan MUST include a table mapping tests to real bugs prevented:
+
+```markdown
+| Test | Bug It Catches |
+|------|---------------|
+| `AddItem_ExceedsMaxItems_ThrowsException` | User adds 51st item, corrupts list state |
+| `CreateList_EmptyName_ReturnsValidationError` | User creates list with blank name, causes display issues |
+```
+
 ## Bite-Sized Task Granularity
 
 **Each step is one action:**

@@ -393,7 +393,7 @@ After subagent completes, controller verifies:
 
 **Purpose:** Turn product spec into concrete technical decisions. Answers **how**, not **what**.
 
-**Runs as:** Subagent via `Task(subagent_type="general-purpose")` with `dotnet-tactical-ddd` + `react-frontend-patterns` loaded + autonomous preamble.
+**Runs as:** Subagent via `Task(subagent_type="general-purpose")` with `saurun:dotnet-tactical-ddd` + `saurun:react-frontend-patterns` loaded + autonomous preamble.
 
 ### Backend Decisions (via dotnet-tactical-ddd)
 
@@ -441,8 +441,8 @@ PRODUCT SPEC: {contents of _docs/specs/YYYY-MM-DD-<feature>.md}
 STATE: {STATE.md contents}
 
 SKILLS TO LOAD (use Skill tool):
-1. dotnet-tactical-ddd — for backend architecture decisions
-2. react-frontend-patterns — for frontend architecture decisions
+1. saurun:dotnet-tactical-ddd — for backend architecture decisions
+2. saurun:react-frontend-patterns — for frontend architecture decisions
 
 OUTPUT REQUIREMENTS:
 1. Write architecture doc to _docs/specs/YYYY-MM-DD-{feature}-architecture.md
@@ -667,14 +667,14 @@ For each plan (in order):
 
 ### Subagent Skill Loading
 
-| Plan Type | Implementer Skills | Review Criteria Source |
+| Plan Type | Implementer Agent | Review Criteria Source |
 |-----------|-------------------|------------------------|
-| Backend domain | `dotnet-tdd`, `dotnet-tactical-ddd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
-| Backend API | `dotnet-tdd`, `dotnet-tactical-ddd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
-| Backend SignalR | `dotnet-tdd` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
-| Frontend state | `react-tdd`, `react-tailwind-v4-components` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
-| Frontend pages | `react-tdd`, `react-tailwind-v4-components`, `frontend-design` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
-| Integration | Both backend + frontend skills | Reviewer loads both criteria skills |
+| Backend domain | `saurun:backend-implementer` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
+| Backend API | `saurun:backend-implementer` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
+| Backend SignalR | `saurun:backend-implementer` | Reviewer loads `saurun:dotnet-code-quality-reviewer-prompt` |
+| Frontend state | `saurun:frontend-implementer` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
+| Frontend pages | `saurun:frontend-implementer` | Reviewer loads `saurun:react-code-quality-reviewer-prompt` |
+| Integration | Both agents | Reviewer loads both criteria skills |
 
 **How Quality Criteria Are Used:**
 The skills `saurun:dotnet-code-quality-reviewer-prompt` and `saurun:react-code-quality-reviewer-prompt` are **criteria skills** that the reviewer loads directly. The god-agent:
@@ -685,7 +685,11 @@ This enables a single reviewer dispatch that covers both spec compliance and sta
 
 ### Implementer Dispatch
 
-Backend tasks use `saurun:dotnet-implementer-prompt` as the dispatch template (loads `dotnet-tdd` + `dotnet-tactical-ddd`). Frontend tasks use `saurun:react-implementer-prompt` as the dispatch template (loads `react-tdd` + `react-tailwind-v4-components`).
+The god-agent dispatches directly to specialized agents (`saurun:backend-implementer` for backend tasks, `saurun:frontend-implementer` for frontend tasks). These agents have their skills pre-loaded:
+- `saurun:backend-implementer` pre-loads: `saurun:dotnet-tdd`, `saurun:dotnet-tactical-ddd`
+- `saurun:frontend-implementer` pre-loads: `saurun:react-frontend-patterns`, `frontend-design:frontend-design`, `saurun:react-tdd`
+
+The `saurun:dotnet-implementer-prompt` and `saurun:react-implementer-prompt` skills are **reference templates** documenting the dispatch pattern — they are not loaded at runtime.
 
 **Backend tasks:**
 ```
@@ -883,22 +887,23 @@ URL (if applicable)
 | `superpowers:brainstorming` | superpowers plugin | 0 |
 | `saurun:dotnet-tactical-ddd` | saurun | 1 |
 | `saurun:react-frontend-patterns` | saurun | 1 |
-| `saurun:react-tailwind-v4-components` | saurun | 3 |
 | `saurun:dotnet-writing-plans` | saurun | 2 |
 | `saurun:react-writing-plans` | saurun | 2 |
 | `superpowers:subagent-driven-development` | superpowers plugin | 3 |
-| `saurun:dotnet-tdd` | saurun | 3 |
-| `saurun:react-tdd` | saurun | 3 |
-| `saurun:dotnet-implementer-prompt` | saurun | 3 |
-| `saurun:react-implementer-prompt` | saurun | 3 |
 | `saurun:dotnet-code-quality-reviewer-prompt` | saurun | 3 |
 | `saurun:react-code-quality-reviewer-prompt` | saurun | 3 |
 | `superpowers:systematic-debugging` | superpowers plugin | 3 |
 | `superpowers:verification-before-completion` | superpowers plugin | 4 |
 | `superpowers:finishing-a-development-branch` | superpowers plugin | 4 |
-| `frontend-design:frontend-design` | frontend-design plugin (Anthropic) | 3 |
 
-> **Note:** Phase 3 skills (`dotnet-tdd`, `react-tdd`, `dotnet-tactical-ddd`, `react-tailwind-v4-components`, `frontend-design`) are pre-loaded by the specialized agents (`saurun:backend-implementer`, `saurun:frontend-implementer`), so they don't need explicit loading in Phase 3 prompts.
+### Specialized Agents (Phase 3)
+
+| Agent | Pre-loaded Skills |
+|-------|-------------------|
+| `saurun:backend-implementer` | `saurun:dotnet-tdd`, `saurun:dotnet-tactical-ddd` |
+| `saurun:frontend-implementer` | `saurun:react-frontend-patterns`, `saurun:react-tailwind-v4-components`, `frontend-design:frontend-design`, `saurun:react-tdd` |
+
+> **Note:** Phase 3 implementation skills are pre-loaded by the specialized agents above, so they are not listed in the main skill table and don't need explicit loading in dispatch prompts. The `saurun:dotnet-implementer-prompt` and `saurun:react-implementer-prompt` are reference templates documenting the dispatch pattern — not runtime dependencies.
 
 ### God-Agent Skill Location
 
@@ -1053,8 +1058,8 @@ USER INPUT: /god-agent "idea" [--context "constraints"]
               ▼
 ┌──────────────────────────────────────────────────┐
 │  PHASE 1: ARCHITECTURE                           │
-│  Subagent: dotnet-tactical-ddd                   │
-│          + react-frontend-patterns               │
+│  Subagent: saurun:dotnet-tactical-ddd            │
+│          + saurun:react-frontend-patterns        │
 │          + autonomous preamble                   │
 │                                                  │
 │  Entity model (rich vs anemic)                   │

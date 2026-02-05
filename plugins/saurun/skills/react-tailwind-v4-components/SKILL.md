@@ -1,33 +1,26 @@
 ---
 name: react-tailwind-v4-components
-description: Use when building React components with Tailwind CSS v4, shadcn/ui, or Radix primitives. Use when writing className strings, cva variants, or arbitrary CSS variable values in Tailwind. Critical for avoiding v3 syntax that silently breaks in v4.
+description: Use when building React components with Tailwind CSS v4, shadcn/ui, or Radix primitives. Use when writing className strings, cva variants, or CSS variable values in Tailwind.
 ---
 
 # React Components with Tailwind v4 + shadcn/ui
 
 ## Overview
 
-Reference for building React components with Tailwind CSS v4, shadcn/ui, and Radix. **Primary purpose:** prevent v3 syntax habits that silently break in v4.
+Reference for building React components with Tailwind CSS v4, shadcn/ui, and Radix primitives.
 
-## Tailwind v4 Syntax — Critical Changes
+## Tailwind v4 Syntax
 
-### CSS Variable Syntax: Parentheses, NOT Brackets
+### CSS Variables: Parentheses Syntax
 
 ```tsx
-// v4 CORRECT — parentheses for READING CSS variables
+// Reading CSS variables in class names
 <div className="bg-(--brand-color) text-(--text-color) ring-(--accent)">
-
-// v3 WRONG — square brackets
-<div className="bg-[--brand-color] text-[var(--text-color)]">
 ```
 
-**This is the #1 mistake.** Square bracket CSS variable syntax silently fails in v4.
-
-**This applies EVERYWHERE — including inside cva() strings and arbitrary values.**
+**Use parentheses `(--var)` to reference CSS variables.** This works everywhere — className props, cva() strings, and arbitrary values.
 
 ### Opacity Modifiers with CSS Variables
-
-Opacity modifiers work with parentheses syntax:
 
 ```tsx
 <div className="bg-(--brand-color)/10 border-(--accent)/50 text-(--heading)/80">
@@ -35,7 +28,7 @@ Opacity modifiers work with parentheses syntax:
 
 ### Setting CSS Variables Per Variant
 
-**`theme()` is deprecated.** Use `var(--color-*)` directly. Tailwind v4 exposes all theme values as CSS variables: `--color-blue-500`, `--spacing-4`, `--radius-lg`, etc.
+Tailwind v4 exposes all theme values as CSS variables: `--color-blue-500`, `--spacing-4`, `--radius-lg`, etc. Use `var(--color-*)` to reference them.
 
 **Option A: data-attribute + CSS (preferred for many variants):**
 
@@ -63,10 +56,9 @@ export function Alert({ variant, className, ...props }: AlertProps) {
 }
 ```
 
-**Option B: inline style (acceptable for dynamic CSS custom properties):**
+**Option B: inline style (for dynamic values):**
 
 ```tsx
-// When you need to SET a CSS variable dynamically, inline style is acceptable
 const fillColors: Record<string, string> = {
   success: "var(--color-green-500)",
   danger: "var(--color-red-500)",
@@ -78,7 +70,7 @@ const fillColors: Record<string, string> = {
 />
 ```
 
-**Option C: use Tailwind color utilities directly (simplest, when you don't need CSS var indirection):**
+**Option C: Tailwind utilities directly (simplest, when you don't need CSS var indirection):**
 
 ```tsx
 const variants = cva("base", {
@@ -91,66 +83,42 @@ const variants = cva("base", {
 })
 ```
 
-**WRONG — `theme()` in arbitrary properties does not work in v4:**
-```tsx
-"[--accent:theme(colors.blue.500)]"  // BREAKS — use var(--color-blue-500) instead
-```
+### Utility Size Scale
 
-### Renamed Utilities
+**Size scale from smallest to largest:** `-xs` → `-sm` → (default/base) → `-md` → `-lg` → `-xl`
 
-**Defaults shifted down — the old "unlabeled" default is now `-sm`, and the old `-sm` is now `-xs`:**
+| Utility | Smallest | Small | Base | Notes |
+|---------|----------|-------|------|-------|
+| `shadow-*` | `shadow-xs` | `shadow-sm` | `shadow` | Use `-xs` for subtle shadows |
+| `rounded-*` | `rounded-xs` | `rounded-sm` | `rounded` | Use `-xs` for subtle rounding |
+| `blur-*` | `blur-xs` | `blur-sm` | `blur` | |
+| `drop-shadow-*` | `drop-shadow-xs` | `drop-shadow-sm` | `drop-shadow` | |
+| `backdrop-blur-*` | `backdrop-blur-xs` | `backdrop-blur-sm` | `backdrop-blur` | |
 
-| v3 (WRONG) | v4 (CORRECT) | Note |
-|------------|--------------|------|
-| `shadow` | `shadow-sm` | **Easy to miss — `shadow` looks valid but maps to a different size** |
-| `shadow-sm` | `shadow-xs` | |
-| `rounded` | `rounded-sm` | **Easy to miss — `rounded` looks valid but maps to a different size** |
-| `rounded-sm` | `rounded-xs` | |
-| `blur` | `blur-sm` | **Easy to miss** |
-| `blur-sm` | `blur-xs` | |
-| `backdrop-blur` | `backdrop-blur-sm` | |
-| `backdrop-blur-sm` | `backdrop-blur-xs` | |
-| `drop-shadow` | `drop-shadow-sm` | |
-| `drop-shadow-sm` | `drop-shadow-xs` | |
-| `ring` | `ring-3` | Default ring width changed from 3px to 1px |
-| `outline-none` | `outline-hidden` | `outline-none` now actually sets `outline-style: none` |
+**Ring width:** `ring` = 1px. Use `ring-2`, `ring-3`, etc. for thicker rings.
 
-### Deprecated Utilities (Avoid in New Code)
+### Important Modifier
 
-| v3 (DEPRECATED) | v4 Replacement |
-|-----------------|----------------|
-| `ring-offset-*` | **Use `outline` + `outline-offset-*`** for ring-with-gap effect |
-| `ring-offset-color-*` | **Use `outline-*` color utilities** |
-| `!text-red-500` (prefix `!`) | `text-red-500!` — important modifier moved to suffix |
+Use suffix `!` for important: `text-red-500!`, `font-bold!`
 
-`ring-offset-*` still works for backward compatibility but is undocumented in v4. Use `outline` + `outline-offset` for new code.
+### Opacity Utilities
 
-### Removed Utilities
+Use slash modifiers: `bg-black/50`, `text-white/80`, `ring-blue-500/30`
 
-| v3 (REMOVED) | v4 Replacement |
-|--------------|----------------|
-| `bg-opacity-*` | Opacity modifiers: `bg-black/50` |
-| `text-opacity-*` | Opacity modifiers: `text-black/50` |
-| `ring-opacity-*` | Opacity modifiers: `ring-black/50` |
-
-### v3 `ring-inset` → v4 `inset-ring-*`
-
-`ring-inset` was a v3 modifier for inset rings. It is **replaced by `inset-ring-*`** — a dedicated utility namespace in v4 (see below).
-
-### Inset Shadows and Rings (New in v4)
+### Inset Shadows and Rings
 
 ```tsx
-// Inset shadow — NOT "shadow-inset", it's a separate utility namespace
+// Inset shadow
 <div className="inset-shadow-sm inset-shadow-black/10">
 
-// Inset ring — for inner borders
+// Inset ring (inner border)
 <div className="inset-ring inset-ring-black/10">
 ```
 
-### Focus Ring Pattern (v4)
+### Focus Ring Patterns
 
 ```tsx
-// Ring with gap (replaces ring + ring-offset from v3):
+// Ring with gap from element:
 <input className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring-color)" />
 
 // Flush ring (no gap):
@@ -163,7 +131,6 @@ const variants = cva("base", {
 ### Theme Configuration
 
 ```css
-/* v4: CSS-first config with @theme directive */
 @import "tailwindcss";
 
 @theme inline {
@@ -172,9 +139,9 @@ const variants = cva("base", {
 }
 ```
 
-Use `@theme inline` when your theme variables reference other `var()` values — it inlines the resolved value into utility classes instead of referencing the theme variable, avoiding CSS variable resolution issues. Use plain `@theme` for static values like `--color-brand: oklch(0.7 0.15 200);`.
+Use `@theme inline` when variables reference other `var()` values. Use plain `@theme` for static values like `--color-brand: oklch(0.7 0.15 200);`.
 
-**v4 auto-generates CSS variables for all theme values.** Use these directly instead of `theme()`:
+**Theme CSS variables:**
 
 | Theme value | CSS variable pattern | Example |
 |-------------|---------------------|---------|
@@ -184,8 +151,6 @@ Use `@theme inline` when your theme variables reference other `var()` values —
 | Radii | `--radius-{size}` | `var(--radius-lg)` |
 | Shadows | `--shadow-{size}` | `var(--shadow-sm)` |
 | Breakpoints | `--breakpoint-{name}` | `var(--breakpoint-xl)` |
-
-**`theme()` is deprecated** but still works for contexts where CSS variables don't work (media queries). Uses new syntax: `theme(--breakpoint-xl)` not `theme(screens.xl)`. **Never use `theme()` in arbitrary values or class strings.**
 
 ### Container Queries (Built-in)
 
@@ -227,7 +192,7 @@ import { cn } from "@/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
 
 const cardVariants = cva(
-  "rounded-sm border p-4 transition-colors",  // base (note: rounded-sm = old rounded in v4)
+  "rounded-sm border p-4 transition-colors",  // base
   {
     variants: {
       variant: {
@@ -340,42 +305,32 @@ components/
 
 ## Common Mistakes
 
-| Mistake | Fix |
-|---------|-----|
-| `bg-[--brand]` or `bg-[var(--brand)]` | `bg-(--brand)` — v4 parentheses |
-| `shadow-sm` for subtle shadow | `shadow-xs` — sm shifted to xs in v4 |
-| `shadow` for default shadow | `shadow-sm` — defaults shifted down |
-| `rounded-sm` for subtle rounding | `rounded-xs` — sm shifted to xs in v4 |
-| `rounded` for default rounding | `rounded-sm` — defaults shifted down |
-| `ring` for 3px ring | `ring-3` — default ring width is now 1px |
-| `ring-offset-2` for ring with gap | `outline-2 outline-offset-2` — ring-offset deprecated |
-| `!text-red-500` important prefix | `text-red-500!` — modifier moved to suffix |
-| `shadow-inset` for inner shadow | `inset-shadow-sm` — separate utility namespace in v4 |
-| `outline-none` to hide outline | `outline-hidden` — `outline-none` now sets `outline-style: none` |
-| `` className={`base ${x}`} `` | `className={cn("base", x)}` |
-| `style={{ color: "var(--x)" }}` for reading | `className="text-(--x)"` |
-| `[--var:theme(colors.x.y)]` to set CSS var | Use data-attribute + CSS or inline `style` with `var(--color-x-y)` |
-| `theme(colors.blue.500)` in arbitrary values | Use `var(--color-blue-500)` directly |
-| Modifying shadcn source for one-off | Wrap the component instead |
-| Overriding Radix `aria-*` props | Don't — Radix handles accessibility |
+| Incorrect | Correct | Why |
+|-----------|---------|-----|
+| `bg-[--brand]` | `bg-(--brand)` | Use parentheses for CSS variables |
+| `bg-[var(--brand)]` | `bg-(--brand)` | No need for `var()` wrapper |
+| `ring` for 3px ring | `ring-3` | `ring` = 1px width |
+| `ring-offset-2` | `outline-2 outline-offset-2` | Use outline for ring-with-gap |
+| `!text-red-500` | `text-red-500!` | Important modifier is suffix |
+| `shadow-inset` | `inset-shadow-sm` | Separate utility namespace |
+| `outline-none` to hide | `outline-hidden` | `outline-none` sets style:none |
+| `` `base ${x}` `` | `cn("base", x)` | Use cn() for class merging |
+| `style={{ color: "var(--x)" }}` | `className="text-(--x)"` | Read CSS vars with Tailwind |
+| `[--var:theme(colors.x.y)]` | data-attr + CSS | Set CSS vars via CSS or inline style |
+| `theme(colors.blue.500)` | `var(--color-blue-500)` | Use CSS variables directly |
+| Modifying shadcn source | Wrap the component | Preserve upgradeability |
+| Overriding Radix `aria-*` | Don't | Radix handles accessibility |
 
-## Red Flags — You're Using v3 Syntax
+## Quick Self-Check
 
-**STOP and fix if you see any of these in your output:**
+**Before committing, verify:**
 
-- Square brackets around CSS variables: `[--anything]` → use `(--anything)`
-- `theme()` in arbitrary values or class strings → deprecated; use `var(--color-*)` directly
-- `[--var:theme(colors.x.y)]` — doubly wrong: brackets AND theme()
-- `shadow-sm` / `rounded-sm` / `blur-sm` / `drop-shadow-sm` when you mean the SMALLEST size → use `-xs`
-- `shadow` / `rounded` / `blur` / `drop-shadow` / `backdrop-blur` as bare utilities → they shifted down, now use `-sm`
-- `ring-offset-*` utilities → deprecated; use `outline-*` + `outline-offset-*`
-- `!text-red-500` (prefix `!`) → `text-red-500!` — important modifier moved to suffix
-- `shadow-inset` → use `inset-shadow-*` (separate namespace in v4)
-- `ring` expecting 3px width → use `ring-3` (default is now 1px)
-- `outline-none` for hiding outlines → use `outline-hidden`
-- Inline `style={{ }}` for READING a CSS variable → use Tailwind `(--var)` syntax
-- Template literals for className: `` `base ${x}` `` → use `cn()`
+- CSS variables use parentheses: `(--var)` not `[--var]`
+- Smallest sizes use `-xs`: `shadow-xs`, `rounded-xs`
+- Ring with gap uses `outline-offset-*` not `ring-offset-*`
+- Important modifier is suffix: `text-red-500!` not `!text-red-500`
+- Inset shadows use `inset-shadow-*` namespace
+- Hide outlines with `outline-hidden` not `outline-none`
+- Class strings use `cn()` not template literals
 
-**Inline `style` IS acceptable for SETTING CSS custom properties** (e.g., `style={{ "--fill": "var(--color-blue-500)" }}`). It is NOT acceptable for reading them when Tailwind can express it.
-
-**These apply inside cva() strings too, not just JSX className props.**
+**Inline `style` IS acceptable for SETTING CSS custom properties** (e.g., `style={{ "--fill": "var(--color-blue-500)" }}`). Use Tailwind syntax for reading them.

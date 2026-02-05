@@ -13,14 +13,13 @@ Prompt template for dispatching a React code quality review subagent. Core princ
 
 - After a React implementation task is complete and you need a quality-focused code review
 - When you want to validate test quality beyond basic coverage (behavioral testing, structure, mock boundaries)
-- As the second review pass in a two-pass workflow: spec compliance first, then code quality
+- When dispatching a unified code review that checks both spec compliance and code quality in a single pass
 
 Implementers should follow `saurun:react-tdd` to proactively prevent the anti-patterns this reviewer flags.
 
 ## When NOT to Use
 
 - For non-React code — the checklist is React/Vitest/RTL-specific
-- As the first review of a task — run a spec compliance review first to confirm requirements are met
 - For general architecture or design reviews without implementation code to inspect
 
 ## Quick Reference
@@ -55,7 +54,6 @@ The base template handles: git diff inspection, standard review checklist (code 
 
 ## Common Mistakes
 
-- **Dispatching before spec compliance review** — run spec review first (via `superpowers:requesting-code-review` without React checklist). This skill checks *how* it was built, not *what*.
 - **Applying to non-React code** — checklist is Vitest/RTL/MSW-specific. Will produce false positives on other stacks.
 - **Forgetting placeholder variables** — template breaks if `BASE_SHA`/`HEAD_SHA` are left as placeholders. Get actual SHAs from `git log`.
 - **Missing superpowers plugin** — dispatch targets `superpowers:code-reviewer`. Task tool call fails without it.
@@ -63,9 +61,9 @@ The base template handles: git diff inspection, standard review checklist (code 
 
 ## Dispatch Template
 
-**Only dispatch after a spec compliance review passes.** A spec compliance review checks that the implementation meets the plan/requirements. This code quality review checks that the implementation is well-engineered. Run them in order: spec first, quality second.
+This skill provides `ADDITIONAL_REVIEW_CRITERIA` for a unified review that checks both spec compliance and code quality in a single pass. The reviewer subagent loads this skill via the Skill tool and follows its criteria checklist.
 
-Dispatch by calling the Task tool with `superpowers:code-reviewer`, passing these variables:
+Dispatch by calling the Task tool with `superpowers:code-reviewer`, instructing it to load this skill:
 
 ```
 Task tool (superpowers:code-reviewer):
