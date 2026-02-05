@@ -20,9 +20,9 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
-**Version: 1.0.28** — Concise planning format (Implements/Files/Behaviors)
+**Version: 1.0.29** — Concise architecture output (no redundancy, method signatures only)
 
-> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.28 (concise planning format)"
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.29 (concise architecture output)"
 
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
@@ -401,86 +401,84 @@ OUTPUT REQUIREMENTS:
    using the template below
 2. Update .god-agent/STATE.md with architecture decisions
 
+CONCISENESS RULES (this doc is for autonomous agents, not humans):
+- NO redundancy: information appears ONCE in the most logical place
+- NO full code: method signatures only, not implementations
+- NO obvious patterns: don't describe standard TanStack Query or EF Core flows
+- NO separate validation section: put validation inline in DTOs as comments
+- Rich entities: list method signatures only (e.g., `Create(), AddItem(), RemoveItem()`)
+- Anemic entities: just name and properties, no behavior section
+- Data Flow: ONLY describe non-standard flows or critical decisions
+- Infrastructure: ONLY non-default choices (skip "EF Core code-first migrations")
+
 ARCHITECTURE TEMPLATE:
 # {Feature Name} -- Technical Architecture
 
 ## Entity Model
-Entities, relationships, rich vs anemic classification.
-Aggregate boundaries if applicable.
+For each entity: name, aggregate boundary, rich/anemic classification.
+Rich entities: list behavior method names (not full signatures).
+
+Example:
+```
+Recipe (Aggregate Root, Rich)
+  - owns: Ingredient[], Step[]
+  - behaviors: Create(), AddIngredient(), RemoveIngredient(), UpdateDetails()
+
+Ingredient (Owned, Anemic) - no independent behavior
+Category (Lookup, Anemic) - seeded reference data
+```
 
 ## API Contract
 
 ### DTOs
-List all DTOs with their properties:
-- EntityDto { id, prop1, prop2, nestedDtos[] }
-- CreateEntityRequest { prop1, prop2 }
-- UpdateEntityRequest { prop1, prop2 }
+List DTOs with properties and inline validation:
+```typescript
+CreateEntityRequest {
+  name: string,      // required, 1-100 chars
+  category: string   // required, enum value
+}
+EntityDto { id, name, category, createdAt }
+```
+(Validation is inline — no separate validation section needed)
 
 ### Endpoints
-List all endpoints with request/response types:
-- GET /entities → EntityDto[]
+- GET /entities?filter={x} → EntityDto[]
 - POST /entities ← CreateEntityRequest → EntityDto
-- GET /entities/{id} → EntityDto
 - PUT /entities/{id} ← UpdateEntityRequest → EntityDto
 - DELETE /entities/{id} → 204
 
-### Validation Rules
-List validation rules per request DTO:
-- CreateEntityRequest.prop1: required, 1-100 chars
-- CreateEntityRequest.prop2: required, enum values
-
 ## Component Tree
-
-### Pages
-List pages with their routes:
-- /entities → EntitiesPage
-- /entities/{id} → EntityDetailPage
-
-### Components
-List components with their props:
-- EntityCard { entity: EntityDto, onDelete: () => void }
-- EntityForm { onSubmit: (data: CreateEntityRequest) => void }
-
-### Stores (Zustand)
-List stores with their shape and actions:
-- useEntityStore { entities, fetchEntities, createEntity, deleteEntity }
-
-### API Hooks
-List React Query hooks:
-- useEntitiesQuery() → { entities, isLoading, error }
-- useEntityQuery(id) → { entity, isLoading, error }
-- useCreateEntityMutation() → { mutate, isPending }
-
-## Data Flow
-Frontend -> API -> Application -> Domain -> Infrastructure -> DB (and back).
+Pages with routes, components with props, stores with shape, hooks.
+Use compact format:
+- `/entities` → EntitiesPage
+- `EntityCard { entity, onSave? }` — thumbnail card
+- `useEntitiesQuery()` → `{ data, isLoading }`
 
 ## Infrastructure Decisions
-SignalR, background jobs, caching, external APIs, etc.
+ONLY list non-default choices:
+- Image storage: local filesystem (abstracted for future S3)
+- Auth: JWT bearer, 7-day expiry, no refresh tokens for MVP
 
 ## Test Layer Map
-| Entity/Component | Rich/Anemic | Test Layer |
-|-----------------|-------------|------------|
-| Example         | Anemic      | Integration (API) |
+| Entity | Classification | Test Layer |
+|--------|----------------|------------|
+| Recipe | Rich | Unit (domain behaviors) |
+| Ingredient | Anemic | Integration (via Recipe API) |
 """)
 ```
 
 **Gate 1 Checklist:**
 - [ ] Architecture doc exists at `_docs/specs/{DATE}-{feature}-architecture.md`
-- [ ] Section "## Entity Model" classifies each entity from spec as rich or anemic
-- [ ] Section "## API Contract" exists with subsections:
-  - [ ] "### DTOs" lists all DTOs with properties
-  - [ ] "### Endpoints" lists all endpoints with request/response types
-  - [ ] "### Validation Rules" lists validation rules per request DTO
-- [ ] Section "## Component Tree" exists with subsections:
-  - [ ] "### Pages" lists pages with routes
-  - [ ] "### Components" lists components with props
-  - [ ] "### Stores (Zustand)" lists stores with shape and actions
-  - [ ] "### API Hooks" lists React Query hooks (if frontend uses them)
-- [ ] Section "## Data Flow" exists and is not empty
-- [ ] Section "## Infrastructure Decisions" exists
-- [ ] Section "## Test Layer Map" has entry for every entity
-- [ ] Rich entities have domain-level tests specified
-- [ ] Anemic entities have integration-level tests specified (not domain)
+- [ ] Section "## Entity Model" classifies each entity as rich or anemic with aggregate boundaries
+- [ ] Rich entities list behavior method names (not full implementations)
+- [ ] Section "## API Contract" has:
+  - [ ] "### DTOs" with properties AND inline validation comments (no separate validation section)
+  - [ ] "### Endpoints" with request/response types
+- [ ] Section "## Component Tree" covers pages, components, stores, hooks (compact format)
+- [ ] Section "## Infrastructure Decisions" lists ONLY non-default choices
+- [ ] Section "## Test Layer Map" has entry for every entity with correct test layer
+- [ ] NO redundancy: validation not repeated, entity design not duplicated
+- [ ] NO full code implementations (method signatures only for rich entities)
 
 **On failure:** Re-dispatch phase subagent with prompt including:
 "Previous attempt failed Gate 1. Issues: {list unchecked items}. Fix these specific issues."
