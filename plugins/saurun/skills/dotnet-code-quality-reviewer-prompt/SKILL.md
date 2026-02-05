@@ -46,7 +46,7 @@ Prompt template for dispatching a .NET code quality review subagent. Core princi
 | Variable | Source |
 |---|---|
 | `WHAT_WAS_IMPLEMENTED` | From implementer subagent's completion report |
-| `PLAN_OR_REQUIREMENTS` | Plan file path + task number, e.g. "Task 3 from docs/plans/feature-x.md" |
+| `PLAN_OR_REQUIREMENTS` | Plan file path + task number, e.g. "Task 3 from _docs/plans/feature-x.md" |
 | `BASE_SHA` | Commit SHA before implementation (`git log`) |
 | `HEAD_SHA` | Current commit after implementation (typically `HEAD`) |
 | `DESCRIPTION` | One-line task summary |

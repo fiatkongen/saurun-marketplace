@@ -19,7 +19,7 @@ This skill routes to the appropriate stack-specific planning skill. It does NOT 
 ## When NOT to Use
 - Simple single-file change (just do it)
 - Exploratory spike work (use investigation skills)
-- Plan already exists in `docs/plans/`
+- Plan already exists in `_docs/plans/`
 
 ## Route Table
 

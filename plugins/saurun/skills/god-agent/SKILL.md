@@ -1,6 +1,17 @@
 ---
 name: god-agent
-description: Use when starting a new project from an idea or adding a major feature to an existing .NET + React project — fully autonomous, no human checkpoints.
+description: >
+  Autonomous end-to-end development pipeline. Takes an idea and delivers working, tested, committed code through 5 phases (scaffold → spec → architecture → plans → implementation).
+
+  USE FOR: Greenfield apps, major features requiring both backend + frontend work.
+
+  DO NOT USE FOR: Bug fixes, small changes, single-layer work (backend-only or frontend-only), non-.NET/React projects.
+
+  REQUIRED STACK: .NET 9 + React 19 + Tailwind v4 + Zustand + SQLite. Will not work with other stacks.
+
+  INPUT FORMAT: Idea string + optional "Preferences: ..." suffix (e.g., "Build X. Preferences: Danish market, mobile-first").
+
+  COMMITMENT: Long-running (30+ min), creates _docs/specs/, _docs/plans/, .god-agent/, modifies CLAUDE.md. Resumable via STATE.md if interrupted.
 user-invocable: true
 argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-first"
 ---
@@ -223,6 +234,63 @@ MODE: {Greenfield | Extension}
 OUTPUT REQUIREMENTS:
 1. Write product spec to _docs/specs/{DATE}-{feature}.md using the template below
 2. Update .god-agent/STATE.md with decisions and assumptions
+3. Write brainstorming Q&A log to .god-agent/brainstorm-qa.md using the Q&A template below
+
+Q&A LOG TEMPLATE:
+# Brainstorming Q&A Log
+
+## Session Info
+- **Feature:** {feature name}
+- **Date:** {ISO date}
+- **Mode:** {Greenfield | Extension}
+
+## Questions & Answers
+
+### 1. Problem Definition
+**Q:** What specific problem or pain point does this solve?
+**A:** {answer}
+**Source:** {Injected context | Project context | Stack defaults | Assumption}
+
+### 2. Target Users
+**Q:** Who are the primary users?
+**A:** {answer}
+**Source:** {source}
+
+### 3. Core Features
+**Q:** What are the must-have features for MVP?
+**A:** {answer}
+**Source:** {source}
+
+### 4. Out of Scope
+**Q:** What should explicitly NOT be included?
+**A:** {answer}
+**Source:** {source}
+
+### 5. Domain Entities
+**Q:** What are the key domain objects?
+**A:** {answer}
+**Source:** {source}
+
+### 6. User Flows
+**Q:** What are the primary user journeys?
+**A:** {answer}
+**Source:** {source}
+
+### 7. Technical Constraints
+**Q:** Any specific technical requirements or constraints?
+**A:** {answer}
+**Source:** {source}
+
+### 8. UX Preferences
+**Q:** Any design/UX preferences (language, style, mobile-first)?
+**A:** {answer}
+**Source:** {source}
+
+## Additional Questions
+{Any other questions that arose during brainstorming, with answers and sources}
+
+## Assumptions Made
+{List all assumptions with reasoning — these also go to STATE.md}
 
 SPEC TEMPLATE:
 # {Feature Name} -- Product Spec
@@ -279,6 +347,9 @@ Approaches considered but not taken, with reasons.
 - [ ] Section "## Rejected Alternatives" has at least 2 entries with reasoning
 - [ ] Section "## Risks & Mitigations" table has at least 2 rows
 - [ ] No obvious contradictions between In Scope and Out of Scope
+- [ ] Q&A log exists at `.god-agent/brainstorm-qa.md`
+- [ ] Q&A log has answers for all 8 standard questions
+- [ ] Each Q&A entry has a Source field (Injected context | Project context | Stack defaults | Assumption)
 
 **On failure:** Re-dispatch phase subagent with prompt including:
 "Previous attempt failed Gate 0. Issues: {list unchecked items}. Fix these specific issues."
