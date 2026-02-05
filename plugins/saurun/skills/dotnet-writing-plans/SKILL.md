@@ -13,9 +13,7 @@ Write bite-sized tasks with exact file paths, complete code, and explicit test s
 
 **Announce at start:** "I'm using the dotnet-writing-plans skill to create the implementation plan."
 
-**REQUIRED CONTEXT:** Run in a dedicated worktree (created by `superpowers:brainstorming`).
-
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `_docs/plans/YYYY-MM-DD-<feature-name>.md`
 
 ## When NOT to Use
 - Single-file bug fix with obvious cause and fix
@@ -154,23 +152,8 @@ Integration tests use `IClassFixture<CustomWebApplicationFactory>` with `TestHel
 - DRY, YAGNI, TDD, frequent commits
 - NO getter/setter tests — ever
 
-## Execution Handoff
+## Completion
 
-After saving the plan, offer execution choice:
+After saving the plan, report:
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
-
-**1. Subagent-Driven (this session)** — I dispatch fresh subagent per task using `saurun:dotnet-implementer-prompt`, review between tasks with `saurun:dotnet-code-quality-reviewer-prompt`, fast iteration
-
-**2. Parallel Session (separate)** — Open new session in worktree, batch execution with checkpoints
-
-**Which approach?"**
-
-**If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** `saurun:dotnet-implementer-prompt` for implementer dispatch
-- **REQUIRED SUB-SKILL:** `saurun:dotnet-code-quality-reviewer-prompt` for code review
-- Stay in this session, fresh subagent per task + code review
-
-**If Parallel Session chosen:**
-- Guide them to open new session in worktree
-- **REQUIRED SUB-SKILL:** New session uses `superpowers:executing-plans`
+**"Plan saved to `_docs/plans/<filename>.md`. Ready for execution."**

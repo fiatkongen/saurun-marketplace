@@ -13,9 +13,7 @@ Write bite-sized tasks with exact file paths, complete code, and explicit test s
 
 **Announce at start:** "I'm using the react-writing-plans skill to create the implementation plan."
 
-**REQUIRED:** Run in a dedicated worktree created by `superpowers:brainstorming`.
-
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `_docs/plans/YYYY-MM-DD-<feature-name>.md`
 
 ## When to Use
 - Multi-step React feature requiring new components, stores, or API integration
@@ -33,7 +31,7 @@ Write bite-sized tasks with exact file paths, complete code, and explicit test s
 
 | Element | Requirement |
 |---------|-------------|
-| **Plan location** | `docs/plans/YYYY-MM-DD-<feature-name>.md` |
+| **Plan location** | `_docs/plans/YYYY-MM-DD-<feature-name>.md` |
 | **Task 1** | Test infrastructure (renderWithProviders, MSW, Zustand reset) |
 | **Task granularity** | One behavior, max 2 new files |
 | **Each task** | 5 steps: write test → run (fail) → implement → run (pass) → commit |
@@ -218,23 +216,8 @@ Integration tests render full component trees with real Zustand stores and MSW h
 | Square bracket CSS vars | Use `bg-(--var)` NOT `bg-[--var]`. Brackets silently fail in v4. |
 | Mocking React components or hooks | Test real components. Mock only API (MSW) and browser APIs. |
 
-## Execution Handoff
+## Completion
 
-After saving the plan, offer execution choice:
+After saving the plan, report:
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
-
-**1. Subagent-Driven (this session)** — I dispatch fresh subagent per task using `saurun:react-implementer-prompt`, review between tasks with `saurun:react-code-quality-reviewer-prompt`, fast iteration
-
-**2. Parallel Session (separate)** — Open new session in worktree, batch execution with checkpoints
-
-**Which approach?"**
-
-**If Subagent-Driven chosen:**
-- **REQUIRED:** Use `saurun:react-implementer-prompt` for implementer dispatch
-- **REQUIRED:** Use `saurun:react-code-quality-reviewer-prompt` for code review
-- Stay in this session, fresh subagent per task + code review
-
-**If Parallel Session chosen:**
-- Guide them to open new session in worktree
-- **REQUIRED:** New session uses `superpowers:executing-plans`
+**"Plan saved to `_docs/plans/<filename>.md`. Ready for execution."**
