@@ -42,6 +42,7 @@ Before anything else:
 4. **Enter project directory.**
    - Greenfield: Create the directory, then `cd` into it
    - Extension: `cd` into the existing directory
+   - Open the project in VS Code: `code {project-path}`
 
 5. **Check for resume.** If `.god-agent/STATE.md` exists:
    - Read it
