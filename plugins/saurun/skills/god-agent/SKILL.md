@@ -20,6 +20,10 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
+**Version: 1.0.28** — Concise planning format (Implements/Files/Behaviors)
+
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.28 (concise planning format)"
+
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
 **Tech stack (always):** .NET 9, ASP.NET Core, EF Core 9, SQLite, SignalR, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand.
