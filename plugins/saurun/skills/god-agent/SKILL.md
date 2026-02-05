@@ -20,9 +20,9 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
-**Version: 1.0.31** — E2E testing phase with Playwright and auto-fix
+**Version: 1.0.32** — Pre-E2E commit checkpoint
 
-> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.31 (E2E testing phase)"
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.32 (pre-E2E commit checkpoint)"
 
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
@@ -860,15 +860,20 @@ URL (if applicable)
 
 **Runs as:** Controller executes directly (orchestrates the E2E test flow).
 
-**Load skill:** `saurun:e2e-test` via the Skill tool — follow its process.
-
 **Input from prior phases:**
 - Spec file path from STATE.md (Phase 0) — contains User Flows
 - Architecture doc for component paths (Phase 1)
 
 **Steps:**
-1. Load `saurun:e2e-test` skill
-2. Follow the skill's execution flow:
+1. **Commit before E2E tests:**
+   ```bash
+   git add -A
+   git commit -m "chore: pre-e2e checkpoint - all unit/integration tests passing"
+   ```
+   This creates a clean checkpoint before E2E testing begins. If E2E tests find issues and trigger auto-fixes, you can always revert to this known-good state.
+
+2. Load `saurun:e2e-test` skill via the Skill tool — follow its process.
+3. Follow the skill's execution flow:
    - Find spec file, extract User Flows
    - Generate Playwright test files
    - Start backend + frontend
@@ -878,6 +883,7 @@ URL (if applicable)
    - Teardown servers
 
 **Gate 5 Checklist (informational — doesn't block completion):**
+- [ ] Pre-E2E commit exists with message containing "pre-e2e checkpoint"
 - [ ] E2E test files exist in `frontend/e2e/*.spec.ts`
 - [ ] All User Flows from spec have corresponding test files
 - [ ] Playwright ran successfully (process completed, regardless of test results)
