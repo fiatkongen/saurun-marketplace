@@ -405,11 +405,47 @@ Entities, relationships, rich vs anemic classification.
 Aggregate boundaries if applicable.
 
 ## API Contract
-Endpoints, HTTP methods, request/response DTOs.
-SignalR hubs and events if applicable.
+
+### DTOs
+List all DTOs with their properties:
+- EntityDto { id, prop1, prop2, nestedDtos[] }
+- CreateEntityRequest { prop1, prop2 }
+- UpdateEntityRequest { prop1, prop2 }
+
+### Endpoints
+List all endpoints with request/response types:
+- GET /entities → EntityDto[]
+- POST /entities ← CreateEntityRequest → EntityDto
+- GET /entities/{id} → EntityDto
+- PUT /entities/{id} ← UpdateEntityRequest → EntityDto
+- DELETE /entities/{id} → 204
+
+### Validation Rules
+List validation rules per request DTO:
+- CreateEntityRequest.prop1: required, 1-100 chars
+- CreateEntityRequest.prop2: required, enum values
 
 ## Component Tree
-Pages, shared components, hooks, stores.
+
+### Pages
+List pages with their routes:
+- /entities → EntitiesPage
+- /entities/{id} → EntityDetailPage
+
+### Components
+List components with their props:
+- EntityCard { entity: EntityDto, onDelete: () => void }
+- EntityForm { onSubmit: (data: CreateEntityRequest) => void }
+
+### Stores (Zustand)
+List stores with their shape and actions:
+- useEntityStore { entities, fetchEntities, createEntity, deleteEntity }
+
+### API Hooks
+List React Query hooks:
+- useEntitiesQuery() → { entities, isLoading, error }
+- useEntityQuery(id) → { entity, isLoading, error }
+- useCreateEntityMutation() → { mutate, isPending }
 
 ## Data Flow
 Frontend -> API -> Application -> Domain -> Infrastructure -> DB (and back).
@@ -427,8 +463,15 @@ SignalR, background jobs, caching, external APIs, etc.
 **Gate 1 Checklist:**
 - [ ] Architecture doc exists at `_docs/specs/{DATE}-{feature}-architecture.md`
 - [ ] Section "## Entity Model" classifies each entity from spec as rich or anemic
-- [ ] Section "## API Contract" has at least 1 endpoint per user flow from spec
-- [ ] Section "## Component Tree" has at least 1 page per user flow
+- [ ] Section "## API Contract" exists with subsections:
+  - [ ] "### DTOs" lists all DTOs with properties
+  - [ ] "### Endpoints" lists all endpoints with request/response types
+  - [ ] "### Validation Rules" lists validation rules per request DTO
+- [ ] Section "## Component Tree" exists with subsections:
+  - [ ] "### Pages" lists pages with routes
+  - [ ] "### Components" lists components with props
+  - [ ] "### Stores (Zustand)" lists stores with shape and actions
+  - [ ] "### API Hooks" lists React Query hooks (if frontend uses them)
 - [ ] Section "## Data Flow" exists and is not empty
 - [ ] Section "## Infrastructure Decisions" exists
 - [ ] Section "## Test Layer Map" has entry for every entity
@@ -504,12 +547,13 @@ OUTPUT: Write plan to _docs/plans/{DATE}-{unit_name}.md
 Array order is execution order. The .NET + React stack has predictable, near-linear dependencies (backend before frontend), so DAG complexity is unnecessary.
 
 **Gate 2 Checklist (per plan):**
-- [ ] Plan file exists at expected path
-- [ ] Every task has explicit file paths (`Create:`, `Modify:`, `Test:`)
-- [ ] Every task includes TDD workflow (test first)
-- [ ] No getter/setter tests specified for anemic entities
-- [ ] Test names follow `MethodName_Scenario_Expected` convention
-- [ ] "What bugs do these tests catch?" table exists and has at least 1 row
+- [ ] Plan file exists at `_docs/plans/{DATE}-{unit}.md`
+- [ ] Plan header includes Goal, Architecture reference, Tech Stack
+- [ ] Every task has `**Implements:**` referencing a contract from architecture doc
+- [ ] Every task has `**Files:**` with exact Create/Modify/Test paths
+- [ ] Every task has `**Behaviors:**` with at least 2 items (happy path + error case)
+- [ ] Tasks with dependencies have `**Dependencies:**` listing prerequisite tasks
+- [ ] No task references a contract that doesn't exist in architecture doc (cross-reference validation)
 
 **Gate 2 Checklist (MANIFEST.json):**
 - [ ] File exists at `_docs/plans/MANIFEST.json`
@@ -535,22 +579,27 @@ Array order is execution order. The .NET + React stack has predictable, near-lin
 
 ```
 Read MANIFEST.json -> plans array defines execution order
+Read architecture doc ONCE (for contract extraction)
+
 For each plan (in array order):
-  Read the plan file, extract all tasks with full text
+  Read the plan file, extract all tasks
   For each task:
     1. Update STATE.md: current position
-    2. Dispatch IMPLEMENTER subagent (see agent routing below)
+    2. Extract relevant contract from architecture doc:
+       - Find the contract referenced in task's "Implements:" field
+       - Extract just the relevant DTO definitions, endpoint spec, validation rules
+       - Keep extracted contract to ~15 lines max
+    3. Dispatch IMPLEMENTER subagent (see agent routing below)
        - Use specialized agent: saurun:backend-implementer or saurun:frontend-implementer
-       - Provide: full task text, autonomous preamble, product spec summary,
-         architecture context, previous task outcomes
+       - Provide: task name, extracted contract, file paths, behaviors
        - Skills are pre-loaded by the agent (no skill-loading instructions needed)
        - If implementer asks questions -> answer from Phase 0/1 context
-    3. Dispatch REVIEWER subagent (single-pass, combined spec + quality review)
+    4. Dispatch REVIEWER subagent (single-pass, combined spec + quality review)
        - Uses superpowers:code-reviewer with stack-specific quality criteria
        - Pass -> continue
        - Fail (Critical/Important) -> resume implementer with fix instructions -> re-review (up to 2 retries)
        - Fail (Minor) -> note and continue
-    4. Update STATE.md: task complete
+    5. Update STATE.md: task complete
   After all tasks in plan:
     Run full test suite: dotnet test backend/ && npm test (if frontend exists)
     Pass -> next plan
@@ -566,11 +615,23 @@ For each plan (in array order):
 Task(subagent_type="saurun:backend-implementer", prompt="""
 {AUTONOMOUS_PREAMBLE}
 
-TASK: {full task text from plan}
+TASK: {task name from plan}
 
-PRODUCT SPEC SUMMARY: {key points from Phase 0 spec}
+CONTRACT (from Architecture doc):
+- Endpoint: POST /lists/{id}/items ← AddItemRequest → ShoppingItemDto
+- AddItemRequest { name, category }
+- ShoppingItemDto { id, name, category, isChecked, addedAt }
+- Validation: name required 1-100 chars, category required enum
 
-ARCHITECTURE CONTEXT: {relevant sections from Phase 1 architecture doc}
+FILES:
+- Create: Api/Endpoints/ShoppingListEndpoints.cs
+- Test: Tests/Api/ShoppingListEndpointsTests.cs
+
+BEHAVIORS:
+- Valid input → returns created ShoppingItemDto with 201
+- Empty name → returns 400 with validation error
+- Invalid category → returns 400 with validation error
+- List not found → returns 404
 
 PREVIOUS TASK OUTCOMES: {summary of completed tasks in this plan}
 """)
@@ -582,11 +643,21 @@ PREVIOUS TASK OUTCOMES: {summary of completed tasks in this plan}
 Task(subagent_type="saurun:frontend-implementer", prompt="""
 {AUTONOMOUS_PREAMBLE}
 
-TASK: {full task text from plan}
+TASK: {task name from plan}
 
-PRODUCT SPEC SUMMARY: {key points from Phase 0 spec}
+CONTRACT (from Architecture doc):
+- Component: AddItemForm { listId: string, onItemAdded: (item: ShoppingItemDto) => void }
+- ShoppingItemDto { id, name, category, isChecked, addedAt }
+- API: POST /lists/{id}/items ← { name, category } → ShoppingItemDto
 
-ARCHITECTURE CONTEXT: {relevant sections from Phase 1 architecture doc}
+FILES:
+- Create: src/components/AddItemForm.tsx
+- Test: src/components/__tests__/AddItemForm.test.tsx
+
+BEHAVIORS:
+- Submitting valid input calls onItemAdded with new item
+- Empty name shows validation error
+- Displays loading state while submitting
 
 PREVIOUS TASK OUTCOMES: {summary of completed tasks in this plan}
 """)

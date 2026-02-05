@@ -1,15 +1,13 @@
 ---
 name: dotnet-writing-plans
-description: Use when you have a spec or requirements for a multi-step .NET backend task, before touching code. Covers task decomposition, test design, and TDD-ready implementation plans.
+description: Use when you have a spec or requirements for a multi-step .NET backend task, before touching code. Creates concise implementation plans that reference architecture contracts.
 ---
 
 # .NET Writing Plans
 
 ## Overview
 
-Every implementation plan is a self-contained instruction set: an engineer with zero codebase context should be able to execute it task-by-task using only the plan and TDD.
-
-Write bite-sized tasks with exact file paths, complete code, and explicit test specs. DRY. YAGNI. TDD. Frequent commits. Assume the implementer is skilled but knows nothing about our toolset, problem domain, or good test design — be explicit about what to test and what NOT to test.
+Plans are **architectural blueprints**, not copy-paste code. Each task references contracts defined in the architecture doc. Implementers use TDD skills to fill in the actual code.
 
 **Announce at start:** "I'm using the dotnet-writing-plans skill to create the implementation plan."
 
@@ -20,52 +18,6 @@ Write bite-sized tasks with exact file paths, complete code, and explicit test s
 - Config/environment changes (appsettings, launchSettings, .csproj tweaks)
 - Renaming or moving files without logic changes
 - Adding a NuGet package with no code changes beyond the import
-
-## Test Quality Rules for Plan Writers
-
-**These rules apply to EVERY test you spec in a plan. Violations mean the plan is broken.**
-
-### NEVER spec these tests:
-- Getter/setter tests (`CanSetName`, `CanSetProperties`, `HasInitializedCollections`)
-- Tests that verify a property is nullable/not-null by default
-- Tests that assert a constructor assigns values to properties
-- Tests that check framework behavior (EF navigation properties, DI resolution)
-
-### Every test MUST:
-- **Verify behavior that could have a bug.** Ask: "What bug does this catch?" If the answer is "none" — delete the test from the plan.
-- **Have max 3 assertions.** More than 3? Split into separate tests.
-- **Use `[Theory]`+`[InlineData]` for multiple inputs** of the same behavior (e.g., empty string, null, whitespace all invalid).
-- **Follow naming: `MethodName_Scenario_ExpectedBehavior`** — not `Test1`, `ItWorks`, `CanSetName`.
-
-### Phase 1 of every plan MUST include:
-- Shared test infrastructure setup (`CustomWebApplicationFactory`, test helpers)
-- SQLite in-memory with kept-alive connection (NOT EF InMemory provider)
-- `IClassFixture<CustomWebApplicationFactory>` pattern for integration tests
-
-### Mock Boundary Rule in plans:
-- Spec mocking for: DbContext, IHttpClientFactory, ILogger, TimeProvider, external APIs
-- NEVER spec mocking for: domain entities, value objects, pure functions
-- Always specify NSubstitute
-
-### "What Bug Does This Catch?" Table
-
-Every plan MUST include a table mapping tests to real bugs prevented:
-
-```markdown
-| Test | Bug It Catches |
-|------|---------------|
-| `AddItem_ExceedsMaxItems_ThrowsException` | User adds 51st item, corrupts list state |
-| `CreateList_EmptyName_ReturnsValidationError` | User creates list with blank name, causes display issues |
-```
-
-## Bite-Sized Task Granularity
-
-**Each step is one action:**
-- "Write the failing test" — step
-- "Run it to make sure it fails" — step
-- "Implement the minimal code to make the test pass" — step
-- "Run the tests and make sure they pass" — step
-- "Commit" — step
 
 ## Plan Document Header
 
@@ -78,7 +30,7 @@ Every plan MUST include a table mapping tests to real bugs prevented:
 
 **Goal:** [One sentence describing what this builds]
 
-**Architecture:** [2-3 sentences about approach]
+**Architecture:** `_docs/specs/{DATE}-{feature}-architecture.md`
 
 **Tech Stack:** .NET 9, ASP.NET Core, EF Core 9, SQLite, xUnit, NSubstitute
 
@@ -88,80 +40,130 @@ Every plan MUST include a table mapping tests to real bugs prevented:
 ## Task Structure
 
 ```markdown
-### Task N: [Component Name]
+### Task N: [Name]
+
+**Implements:** [Contract reference from Architecture doc, e.g., "POST /lists/{id}/items (Architecture §API Contract)"]
 
 **Files:**
 - Create: `exact/path/to/File.cs`
-- Modify: `exact/path/to/Existing.cs:123-145`
 - Test: `tests/exact/path/to/FileTests.cs`
 
-**Step 1: Write the failing test**
+**Behaviors:**
+- [Happy path behavior]
+- [Error case 1]
+- [Error case 2]
 
-```csharp
-[Fact]
-public async Task MethodName_Scenario_ExpectedBehavior()
-{
-    // Arrange
-    var list = new ShoppingList("Groceries", householdId);
-
-    // Act
-    list.AddItem("Milk", Category.Dairy);
-
-    // Assert
-    Assert.Single(list.Items);
-    Assert.Equal("Milk", list.Items[0].Name);
-}
+**Dependencies:** Task X (if applicable)
 ```
 
-**Step 2: Run test to verify it fails**
+## Backend Task Examples
 
-Run: `dotnet test --filter "FullyQualifiedName~MethodName_Scenario_ExpectedBehavior"`
-Expected: FAIL with "method not found" or "Assert.Single() Failure"
+### Domain Entity Task
 
-**Step 3: Write minimal implementation**
+```markdown
+### Task 2: ShoppingList aggregate
 
-```csharp
-public void AddItem(string name, Category category)
-{
-    _items.Add(new ShoppingItem(name, category));
-}
+**Implements:** ShoppingList entity (Architecture §Entity Model)
+
+**Files:**
+- Create: `Domain/Aggregates/ShoppingList.cs`
+- Test: `Tests/Domain/ShoppingListTests.cs`
+
+**Behaviors:**
+- Creating with valid name initializes empty items collection
+- Adding item with valid name increases item count
+- Adding item when at max capacity throws DomainException
+- Removing non-existent item throws DomainException
 ```
 
-**Step 4: Run test to verify it passes**
+### API Endpoint Task
 
-Run: `dotnet test --filter "FullyQualifiedName~MethodName_Scenario_ExpectedBehavior"`
-Expected: PASS
+```markdown
+### Task 5: AddItem endpoint
 
-**Step 5: Commit**
+**Implements:** POST /lists/{id}/items (Architecture §API Contract)
 
-```bash
-git add path/to/files
-git commit -m "feat: add item to shopping list"
+**Files:**
+- Create: `Api/Endpoints/ShoppingListEndpoints.cs`
+- Test: `Tests/Api/ShoppingListEndpointsTests.cs`
+
+**Behaviors:**
+- Valid input → returns created ShoppingItemDto with 201
+- Empty name → returns 400 with validation error
+- Invalid category → returns 400 with validation error
+- List not found → returns 404
+
+**Dependencies:** Task 2 (ShoppingList entity), Task 4 (DbContext)
 ```
+
+### Infrastructure Task
+
+```markdown
+### Task 4: EF Core DbContext and migrations
+
+**Implements:** Data persistence (Architecture §Infrastructure Decisions)
+
+**Files:**
+- Create: `Infrastructure/AppDbContext.cs`
+- Create: `Infrastructure/Configurations/ShoppingListConfiguration.cs`
+- Modify: `Program.cs` (add DbContext registration)
+
+**Behaviors:**
+- DbContext configured with SQLite provider
+- ShoppingList entity mapped with owned Items collection
+- Migration creates tables matching entity model
+
+**Dependencies:** Task 2 (ShoppingList entity)
 ```
 
-## Integration Test Pattern
+## What Plans Include
 
-Integration tests use `IClassFixture<CustomWebApplicationFactory>` with `TestHelpers.CreateAuthenticatedClient(factory, Guid.NewGuid())`. Arrange via API calls (not direct DB manipulation). Assert HTTP response + deserialized body. Same naming: `Endpoint_Scenario_ExpectedBehavior`.
+| Element | Required |
+|---------|----------|
+| Exact file paths (Create/Modify/Test) | ✓ |
+| Contract reference (`Implements:`) | ✓ |
+| Behaviors (one line each) | ✓ |
+| Task dependencies | When applicable |
+
+## What Plans Do NOT Include
+
+| Element | Reason |
+|---------|--------|
+| Full test code | TDD skill generates tests from behaviors |
+| Full implementation code | Implementer writes from contract + behaviors |
+| Step-by-step TDD instructions | TDD skill handles workflow |
+| Expected failure messages | TDD skill handles verification |
+| "What bugs does this catch?" table | Behaviors implicitly define bug coverage |
+
+## Test Infrastructure Task
+
+**Task 1 of every plan MUST set up test infrastructure:**
+
+```markdown
+### Task 1: Test infrastructure setup
+
+**Implements:** Shared test helpers (N/A - infrastructure)
+
+**Files:**
+- Create: `Tests/CustomWebApplicationFactory.cs`
+- Create: `Tests/TestHelpers.cs`
+
+**Behaviors:**
+- CustomWebApplicationFactory configured with SQLite in-memory
+- TestHelpers provides authenticated HttpClient creation
+- IClassFixture pattern ready for integration tests
+```
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Tasks too large (multiple files + tests in one task) | One behavior per task. If task has >2 new files, split it. |
-| Missing file paths | Every task MUST list exact `Create:` / `Modify:` / `Test:` paths. |
-| Vague steps like "add validation" | Write the actual code in the plan. No placeholders. |
-| Missing expected failure messages | Step 2 must say exactly what the test runner prints on failure. |
-| Speccing getter/setter tests | Ask "what bug does this catch?" If "none" -- delete. |
-| No test infrastructure in Phase 1 | `CustomWebApplicationFactory` + helpers MUST be Task 1. |
-
-## Remember
-- Exact file paths always
-- Complete code in plan (not "add validation")
-- Exact commands with expected output
-- **REQUIRED SUB-SKILL:** `saurun:dotnet-tdd` for TDD workflow
-- DRY, YAGNI, TDD, frequent commits
-- NO getter/setter tests — ever
+| Writing full test/implementation code | Just list behaviors — TDD skill writes code |
+| Forgetting `Implements:` reference | Every task MUST reference architecture contract |
+| Vague behaviors like "handles errors" | Be specific: "Empty name → returns 400" |
+| Missing file paths | Every task MUST list exact Create/Modify/Test paths |
+| Tasks too large (>3 files) | Split into smaller tasks |
+| No test infrastructure in Task 1 | `CustomWebApplicationFactory` + helpers MUST be Task 1 |
 
 ## Completion
 

@@ -1,15 +1,13 @@
 ---
 name: react-writing-plans
-description: Use when you have a spec, PRD, or requirements for a React frontend feature requiring multiple components, stores, or API integrations, before writing any code.
+description: Use when you have a spec, PRD, or requirements for a React frontend feature requiring multiple components, stores, or API integrations, before writing any code. Creates concise implementation plans that reference architecture contracts.
 ---
 
 # React Writing Plans
 
 ## Overview
 
-Every implementation plan is a self-contained instruction set: an engineer with zero codebase context should be able to execute it task-by-task using only the plan and TDD.
-
-Write bite-sized tasks with exact file paths, complete code, and explicit test specs. DRY. YAGNI. TDD. Frequent commits. Assume the implementer is skilled but knows nothing about our toolset, problem domain, or good test design — be explicit about what to test and what NOT to test.
+Plans are **architectural blueprints**, not copy-paste code. Each task references contracts defined in the architecture doc. Implementers use TDD skills to fill in the actual code.
 
 **Announce at start:** "I'm using the react-writing-plans skill to create the implementation plan."
 
@@ -27,71 +25,6 @@ Write bite-sized tasks with exact file paths, complete code, and explicit test s
 - Renaming or moving files without logic changes
 - Adding an npm package with no code changes beyond the import
 
-## Quick Reference
-
-| Element | Requirement |
-|---------|-------------|
-| **Plan location** | `_docs/plans/YYYY-MM-DD-<feature-name>.md` |
-| **Task 1** | Test infrastructure (renderWithProviders, MSW, Zustand reset) |
-| **Task granularity** | One behavior, max 2 new files |
-| **Each task** | 5 steps: write test → run (fail) → implement → run (pass) → commit |
-| **File paths** | Exact paths with `Create:` / `Modify:` / `Test:` |
-| **Test naming** | `it('should [behavior] when [condition]')` |
-| **Max assertions** | 3 per test, use `it.each` for multiple inputs |
-| **Mock boundary** | MSW for APIs, `vi.mock` for browser APIs only |
-| **Never mock** | Zustand stores, React components, custom hooks |
-| **Tailwind v4** | Parentheses for CSS vars: `bg-(--var)` not `bg-[--var]` |
-
-## Test Quality Rules for Plan Writers
-
-**These rules apply to EVERY test you spec in a plan. Violations mean the plan is broken.**
-
-### NEVER spec these tests:
-- "Renders without crashing" smoke tests
-- Tests that assert className or style presence
-- Tests that verify a prop is passed through
-- Tests that check default state values from a store (`hasDefaultItems`, `initialCountIsZero`)
-- Tests that mock Zustand stores, React components, or custom hooks
-- Assertion-less tests (render + no expect)
-
-### Every test MUST:
-- **Verify behavior that could have a bug.** Ask: "What bug does this catch?" If the answer is "none" — delete the test from the plan.
-- **Have max 3 assertions.** More than 3? Split into separate tests.
-- **Use `it.each` for multiple inputs** of the same behavior (e.g., empty string, null, various invalid inputs).
-- **Follow naming: `it('should [behavior] when [condition]')`** — not `test1`, `it works`, `renders component`.
-- **No "and" in test names.** If you write "and", split into two tests.
-
-### Phase 1 of every plan MUST include:
-- Shared test infrastructure: custom `renderWithProviders` wrapper (`test-utils.tsx`)
-- MSW setup: `setupServer` in shared setup file, `vitest.setup.ts` with MSW lifecycle
-- `onUnhandledRequest: 'error'` in MSW config (catch missing handlers)
-- Zustand store reset pattern in `beforeEach`
-
-### Mock Boundary Rule in plans:
-- Spec mocking for: API endpoints via MSW (`http.get`, `http.post`, etc.), browser APIs (`window.location`, `navigator.*`, timers, `IntersectionObserver`)
-- NEVER spec mocking for: Zustand stores (use real stores with controlled state), React components, custom hooks, utility functions, domain logic
-- Mock setup must be <50% of test code — if mocking dominates, the test is wrong
-
-### "What Bug Does This Catch?" Table
-
-Every plan MUST include a table mapping tests to real bugs prevented:
-
-```markdown
-| Test | Bug It Catches |
-|------|---------------|
-| `should show error when API returns 500` | User sees blank screen on server error |
-| `should disable submit when form invalid` | User submits incomplete data |
-```
-
-## Bite-Sized Task Granularity
-
-**Each step is one action:**
-- "Write the failing test" — step
-- "Run it to make sure it fails" — step
-- "Implement the minimal code to make the test pass" — step
-- "Run the tests and make sure they pass" — step
-- "Commit" — step
-
 ## Plan Document Header
 
 **Every plan MUST start with this header:**
@@ -103,7 +36,7 @@ Every plan MUST include a table mapping tests to real bugs prevented:
 
 **Goal:** [One sentence describing what this builds]
 
-**Architecture:** [2-3 sentences about approach]
+**Architecture:** `_docs/specs/{DATE}-{feature}-architecture.md`
 
 **Tech Stack:** React 19, Vite, TypeScript, Tailwind CSS v4, Zustand, Vitest, React Testing Library, MSW
 
@@ -113,108 +46,158 @@ Every plan MUST include a table mapping tests to real bugs prevented:
 ## Task Structure
 
 ```markdown
-### Task N: [Component Name]
+### Task N: [Name]
+
+**Implements:** [Contract reference from Architecture doc, e.g., "AddItemForm (Architecture §Component Tree)"]
 
 **Files:**
 - Create: `src/components/exact/path/Component.tsx`
-- Create: `src/stores/exactStore.ts`
 - Test: `src/components/exact/path/__tests__/Component.test.tsx`
 
-**Step 1: Write the failing test**
+**Behaviors:**
+- [Happy path behavior]
+- [Error case 1]
+- [Error case 2]
 
-```tsx
-import { renderWithProviders, screen } from '@/test-utils'
-import userEvent from '@testing-library/user-event'
-import { http, HttpResponse } from 'msw'
-import { server } from '@/mocks/server'
-import { AddItemForm } from '../AddItemForm'
-
-it('should add item to list when form submitted with valid input', async () => {
-  const user = userEvent.setup()
-  server.use(
-    http.post('/api/items', () => HttpResponse.json({ id: '1', name: 'Milk' }))
-  )
-
-  renderWithProviders(<AddItemForm listId="list-1" />)
-
-  await user.type(screen.getByRole('textbox', { name: /item name/i }), 'Milk')
-  await user.click(screen.getByRole('button', { name: /add/i }))
-
-  expect(await screen.findByText('Milk')).toBeInTheDocument()
-})
+**Dependencies:** Task X (if applicable)
 ```
 
-**Step 2: Run test to verify it fails**
+## Frontend Task Examples
 
-Run: `npx vitest run --reporter=verbose src/components/exact/path/__tests__/Component.test.tsx`
-Expected: FAIL with "Unable to find element" or "module not found"
+### Component Task
 
-**Step 3: Write minimal implementation**
+```markdown
+### Task 3: AddItemForm component
 
-```tsx
-export function AddItemForm({ listId }: { listId: string }) {
-  const [name, setName] = useState('')
-  const addItem = useItemStore((s) => s.addItem)
+**Implements:** AddItemForm (Architecture §Component Tree)
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    await addItem(listId, name)
-    setName('')
-  }
+**Files:**
+- Create: `src/components/AddItemForm.tsx`
+- Test: `src/components/__tests__/AddItemForm.test.tsx`
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <label>
-        Item name
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
-      <button type="submit">Add</button>
-    </form>
-  )
-}
+**Behaviors:**
+- Submitting valid input calls onItemAdded with new item
+- Empty name shows validation error
+- Displays loading state while submitting
+- Disables submit button when form invalid
 ```
 
-**Step 4: Run test to verify it passes**
+### Store Task
 
-Run: `npx vitest run --reporter=verbose src/components/exact/path/__tests__/Component.test.tsx`
-Expected: PASS
+```markdown
+### Task 2: useListStore Zustand store
 
-**Step 5: Commit**
+**Implements:** useListStore (Architecture §Stores)
 
-```bash
-git add src/components/exact/path/ src/stores/
-git commit -m "feat: add item form with API integration"
+**Files:**
+- Create: `src/stores/listStore.ts`
+- Test: `src/stores/__tests__/listStore.test.ts`
+
+**Behaviors:**
+- fetchLists populates lists array from API
+- createList adds new list and returns it
+- deleteList removes list from array
+- Handles API errors by setting error state
 ```
+
+### Page Task
+
+```markdown
+### Task 5: ListDetailPage
+
+**Implements:** /lists/{id} → ListDetailPage (Architecture §Pages)
+
+**Files:**
+- Create: `src/pages/ListDetailPage.tsx`
+- Test: `src/pages/__tests__/ListDetailPage.test.tsx`
+
+**Behaviors:**
+- Shows loading spinner while fetching
+- Displays list name and items when loaded
+- Shows error message when list not found
+- AddItemForm adds items to the list
+
+**Dependencies:** Task 2 (useListStore), Task 3 (AddItemForm)
 ```
 
-## Tailwind v4 Compliance in Plans
+### API Hook Task
 
-**Every plan that includes UI code MUST follow these rules:**
+```markdown
+### Task 4: useListQuery hook
+
+**Implements:** useListQuery (Architecture §API Hooks)
+
+**Files:**
+- Create: `src/hooks/useListQuery.ts`
+- Test: `src/hooks/__tests__/useListQuery.test.ts`
+
+**Behaviors:**
+- Returns loading state initially
+- Returns list data when API succeeds
+- Returns error when API fails
+- Refetches on listId change
+```
+
+## What Plans Include
+
+| Element | Required |
+|---------|----------|
+| Exact file paths (Create/Modify/Test) | ✓ |
+| Contract reference (`Implements:`) | ✓ |
+| Behaviors (one line each) | ✓ |
+| Task dependencies | When applicable |
+
+## What Plans Do NOT Include
+
+| Element | Reason |
+|---------|--------|
+| Full test code | TDD skill generates tests from behaviors |
+| Full implementation code | Implementer writes from contract + behaviors |
+| Step-by-step TDD instructions | TDD skill handles workflow |
+| Expected failure messages | TDD skill handles verification |
+| "What bugs does this catch?" table | Behaviors implicitly define bug coverage |
+
+## Test Infrastructure Task
+
+**Task 1 of every plan MUST set up test infrastructure:**
+
+```markdown
+### Task 1: Test infrastructure setup
+
+**Implements:** Shared test helpers (N/A - infrastructure)
+
+**Files:**
+- Create: `src/test-utils.tsx`
+- Create: `src/mocks/server.ts`
+- Create: `src/mocks/handlers.ts`
+- Modify: `vitest.setup.ts`
+
+**Behaviors:**
+- renderWithProviders wraps components with necessary providers
+- MSW server configured with onUnhandledRequest: 'error'
+- Zustand store reset in beforeEach
+```
+
+## Tailwind v4 Compliance
+
+**Implementers MUST follow these rules (remind in plan if UI-heavy):**
 
 - CSS variables use **parentheses**: `bg-(--brand-color)` NOT `bg-[--brand-color]`
-- Use renamed utilities: `shadow-xs` (not `shadow-sm` for smallest), `rounded-xs` (not `rounded-sm` for smallest)
-- Focus rings: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ring-color)`
+- Use renamed utilities: `shadow-xs`, `rounded-xs` (not `shadow-sm`, `rounded-sm` for smallest)
 - Class merging: always `cn()`, never template literals
-- Variants: `cva` with `VariantProps` typing
 - No `theme()` in arbitrary values — use `var(--color-*)` instead
-
-## Integration Test Pattern
-
-Integration tests render full component trees with real Zustand stores and MSW handlers. Arrange via `userEvent` interactions and MSW response setup. Assert user-visible outcomes (text, roles, navigation). Same naming: `it('should [behavior] when [condition]')`.
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Tasks too large (multiple components + tests in one task) | One behavior per task. If task has >2 new files, split it. |
-| Missing file paths | Every task MUST list exact `Create:` / `Modify:` / `Test:` paths. |
-| Vague steps like "add validation" | Write the actual code in the plan. No placeholders. |
-| Missing expected failure messages | Step 2 must say exactly what the test runner prints on failure. |
-| Speccing "renders without crashing" tests | Ask "what bug does this catch?" If "none" — delete. |
-| No test infrastructure in Phase 1 | `renderWithProviders` + MSW setup + Zustand reset MUST be Task 1. |
-| Mocking Zustand stores | Use real stores. Control state via store actions or `setState`. |
-| Square bracket CSS vars | Use `bg-(--var)` NOT `bg-[--var]`. Brackets silently fail in v4. |
-| Mocking React components or hooks | Test real components. Mock only API (MSW) and browser APIs. |
+| Writing full test/implementation code | Just list behaviors — TDD skill writes code |
+| Forgetting `Implements:` reference | Every task MUST reference architecture contract |
+| Vague behaviors like "handles errors" | Be specific: "Shows error message when API returns 500" |
+| Missing file paths | Every task MUST list exact Create/Modify/Test paths |
+| Tasks too large (>3 files) | Split into smaller tasks |
+| No test infrastructure in Task 1 | `renderWithProviders` + MSW setup MUST be Task 1 |
+| Square bracket CSS vars | Use `bg-(--var)` NOT `bg-[--var]` |
 
 ## Completion
 
