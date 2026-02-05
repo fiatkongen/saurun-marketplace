@@ -7,16 +7,16 @@ Users get updates via `/plugin marketplace update saurun-marketplace` or enable 
 ## Usage
 
 ```
-/publish-plugin [bump]
+/publish-plugin [--no-bump]
 ```
 
 ## Parameters
 
-- `bump` (optional): Include to increment the patch version (e.g., 1.0.0 → 1.0.1)
+- `--no-bump` (optional): Skip version increment (rarely needed)
 
 ## Steps
 
-1. If `bump` parameter is provided:
+1. **Bump version** (unless `--no-bump` is provided):
    - Read `plugins/saurun/.claude-plugin/plugin.json`
    - Increment the patch version (third number)
    - Update the version in both:
@@ -40,8 +40,8 @@ Users get updates via `/plugin marketplace update saurun-marketplace` or enable 
 ## Examples
 
 ```
-/publish-plugin        # Push without version bump
-/publish-plugin bump   # Bump version and push
+/publish-plugin           # Bump version and push (default)
+/publish-plugin --no-bump # Push without version bump (rare)
 ```
 
 ## First-time Setup
