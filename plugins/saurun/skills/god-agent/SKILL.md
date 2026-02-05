@@ -18,17 +18,24 @@ Before anything else:
 1. **Parse input.** Extract the idea and any inline preferences (look for "Preferences:" in the input string).
 
 2. **Detect mode.**
-   - `CLAUDE.md` exists in working directory → **Extension Mode**
-   - No `CLAUDE.md` → **Greenfield Mode**
+   - `CLAUDE.md` exists in working directory → **Extension Mode** (build in current directory)
+   - No `CLAUDE.md` → **Greenfield Mode** (create new project)
 
-3. **Check for resume.** If `.god-agent/STATE.md` exists:
+3. **Greenfield project location.** (Greenfield only)
+   - Default location: `~/repos/playground/{project-name}/`
+   - Derive `{project-name}` from the idea (kebab-case, e.g., "recipe sharing app" → `recipe-app`)
+   - Create the directory if it doesn't exist
+   - `cd` into it before proceeding
+   - **Never ask the user where to create the project** — use the default location
+
+4. **Check for resume.** If `.god-agent/STATE.md` exists:
    - Read it
    - Find last completed phase
    - Read that phase's output artifact
    - Log `[RESUMED] from Phase {X}` in STATE.md
    - Skip to the next incomplete phase (or sub-position within a phase)
 
-4. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
+5. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
 
    Required skills (verified lazily when each phase first uses them):
    - `superpowers:brainstorming` (Phase 0)
@@ -47,7 +54,7 @@ Before anything else:
    - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`)
    - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`)
 
-5. **Read context layers** (in priority order):
+6. **Read context layers** (in priority order):
 
    | Layer | Source | When |
    |-------|--------|------|
@@ -55,7 +62,7 @@ Before anything else:
    | Project context | `CLAUDE.md`, `_docs/`, `agent-os/` | Extension mode only |
    | Stack defaults | .NET 9, React 19, Tailwind v4, Zustand, SQLite | Always (hardcoded) |
 
-6. **Write initial STATE.md** to `.god-agent/STATE.md` (see STATE.md Protocol below).
+7. **Write initial STATE.md** to `.god-agent/STATE.md` (see STATE.md Protocol below).
 
 ---
 

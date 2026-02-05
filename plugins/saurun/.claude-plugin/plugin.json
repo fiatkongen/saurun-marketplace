@@ -1,7 +1,7 @@
 {
   "name": "saurun",
   "description": "Personal Claude Code skills, commands, and agents - codex-bridge, plan-fixer, and more",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "author": {
     "name": "Rasmus Hove Munk"
   }
