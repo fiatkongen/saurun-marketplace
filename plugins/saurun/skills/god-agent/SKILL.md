@@ -24,6 +24,8 @@ Take any input (one-liner, rough spec, or product brief) and deliver working, te
 
 **Tech stack (always):** .NET 9, ASP.NET Core, EF Core 9, SQLite, SignalR, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand.
 
+**Subagent dispatch (always):** Run all Task subagents in foreground. Never use `run_in_background`. Wait for each subagent to complete before proceeding.
+
 ## Step 1: Pre-Flight
 
 Before anything else:
