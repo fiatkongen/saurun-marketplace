@@ -1,19 +1,15 @@
 ---
 name: god-agent
 description: >
-  Autonomous end-to-end development pipeline. Takes an idea and delivers working, tested, committed code through 8 phases (scaffold → spec → architecture → plans → implementation → integration → e2e testing → design polish).
-
-  USE FOR: Greenfield apps, major features requiring both backend + frontend work.
+  Use when building a new greenfield app or major multi-layer feature requiring both .NET backend + React frontend.
 
   DO NOT USE FOR: Bug fixes, small changes, single-layer work (backend-only or frontend-only), non-.NET/React projects.
 
-  REQUIRED STACK: .NET 9 + React 19 + Tailwind v4 + Zustand + SQLite. Will not work with other stacks.
+  REQUIRED: .NET 9 + React 19 + Tailwind v4 + Zustand + SQLite.
 
-  INPUT FORMAT: Idea string + optional "Preferences: ..." suffix (e.g., "Build X. Preferences: Danish market, mobile-first").
+  INPUT: Idea string + optional "Preferences: ..." suffix.
 
-  PROJECT LOCATION: Always ~/repos/playground/{project-name}/. Location-independent — invoke from anywhere.
-
-  COMMITMENT: Long-running (30+ min), creates _docs/specs/, _docs/plans/, .god-agent/, modifies CLAUDE.md. Resumable via STATE.md if interrupted.
+  COMMITMENT: Long-running (30+ min), resumable via STATE.md.
 user-invocable: true
 argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-first"
 ---
@@ -29,6 +25,19 @@ Take any input (one-liner, rough spec, or product brief) and deliver working, te
 **Tech stack (always):** .NET 9, ASP.NET Core, EF Core 9, SQLite, SignalR, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand.
 
 **Subagent dispatch (always):** Run subagents in foreground. Never use `run_in_background`. When tasks are independent (e.g., Phase 2 planning for different work units), dispatch them in parallel by including multiple Task calls in a single message. Wait for all to complete before proceeding.
+
+## Phase Overview
+
+| Phase | Name | Gate | Output Artifact |
+|-------|------|------|-----------------|
+| -1 | Scaffold | Blocking | Directory structure, git repo |
+| 0 | Intake | Blocking | `_docs/specs/{DATE}-{feature}.md` |
+| 1 | Architecture | Blocking | `_docs/specs/{DATE}-{feature}-architecture.md` |
+| 2 | Planning | Blocking | `_docs/plans/*.md` + `MANIFEST.json` |
+| 3 | Execution | Blocking | Working code, passing tests |
+| 4 | Integration | Blocking | `_docs/reports/{DATE}-{feature}-report.md` |
+| 5 | E2E Testing | **Non-Blocking** | `_docs/e2e-results/report.md` + videos |
+| 6 | Design Polish | **Non-Blocking** | `frontend/public/assets/` + wired components |
 
 ## Step 1: Pre-Flight
 
@@ -106,7 +115,9 @@ After each phase completes, the **controller** (not the subagent) validates the 
 
 ## Step 2: Execute Phases
 
-Run phases -1 through 6 sequentially. After each phase: update STATE.md, run gate check. If gate fails: re-dispatch with feedback (up to 2 retries). If still failing: log to STATE.md and STOP. Note: Phases 5 and 6 are informational and don't block completion.
+Run phases -1 through 6 sequentially. ALL phases MUST be executed. After each phase: update STATE.md, run gate check. If gate fails: re-dispatch with feedback (up to 2 retries). If still failing: log to STATE.md and STOP.
+
+**Phases marked "Non-Blocking" (5 and 6):** MUST execute, MUST run gate check. Execute with the same rigor as blocking phases. Only difference: gate failures are logged but don't trigger STOP. "Non-blocking" means "failures are tolerated." It does NOT mean "skip" or "reduce effort."
 
 ---
 
@@ -248,21 +259,7 @@ Run phases -1 through 6 sequentially. After each phase: update STATE.md, run gat
 
 ```
 Task(subagent_type="general-purpose", prompt="""
-AUTONOMOUS MODE: You are operating without a human in the loop.
-When a skill instructs you to ask the user a question:
-1. Identify what information is needed
-2. Check STATE.md, spec, and architecture docs for the answer
-3. If found -> use it
-4. If not found -> make a reasonable decision and log it as an
-   assumption in STATE.md under ## Assumptions Log
-Never block waiting for human input. Never use AskUserQuestion.
-
-SECURITY GUARDRAILS:
-- Never run destructive git commands (force push, reset --hard, clean -f)
-- Never delete production data, configuration files, or .env files
-- Never modify security-sensitive files (credentials, tokens, secrets)
-- Never run commands that affect systems outside the project directory
-- Log any security-relevant decision to STATE.md under ## Security Log
+{AUTONOMOUS_PREAMBLE}
 
 You are executing Phase 0 (Intake) of the god-agent pipeline.
 
@@ -282,112 +279,9 @@ OUTPUT REQUIREMENTS:
 2. Update .god-agent/STATE.md with decisions and assumptions
 3. Write brainstorming Q&A log to .god-agent/brainstorm-qa.md using the Q&A template below
 
-Q&A LOG TEMPLATE:
-# Brainstorming Q&A Log
+Q&A LOG TEMPLATE: See references/qa-template.md
 
-## Session Info
-- **Feature:** {feature name}
-- **Date:** {ISO date}
-- **Mode:** {Greenfield | Extension}
-
-## Questions & Answers
-
-### 1. Problem Definition
-**Q:** What specific problem or pain point does this solve?
-**A:** {answer}
-**Source:** {Injected context | Project context | Stack defaults | Assumption}
-
-### 2. Target Users
-**Q:** Who are the primary users?
-**A:** {answer}
-**Source:** {source}
-
-### 3. Core Features
-**Q:** What are the must-have features for MVP?
-**A:** {answer}
-**Source:** {source}
-
-### 4. Out of Scope
-**Q:** What should explicitly NOT be included?
-**A:** {answer}
-**Source:** {source}
-
-### 5. Domain Entities
-**Q:** What are the key domain objects?
-**A:** {answer}
-**Source:** {source}
-
-### 6. User Flows
-**Q:** What are the primary user journeys?
-**A:** {answer}
-**Source:** {source}
-
-### 7. Technical Constraints
-**Q:** Any specific technical requirements or constraints?
-**A:** {answer}
-**Source:** {source}
-
-### 8. UX Preferences
-**Q:** Any design/UX preferences (language, style, mobile-first)?
-**A:** {answer}
-**Source:** {source}
-
-### 9. Visual Style
-**Q:** What visual style fits this product?
-**A:** {Derived from product context or user input}
-**Source:** {Injected context | Derived from Q1-Q3}
-**Reasoning:** {Why this style fits the product/users}
-
-Style derivation examples:
-- Recipe app for families → "warm friendly approachable"
-- Fintech dashboard → "professional clean data-focused"
-- Kids education → "playful colorful rounded"
-- Luxury spa booking → "elegant minimal soft"
-
-## Additional Questions
-{Any other questions that arose during brainstorming, with answers and sources}
-
-## Assumptions Made
-{List all assumptions with reasoning — these also go to STATE.md}
-
-SPEC TEMPLATE:
-# {Feature Name} -- Product Spec
-
-## Problem
-What pain does this solve?
-
-## Solution
-What are we building? (1-2 sentences)
-
-## Scope
-### In Scope
-- Numbered feature list
-
-### Out of Scope
-- Explicit exclusions
-
-## Entities
-Domain objects and their relationships.
-
-## User Flows
-Step-by-step what users do for each feature.
-
-## API Surface
-Endpoints or interfaces needed.
-
-## Tech Decisions
-Stack-specific choices (.NET patterns, React component strategy).
-
-## Decisions & Rationale
-Every choice made during brainstorming with why.
-
-## Rejected Alternatives
-Approaches considered but not taken, with reasons.
-
-## Risks & Mitigations
-| Risk | Probability | Impact | Mitigation |
-|------|------------|--------|------------|
-| ... | H/M/L | H/M/L | ... |
+SPEC TEMPLATE: See references/spec-template.md
 """)
 ```
 
@@ -495,59 +389,7 @@ CONCISENESS RULES (this doc is for autonomous agents, not humans):
 - Data Flow: ONLY describe non-standard flows or critical decisions
 - Infrastructure: ONLY non-default choices (skip "EF Core code-first migrations")
 
-ARCHITECTURE TEMPLATE:
-# {Feature Name} -- Technical Architecture
-
-## Entity Model
-For each entity: name, aggregate boundary, rich/anemic classification.
-Rich entities: list behavior method names (not full signatures).
-
-Example:
-```
-Recipe (Aggregate Root, Rich)
-  - owns: Ingredient[], Step[]
-  - behaviors: Create(), AddIngredient(), RemoveIngredient(), UpdateDetails()
-
-Ingredient (Owned, Anemic) - no independent behavior
-Category (Lookup, Anemic) - seeded reference data
-```
-
-## API Contract
-
-### DTOs
-List DTOs with properties and inline validation:
-```typescript
-CreateEntityRequest {
-  name: string,      // required, 1-100 chars
-  category: string   // required, enum value
-}
-EntityDto { id, name, category, createdAt }
-```
-(Validation is inline — no separate validation section needed)
-
-### Endpoints
-- GET /entities?filter={x} → EntityDto[]
-- POST /entities ← CreateEntityRequest → EntityDto
-- PUT /entities/{id} ← UpdateEntityRequest → EntityDto
-- DELETE /entities/{id} → 204
-
-## Component Tree
-Pages with routes, components with props, stores with shape, hooks.
-Use compact format:
-- `/entities` → EntitiesPage
-- `EntityCard { entity, onSave? }` — thumbnail card
-- `useEntitiesQuery()` → `{ data, isLoading }`
-
-## Infrastructure Decisions
-ONLY list non-default choices:
-- Image storage: local filesystem (abstracted for future S3)
-- Auth: JWT bearer, 7-day expiry, no refresh tokens for MVP
-
-## Test Layer Map
-| Entity | Classification | Test Layer |
-|--------|----------------|------------|
-| Recipe | Rich | Unit (domain behaviors) |
-| Ingredient | Anemic | Integration (via Recipe API) |
+ARCHITECTURE TEMPLATE: See references/architecture-template.md
 """)
 ```
 
@@ -630,7 +472,7 @@ OUTPUT: Write plan to _docs/plans/{DATE}-{unit_name}.md
 }
 ```
 
-Array order is execution order. The .NET + React stack has predictable, near-linear dependencies (backend before frontend), so DAG complexity is unnecessary.
+Array order is execution order (backend before frontend).
 
 **Gate 2 Checklist (per plan):**
 - [ ] Plan file exists at `_docs/plans/{DATE}-{unit}.md`
@@ -705,8 +547,6 @@ For each plan (in array order):
     Fail -> dispatch superpowers:systematic-debugging subagent (up to 2 attempts)
     Still fails -> STOP and report
 ```
-
-> **Design note:** Single-pass review is sufficient because: (1) the implementer self-reviews before completing, (2) one combined review is more efficient (single dispatch, all feedback at once), and (3) less orchestration complexity.
 
 **Example implementer dispatch (backend):**
 
@@ -797,12 +637,6 @@ Follow the ADDITIONAL_REVIEW_CRITERIA from the loaded skill.
 """)
 ```
 
-**Quality criteria loading:** The reviewer subagent loads the appropriate criteria skill directly:
-- Backend tasks: reviewer loads `saurun:dotnet-code-quality-reviewer-prompt`
-- Frontend tasks: reviewer loads `saurun:react-code-quality-reviewer-prompt`
-
-The reviewer is instructed to load the skill and follow its criteria, rather than the controller extracting and pasting criteria into the prompt.
-
 **Agent routing:**
 
 | Plan Type | Implementer Agent | Pre-loaded Skills | Review Criteria Source |
@@ -839,7 +673,7 @@ Task fails after 2 implementer retries
 
 ---
 
-### Phase 4: Integration (Working Code -> Shipped)
+### Phase 4: Integration (Working Code -> Verified)
 
 **Run verification first (as controller):**
 ```bash
@@ -873,51 +707,7 @@ TASKS:
    If existing project -> create PR with summary
 4. Write completion report to _docs/reports/{DATE}-{feature}-report.md
 
-COMPLETION REPORT TEMPLATE:
-# {Feature Name} -- Completion Report
-
-## What Was Built
-Summary from Phase 0 spec.
-
-## Architecture Decisions
-Key decisions from Phase 1.
-
-## Plans Executed
-| # | Plan | Tasks | Status |
-|---|------|-------|--------|
-
-## Test Results
-- Backend: X tests, 0 failures
-- Frontend: Y tests, 0 failures
-
-## E2E Test Results
-- **Flows tested:** {n}
-- **Passed:** {n} | **Auto-fixed:** {n} | **Unresolved:** {n}
-- **Demo videos:** [View all](./../e2e-results/videos/)
-- **Full report:** [E2E Report](./../e2e-results/report.md)
-
-### Auto-Fixed Issues
-1. {Test name} — {description} in `{file}:{line}`
-
-### Unresolved Failures
-| Test | Category | Error Summary |
-|------|----------|---------------|
-
-## Generated Assets
-- **Style applied:** {style_name}
-- **Heroes:** {count} generated
-- **Illustrations:** {count} generated
-- **Marketing assets:** OG image, favicon
-- **Manual needed:** {list any that failed}
-
-## Assumptions Made
-All assumptions from STATE.md Assumptions Log.
-
-## Issues Encountered
-Failures, debugging escalations, and resolutions.
-
-## PR
-URL (if applicable)
+COMPLETION REPORT TEMPLATE: See references/completion-report-template.md
 """)
 ```
 
@@ -940,7 +730,7 @@ URL (if applicable)
 
 ---
 
-### Phase 5: E2E Testing (Informational)
+### Phase 5: E2E Testing (Non-Blocking)
 
 **Runs as:** Controller executes directly (orchestrates the E2E test flow).
 
@@ -966,7 +756,7 @@ URL (if applicable)
    - Generate report to `_docs/e2e-results/report.md`
    - Teardown servers
 
-**Gate 5 Checklist (informational — doesn't block completion):**
+**Gate 5 Checklist (non-blocking — failures don't stop pipeline, but phase MUST execute):**
 - [ ] Pre-E2E commit exists with message containing "pre-e2e checkpoint"
 - [ ] E2E test files exist in `frontend/e2e/*.spec.ts`
 - [ ] All User Flows from spec have corresponding test files
@@ -983,7 +773,7 @@ URL (if applicable)
 **Update Completion Report:**
 Add E2E results section (see updated template below).
 
-**Note:** This phase is **informational** — it produces valuable artifacts (demo videos, test coverage) but doesn't block pipeline completion. If all tests fail after fix attempts, log the results and continue to Phase 6.
+**Note:** This phase is **mandatory but non-blocking** — it MUST execute and produces valuable artifacts (demo videos, test coverage), but failures don't stop the pipeline. If all tests fail after fix attempts, log the results and continue to Phase 6.
 
 ---
 
@@ -1091,7 +881,7 @@ frontend/public/assets/
     └── og-image.jpg
 ```
 
-**Gate 6 Checklist (informational — doesn't block completion):**
+**Gate 6 Checklist (non-blocking — failures don't stop pipeline, but phase MUST execute):**
 - [ ] Asset inventory at `_docs/design-polish/asset-inventory.md`
 - [ ] Generation log at `_docs/design-polish/generation-log.md`
 - [ ] All hero images generated (or marked manual)
@@ -1124,68 +914,7 @@ This step is **non-blocking** — if it fails, log to STATE.md and continue. The
 
 ## STATE.md Protocol
 
-Written to `.god-agent/STATE.md`. Updated after every phase completion AND after every task within Phase 3.
-
-```markdown
-# God-Agent State
-
-## Meta
-- **Input:** <original user input, verbatim>
-- **Mode:** Greenfield | Extension
-- **Started:** <ISO timestamp>
-- **Last Updated:** <ISO timestamp>
-
-## Phase Tracker
-| Phase | Status | Artifact | Completed At |
-|-------|--------|----------|--------------|
-| -1. Scaffold | Pending/Skipped | — | — |
-| 0. Intake | Pending | — | — |
-| 1. Architecture | Pending | — | — |
-| 2. Planning | Pending | — | — |
-| 3. Execution | Pending | — | — |
-| 4. Integration | Pending | — | — |
-| 5. E2E Testing | Pending | — | — |
-| 6. Design Polish | Pending | — | — |
-
-## E2E Summary
-- **Passed:** —
-- **Auto-fixed:** —
-- **Unresolved:** —
-- **Category breakdown:** —
-
-## Asset Generation Summary
-- **Style:** —
-- **Generated:** — assets
-- **Manual needed:** — (list in generation-log.md)
-
-## Current Position
-- **Phase:** -1
-- **Sub-position:** Starting
-
-## Decisions Log
-1. [Phase N] Decision — rationale
-
-## Assumptions Log
-1. [Phase N] Assumption — reasoning
-
-## Context Layers
-### Injected Context
-<user-provided preferences, verbatim>
-
-### Project Context
-<CLAUDE.md summary, existing structure, conventions>
-
-### Stack Defaults
-.NET 9, ASP.NET Core, EF Core 9, SQLite, SignalR, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand
-
-## Failures
-| Phase | Task | Attempts | Resolution |
-|-------|------|----------|------------|
-
-## Security Log
-| Timestamp | Phase | Action | Justification |
-|-----------|-------|--------|---------------|
-```
+Written to `.god-agent/STATE.md`. Updated after every phase completion AND after every task within Phase 3. Template: See references/state-template.md
 
 ---
 
@@ -1211,24 +940,23 @@ STATE.md has exact position. All completed code is committed. All plan docs are 
 
 ---
 
+## Red Flags — STOP and Reassess
+
+If you catch yourself thinking any of these, you are rationalizing. Stop and follow the rules.
+
+| Rationalization | Reality |
+|----------------|---------|
+| "Phase 5/6 are non-blocking, I can skip them" | Non-blocking = failures tolerated. Execution is mandatory. |
+| "Tests pass, reviewer is unnecessary" | Every task gets reviewed. No exceptions. |
+| "This task is trivial / similar to the last one, skip it" | Every task in the plan gets implemented. Plans are the contract. |
+| "Phase 4 passed, the pipeline is done" | Pipeline is done after Phase 6 + Post-Completion. Phase 4 = verified, not finished. |
+| "Non-blocking means low effort is fine" | Execute with same rigor as blocking phases. Only failure *consequences* differ. |
+| "This gate item is pedantic, it's fine" | Gates are the quality mechanism. Check every item. |
+| "I'm running low on context, skip remaining phases" | Update STATE.md and STOP. Do not silently skip phases. Resume will pick up. |
+| "The user won't notice if I skip this" | You are autonomous. Quality is your only constraint. |
+
+---
+
 ## Autonomous Preamble (Reference)
 
-Inject this into EVERY subagent dispatch:
-
-```
-AUTONOMOUS MODE: You are operating without a human in the loop.
-When a skill instructs you to ask the user a question:
-1. Identify what information is needed
-2. Check STATE.md, spec, and architecture docs for the answer
-3. If found -> use it
-4. If not found -> make a reasonable decision and log it as an
-   assumption in STATE.md under ## Assumptions Log
-Never block waiting for human input. Never use AskUserQuestion.
-
-SECURITY GUARDRAILS:
-- Never run destructive git commands (force push, reset --hard, clean -f)
-- Never delete production data, configuration files, or .env files
-- Never modify security-sensitive files (credentials, tokens, secrets)
-- Never run commands that affect systems outside the project directory
-- Log any security-relevant decision to STATE.md under ## Security Log
-```
+Inject `{AUTONOMOUS_PREAMBLE}` into EVERY subagent dispatch. Content: See references/autonomous-preamble.md
