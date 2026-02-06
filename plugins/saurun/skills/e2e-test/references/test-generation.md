@@ -43,6 +43,10 @@ User Flow Name → kebab-case.spec.ts
 ```typescript
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ request }) => {
+  await request.post('/api/test/reset');
+});
+
 test('{Flow Name} flow', async ({ page }) => {
   // Step 1: {step description}
   await page.goto('/');
@@ -108,6 +112,10 @@ Use realistic test data:
 ```typescript
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ request }) => {
+  await request.post('/api/test/reset');
+});
+
 test('Create Recipe flow', async ({ page }) => {
   // Step 1: User clicks "New Recipe" button in navbar
   await page.goto('/');
@@ -143,8 +151,9 @@ If flows share setup (e.g., "Edit Recipe" requires a recipe to exist):
 test.describe('Recipe Management', () => {
   let recipeId: string;
 
-  test.beforeAll(async ({ request }) => {
-    // Create test data via API
+  test.beforeEach(async ({ request }) => {
+    // Reset DB then seed test data
+    await request.post('/api/test/reset');
     const response = await request.post('/api/recipes', {
       data: { title: 'Test Recipe', cookTime: 30 }
     });
@@ -154,11 +163,6 @@ test.describe('Recipe Management', () => {
   test('Edit Recipe flow', async ({ page }) => {
     await page.goto(`/recipes/${recipeId}/edit`);
     // ...
-  });
-
-  test.afterAll(async ({ request }) => {
-    // Cleanup
-    await request.delete(`/api/recipes/${recipeId}`);
   });
 });
 ```

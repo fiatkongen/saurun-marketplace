@@ -16,7 +16,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,  // Serial execution — DB isolation via /api/test/reset
   reporter: [
     ['html', { outputFolder: '{RESULTS_DIR}/playwright-report' }],
     ['json', { outputFile: '{RESULTS_DIR}/results.json' }],
@@ -86,8 +86,9 @@ The e2e-test skill finds available ports dynamically to avoid conflicts:
 
 In CI (detected via `process.env.CI`):
 - Retries set to 2 (handle flaky tests)
-- Workers set to 1 (avoid race conditions)
 - `forbidOnly: true` (prevent `.only` from passing)
+
+**Note:** `workers: 1` is set unconditionally (not just CI) to ensure DB isolation via `/api/test/reset` between tests.
 
 ## Custom Video Output
 

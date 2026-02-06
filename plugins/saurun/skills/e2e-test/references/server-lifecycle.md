@@ -19,7 +19,7 @@ echo "Using ports: Backend=$E2E_BACKEND_PORT, Frontend=$E2E_FRONTEND_PORT"
 ## Start Backend
 
 ```bash
-cd {BACKEND_DIR} && {BACKEND_START_CMD} &
+cd {BACKEND_DIR} && E2E_TESTING=true {BACKEND_START_CMD} &
 BACKEND_PID=$!
 
 # Wait for ready (max 60s)

@@ -33,6 +33,9 @@ EntityDto { id, name, category, createdAt }
 - PUT /entities/{id} ← UpdateEntityRequest → EntityDto
 - DELETE /entities/{id} → 204
 
+### Test Support (E2E only — gated behind E2E_TESTING=true)
+- POST /api/test/reset → 204 (deletes and recreates SQLite database)
+
 ## Component Tree
 Pages with routes, components with props, stores with shape, hooks.
 Use compact format:

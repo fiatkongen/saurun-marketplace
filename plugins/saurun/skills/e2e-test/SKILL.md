@@ -52,6 +52,15 @@ This establishes all config variables used in subsequent steps:
 
 Log detected config to stdout. If detection fails on any critical item, warn and ask the user for clarification. In autonomous mode (invoked by another skill), make best guess.
 
+### Step 0b: Verify Test Reset Endpoint
+
+After backend starts, verify the reset endpoint is available:
+```bash
+curl -X POST http://localhost:$E2E_BACKEND_PORT/api/test/reset
+```
+
+If 404 or no response → WARN: "Backend does not expose /api/test/reset. Tests may have state pollution. Ensure backend registers this endpoint when E2E_TESTING=true."
+
 ### Step 1: Find Spec File
 
 ```

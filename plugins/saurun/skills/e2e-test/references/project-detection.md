@@ -163,6 +163,7 @@ Backend port:     {DEFAULT_BACKEND_PORT}
 Test dir:         {TEST_DIR}
 Results dir:      {RESULTS_DIR}
 Spec location:    {SPEC_DIR}
+E2E env var:      E2E_TESTING=true
 ================================
 ```
 

@@ -139,9 +139,9 @@ Error: locator.click: Timeout 30000ms exceeded
 ```
 
 **Diagnosis:** Tests share state. Fix:
-- Add proper cleanup in `afterEach`
-- Use isolated test data
-- Reset database state between tests
+- Verify `beforeEach` calls `POST /api/test/reset`
+- Verify backend started with `E2E_TESTING=true`
+- Verify tests run serially (`workers: 1` in playwright config)
 
 ---
 

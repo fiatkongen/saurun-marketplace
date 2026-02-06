@@ -82,12 +82,13 @@ Before anything else:
    - `superpowers:finishing-a-development-branch` (Phase 4)
    - `superpowers:verification-before-completion` (Phase 4)
    - `saurun:e2e-test` (Phase 5)
-   - `nanobanana` (Phase 6 — asset generation)
+   - `saurun:design-polish` (Phase 6 — asset generation)
    - `claude-md-management:revise-claude-md` (Post-Completion)
 
-   Required agents (Phase 3 implementers — have skills pre-loaded):
-   - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`)
-   - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`)
+   Required agents (have skills pre-loaded):
+   - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`) — Phase 3
+   - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`) — Phase 3
+   - `saurun:design-polish-agent` (has `design-polish` + `nanobanana-skill`) — Phase 6
 
 7. **Read context layers** (in priority order):
 
@@ -732,29 +733,42 @@ COMPLETION REPORT TEMPLATE: See references/completion-report-template.md
 
 ### Phase 5: E2E Testing (Non-Blocking)
 
-**Runs as:** Controller executes directly (orchestrates the E2E test flow).
+**Skip if:** Extension mode AND no new UI components AND no User Flows in spec.
 
-**Input from prior phases:**
-- Spec file path from STATE.md (Phase 0) — contains User Flows
-- Architecture doc for component paths (Phase 1)
+**Runs as:** Controller dispatches E2E subagent.
 
-**Steps:**
-1. **Commit before E2E tests:**
+**Pre-dispatch (controller):**
+1. Commit checkpoint:
    ```bash
-   git add -A
-   git commit -m "chore: pre-e2e checkpoint - all unit/integration tests passing"
+   git add -A && git commit -m "chore: pre-e2e checkpoint - all unit/integration tests passing"
    ```
-   This creates a clean checkpoint before E2E testing begins. If E2E tests find issues and trigger auto-fixes, you can always revert to this known-good state.
 
-2. Load `saurun:e2e-test` skill via the Skill tool — follow its process.
-3. Follow the skill's execution flow:
-   - Find spec file, extract User Flows
-   - Generate Playwright test files
-   - Start backend + frontend
-   - Run Playwright tests
-   - Process failures with auto-fix loop (up to 3 attempts per test)
-   - Generate report to `_docs/e2e-results/report.md`
-   - Teardown servers
+**Dispatch subagent:**
+
+```
+Task(subagent_type="general-purpose", prompt="""
+{AUTONOMOUS_PREAMBLE}
+
+You are executing Phase 5 (E2E Testing) of the god-agent pipeline.
+
+SKILL TO LOAD: saurun:e2e-test (use Skill tool)
+
+SPEC FILE: {spec_path}
+ARCHITECTURE: {architecture_path}
+
+STEPS:
+1. Load saurun:e2e-test skill and execute with spec path: {spec_path}
+2. Follow the skill's full execution flow (detect project, generate tests, run, fix loop, report)
+
+REPORT BACK (print these exact lines at end):
+E2E_TOTAL: {n}
+E2E_PASSED: {n}
+E2E_FIXED: {n}
+E2E_FAILED: {n}
+E2E_REPORT: {results_dir}/report.md
+E2E_UNRESOLVED: {list or "none"}
+""")
+```
 
 **Gate 5 Checklist (non-blocking — failures don't stop pipeline, but phase MUST execute):**
 - [ ] Pre-E2E commit exists with message containing "pre-e2e checkpoint"
@@ -769,6 +783,7 @@ COMPLETION REPORT TEMPLATE: See references/completion-report-template.md
 **Update STATE.md:**
 - Add Phase 5 row to Phase Tracker with status (Complete/Partial)
 - Add `## E2E Summary` section with pass/fix/fail counts
+- Parse subagent's reported E2E_TOTAL/PASSED/FIXED/FAILED lines
 
 **Update Completion Report:**
 Add E2E results section (see updated template below).
@@ -781,104 +796,25 @@ Add E2E results section (see updated template below).
 
 **Skip if:** Extension mode AND no new UI components were added in Phase 3.
 
-**Runs as:** Controller dispatches design-polish subagent.
+**Runs as:** Controller dispatches `saurun:design-polish-agent` (has `design-polish` + `nanobanana-skill` pre-loaded).
 
 **Dispatch subagent:**
 
 ```
-Task(subagent_type="general-purpose", prompt="""
+Task(subagent_type="saurun:design-polish-agent", prompt="""
 {AUTONOMOUS_PREAMBLE}
 
 You are executing Phase 6 (Design Polish) of the god-agent pipeline.
 
-SKILL TO LOAD: nanobanana (use Skill tool)
+Spec path: {spec_path}
 
-INPUTS:
-- Design system: design-system/MASTER.md
-- Product spec: {spec_path}
-- STATE.md: {state contents}
+STATE CONTEXT (for reference — what was built in prior phases):
+{summary of Phase 3 completed tasks and frontend components}
 
-STEPS:
+Follow the design-polish skill process. Both skills (design-polish + nanobanana-skill) are pre-loaded.
 
-1. **Asset Inventory (Spec-Driven)**
-
-   Analyze the spec to determine needed assets:
-
-   | Asset Type | Source |
-   |------------|--------|
-   | Hero images | Spec "## Solution" + landing page |
-   | Empty states | Spec "## User Flows" — what shows when no data |
-   | Error states | Standard: 404, 500, network error |
-   | Success states | Features that complete actions |
-   | Marketing | OG image (1200x630), favicon (32/192/512px) |
-
-   Write inventory to `_docs/design-polish/asset-inventory.md`
-
-2. **Find Placeholders**
-
-   Search frontend/src/ for data-asset attributes:
-   - Collect all `data-asset="{type}-{name}"` occurrences
-   - Map each to an asset in inventory
-   - Flag any placeholders without matching inventory item
-
-3. **Generate Assets**
-
-   For each asset in inventory:
-   a. Read MASTER.md for style context (colors, mood, aesthetic)
-   b. Construct prompt:
-      "{style_name} aesthetic. {mood_keywords} mood.
-       Colors: {palette}.
-       Generate: {asset_description}.
-       Dimensions: {width}x{height}.
-       Format: PNG transparent (illustrations) / JPG (photos).
-       Context: {product_description} for {target_users}."
-   c. Invoke nanobanana with prompt
-   d. Save to frontend/public/assets/{category}/{filename}
-   e. Verify file exists and has correct dimensions
-   f. Log to _docs/design-polish/generation-log.md
-   g. If fails after 2 retries → mark "manual needed", continue
-
-4. **Wire Assets to Components**
-
-   For each placeholder found in step 2:
-   - Find the generated asset
-   - Replace placeholder div with img tag:
-     <img src="/assets/{category}/{filename}" alt="{description}" className="..." />
-
-   Update index.html:
-   - <meta property="og:image" content="/assets/marketing/og-image.jpg" />
-   - <link rel="icon" href="/assets/icons/favicon-32.png" />
-
-5. **Verify**
-
-   - Run: cd frontend && npx playwright test
-   - Check for remaining placeholders: grep -r "data-asset=" frontend/src/
-   - If E2E fails → debug and fix (up to 2 attempts)
-
-OUTPUT:
-- _docs/design-polish/asset-inventory.md
-- _docs/design-polish/generation-log.md
-- frontend/public/assets/ populated
-- Components updated with real images
-- E2E still passing
+When complete, report: assets generated count, manual-needed count, placeholder status.
 """)
-```
-
-**Asset directory structure:**
-```
-frontend/public/assets/
-├── heroes/
-│   └── landing-hero.jpg
-├── illustrations/
-│   ├── empty-state.png
-│   ├── error-state.png
-│   └── success-state.png
-├── icons/
-│   ├── favicon-32.png
-│   ├── favicon-192.png
-│   └── favicon-512.png
-└── marketing/
-    └── og-image.jpg
 ```
 
 **Gate 6 Checklist (non-blocking — failures don't stop pipeline, but phase MUST execute):**
