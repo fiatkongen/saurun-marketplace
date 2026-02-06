@@ -26,7 +26,7 @@ User Flows in specs follow this pattern:
 
 ## Output Format (Playwright Test)
 
-Each User Flow becomes a test file in `frontend/e2e/`.
+Each User Flow becomes a test file in `{TEST_DIR}`.
 
 ### File Naming
 

@@ -1,6 +1,6 @@
 # Server Lifecycle Management
 
-Scripts for starting/stopping backend and frontend servers during E2E tests.
+Scripts for starting/stopping backend and frontend servers during E2E tests. All paths and commands come from Step 0 project detection.
 
 ## Find Available Ports
 
@@ -19,20 +19,28 @@ echo "Using ports: Backend=$E2E_BACKEND_PORT, Frontend=$E2E_FRONTEND_PORT"
 ## Start Backend
 
 ```bash
-cd backend/Api && dotnet run --urls "http://localhost:$E2E_BACKEND_PORT" &
+cd {BACKEND_DIR} && {BACKEND_START_CMD} &
 BACKEND_PID=$!
 
 # Wait for ready (max 60s)
 for i in {1..60}; do
-  curl -s "http://localhost:$E2E_BACKEND_PORT/health" && break
+  curl -s "http://localhost:$E2E_BACKEND_PORT{HEALTH_ENDPOINT}" && break
   sleep 1
 done
 ```
 
+**Port binding:** The start command must bind to `$E2E_BACKEND_PORT`. How this is done depends on the tech:
+- .NET: `dotnet run --urls "http://localhost:$E2E_BACKEND_PORT"`
+- Node: `PORT=$E2E_BACKEND_PORT npm run dev`
+- Python: `uvicorn main:app --port $E2E_BACKEND_PORT`
+- Go: `PORT=$E2E_BACKEND_PORT go run .`
+
+Adapt `{BACKEND_START_CMD}` accordingly when constructing the actual shell command.
+
 ## Start Frontend
 
 ```bash
-cd frontend && npm run dev -- --port $E2E_FRONTEND_PORT &
+cd {FRONTEND_DIR} && {FRONTEND_START_CMD} -- --port $E2E_FRONTEND_PORT &
 FRONTEND_PID=$!
 
 # Wait for ready (max 30s)
@@ -42,10 +50,16 @@ for i in {1..30}; do
 done
 ```
 
+**Port binding:** The `--port` flag works for Vite and Next.js. For other frameworks:
+- CRA: `PORT=$E2E_FRONTEND_PORT npm run start`
+- Angular: `npx ng serve --port $E2E_FRONTEND_PORT`
+
+Adapt the port-passing approach to match the detected frontend framework.
+
 ## Run Tests
 
 ```bash
-cd frontend && npx playwright test --reporter=html,json
+cd {FRONTEND_DIR} && npx playwright test --reporter=html,json
 ```
 
 Playwright reads `E2E_BACKEND_PORT` and `E2E_FRONTEND_PORT` from environment.

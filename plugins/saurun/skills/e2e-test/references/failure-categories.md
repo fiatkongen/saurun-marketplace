@@ -19,17 +19,17 @@ Guidelines for diagnosing and categorizing E2E test failures.
 
 **Patterns:**
 ```
-Error: connect ECONNREFUSED 127.0.0.1:5000
+Error: connect ECONNREFUSED 127.0.0.1:{port}
 Error: net::ERR_CONNECTION_REFUSED
 Error: Timeout waiting for server to start
 Error: Server process exited with code 1
 ```
 
 **Diagnosis:**
-- Backend didn't start → check `dotnet run` output
-- Frontend didn't start → check `npm run dev` output
-- Port conflict → another process using 5000/5173
-- Missing dependencies → `dotnet restore` or `npm install` needed
+- Backend didn't start → check backend start command output
+- Frontend didn't start → check frontend start command output
+- Port conflict → another process using the allocated port
+- Missing dependencies → restore/install dependencies for the detected tech stack
 
 **Resolution:**
 - Kill conflicting processes
@@ -71,7 +71,7 @@ Received: "Error: Failed to save"
 ```
 Error: expect(page).toHaveURL()
 Expected pattern: /recipes/\d+/
-Received: "http://localhost:5173/recipes/new"
+Received: "http://localhost:{port}/recipes/new"
 ```
 
 **Diagnosis:** Redirect not happening. Check:

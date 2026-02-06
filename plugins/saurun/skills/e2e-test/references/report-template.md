@@ -1,6 +1,6 @@
 # E2E Report Template
 
-Write report to `_docs/e2e-results/report.md` using this template:
+Write report to `{RESULTS_DIR}/report.md` using this template:
 
 ```markdown
 # E2E Test Results

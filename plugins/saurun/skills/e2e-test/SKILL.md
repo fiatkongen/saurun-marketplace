@@ -12,7 +12,7 @@ argument-hint: "[spec-file-path] (optional, defaults to latest spec)"
 
 # E2E Testing Skill
 
-Run Playwright E2E tests against User Flows from a product spec. Self-contained lifecycle: starts app → runs tests → tears down. Auto-fix loop with up to 3 attempts per failing test.
+Run Playwright E2E tests against User Flows from a product spec. Self-contained lifecycle: detects project → starts app → runs tests → tears down. Auto-fix loop with up to 3 attempts per failing test.
 
 ## When to Use
 
@@ -32,11 +32,25 @@ Run Playwright E2E tests against User Flows from a product spec. Self-contained 
 
 ## Prerequisites
 
-- Product spec with `## User Flows` section in `_docs/specs/`
+- Product spec with `## User Flows` section
 - Frontend with `data-testid` attributes on interactive elements
-- Backend with `/health` endpoint
+- Backend with a health endpoint (auto-detected)
 
 ## Execution Flow
+
+### Step 0: Detect Project
+
+Run project detection per [references/project-detection.md](references/project-detection.md).
+
+This establishes all config variables used in subsequent steps:
+- `{FRONTEND_DIR}`, `{BACKEND_DIR}` — project directories
+- `{FRONTEND_START_CMD}`, `{BACKEND_START_CMD}` — start commands
+- `{HEALTH_ENDPOINT}` — backend readiness check
+- `{DEFAULT_FRONTEND_PORT}`, `{DEFAULT_BACKEND_PORT}` — port defaults
+- `{TEST_DIR}` — Playwright test directory
+- `{RESULTS_DIR}` — output directory for reports and artifacts
+
+Log detected config to stdout. If detection fails on any critical item, warn and ask the user for clarification. In autonomous mode (invoked by another skill), make best guess.
 
 ### Step 1: Find Spec File
 
@@ -44,8 +58,13 @@ Run Playwright E2E tests against User Flows from a product spec. Self-contained 
 If argument provided:
   spec_path = argument
 Else:
-  Find most recent file matching _docs/specs/*-spec.md or _docs/specs/*.md
-  (Exclude *-architecture.md files)
+  Search in order:
+    _docs/specs/*-spec.md, _docs/specs/*.md (exclude *-architecture.md)
+    docs/specs/*.md
+    docs/*.spec.md
+    specs/*.md
+    *.spec.md (project root)
+  Use most recently modified match.
 ```
 
 ### Step 2: Extract User Flows
@@ -60,21 +79,21 @@ Parse the `## User Flows` section from the spec file. Each flow has:
 Check if Playwright is configured:
 
 ```bash
-# If playwright.config.ts doesn't exist in frontend/
-cd frontend && npm install -D @playwright/test && npx playwright install chromium
+# If playwright.config.ts doesn't exist in {FRONTEND_DIR}
+cd {FRONTEND_DIR} && npm install -D @playwright/test && npx playwright install chromium
 ```
 
-Create or update `frontend/playwright.config.ts` using the template in [references/playwright-config.md](references/playwright-config.md).
+Create or update `{FRONTEND_DIR}/playwright.config.ts` using the template in [references/playwright-config.md](references/playwright-config.md).
 
 ### Step 4: Generate Test Files
 
-For each User Flow, generate a Playwright test file in `frontend/e2e/`.
+For each User Flow, generate a Playwright test file in `{TEST_DIR}`.
 
 See [references/test-generation.md](references/test-generation.md) for mapping rules.
 
 Example output:
 ```typescript
-// frontend/e2e/create-recipe.spec.ts
+// {TEST_DIR}/create-recipe.spec.ts
 import { test, expect } from '@playwright/test';
 
 test('Create Recipe flow', async ({ page }) => {
@@ -100,9 +119,9 @@ test('Create Recipe flow', async ({ page }) => {
 See [references/server-lifecycle.md](references/server-lifecycle.md) for scripts.
 
 1. **Find ports** — dynamically allocate to avoid conflicts
-2. **Start backend** — `dotnet run`, wait for `/health` (60s timeout)
-3. **Start frontend** — `npm run dev`, wait for response (30s timeout)
-4. **Run Playwright** — `npx playwright test --reporter=html,json`
+2. **Start backend** — `{BACKEND_START_CMD}`, wait for `{HEALTH_ENDPOINT}` (60s timeout)
+3. **Start frontend** — `{FRONTEND_START_CMD}`, wait for response (30s timeout)
+4. **Run Playwright** — `cd {FRONTEND_DIR} && npx playwright test --reporter=html,json`
 
 ### Step 9: Process Results & Fix Loop
 
@@ -110,7 +129,7 @@ For each failing test, run the fix loop (see below). After fixes, re-run full su
 
 ### Step 10: Generate Report
 
-Write to `_docs/e2e-results/report.md` using [references/report-template.md](references/report-template.md).
+Write to `{RESULTS_DIR}/report.md` using [references/report-template.md](references/report-template.md).
 
 ### Step 11: Teardown
 
@@ -158,9 +177,9 @@ Task(subagent_type="general-purpose", prompt="""
 """)
 ```
 
-Re-run: `cd frontend && npx playwright test {file} --grep "{name}"`
+Re-run: `cd {FRONTEND_DIR} && npx playwright test {file} --grep "{name}"`
 
-Log attempts to `_docs/e2e-results/fix-attempts/{test-name}.md`
+Log attempts to `{RESULTS_DIR}/fix-attempts/{test-name}.md`
 
 ---
 
@@ -181,7 +200,7 @@ See [references/failure-categories.md](references/failure-categories.md) for det
 ## Artifact Structure
 
 ```
-_docs/e2e-results/
+{RESULTS_DIR}/
 ├── report.md                    # Main report
 ├── videos/
 │   ├── create-recipe.webm
@@ -199,4 +218,4 @@ _docs/e2e-results/
 
 See [references/report-template.md](references/report-template.md) for the full report template.
 
-Write to `_docs/e2e-results/report.md` with: summary stats, video links, fix attempt logs, unresolved failures table, and category breakdown.
+Write to `{RESULTS_DIR}/report.md` with: summary stats, video links, fix attempt logs, unresolved failures table, and category breakdown.
