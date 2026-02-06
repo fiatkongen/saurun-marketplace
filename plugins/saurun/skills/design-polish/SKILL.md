@@ -78,11 +78,45 @@ Scan for `<img src="/assets/...">` tags in frontend source. Each existing asset 
 
 Also scan `frontend/public/assets/` directory. Files present on disk but not referenced by any component are flagged as "orphaned" in the inventory.
 
-Write inventory to `_docs/design-polish/asset-inventory.md`. Each entry has status: `placeholder` | `existing` | `spec-only` | `orphaned`.
+Write inventory to `_docs/design-polish/asset-inventory.md`. Each entry has status: `placeholder` | `existing` | `spec-only` | `orphaned` | `minimum` | `enhancement`.
+
+**Minimum required assets — always generate these regardless of placeholders:**
+
+| Asset | Category | Dimensions | Notes |
+|-------|----------|------------|-------|
+| App logo | `icons/` | 512x512 PNG | Derived from product name + design system aesthetic |
+| Landing hero | `heroes/` | 1920x1080 JPG | Main visual — product concept, mood, audience |
+| OG image | `marketing/` | 1200x630 JPG | Social sharing — logo + tagline + brand colors |
+| Favicon set | `icons/` | 32, 192, 512 PNG | Simplified logo at each size |
+
+If any of these already exist in inventory (from placeholders or existing assets), skip the duplicate. Otherwise add them with status `minimum`. These are generated even if the project has zero placeholders.
+
+**Creative enhancement scan — proactively find opportunities:**
+
+After building the base inventory, scan the frontend for visual enhancement opportunities. Think hard about what would make this product more polished and professional:
+
+```
+Walk through each page/route in the frontend:
+  - Landing page → does it have a compelling hero? background texture? section dividers?
+  - Empty states → "no items yet" screens benefit from friendly illustrations
+  - Loading states → could use branded skeleton/spinner graphics
+  - Error pages → 404, 500, offline — each deserves a unique illustration
+  - About/info pages → team photos, product story illustrations
+  - Feature sections → icons or illustrations per feature highlight
+  - Onboarding → step illustrations for first-time users
+  - Success confirmations → celebratory illustrations (task complete, purchase done)
+
+For each opportunity found:
+  - Add to inventory with status `enhancement`
+  - Note which component/page it targets
+  - Note what visual would improve the UX
+```
+
+The enhancement scan uses project context from CLAUDE.md (target audience, product type) to decide what's appropriate. A kids' app needs playful illustrations everywhere; a B2B dashboard needs subtle, professional graphics.
 
 ### 3. Generate Assets
 
-For each asset in inventory (both `placeholder` and `existing` status):
+For each asset in inventory (`placeholder`, `existing`, `minimum`, and `enhancement` status):
 
 1. Read MASTER.md for style context
 2. Read project context from Step 1 (sourced from CLAUDE.md)
@@ -112,6 +146,11 @@ For each asset in inventory (both `placeholder` and `existing` status):
   ```
 
 **Existing assets** — no component rewiring needed. The new file overwrites the old at the same path. Verify the `<img>` tag's `alt` text still matches the regenerated content; update if not.
+
+**Minimum/enhancement assets** — wire into the appropriate component:
+- Logo → navbar, footer, favicon, OG image
+- Landing hero → landing page hero section (create section if missing)
+- Enhancement illustrations → add `<img>` tag in the target component noted in inventory
 
 Update `index.html`:
 - `<meta property="og:image" content="/assets/marketing/og-image.jpg" />`
@@ -154,9 +193,11 @@ frontend/public/assets/
 
 - [ ] Asset inventory exists at `_docs/design-polish/asset-inventory.md`
 - [ ] Generation log exists at `_docs/design-polish/generation-log.md`
+- [ ] Minimum assets generated: logo, landing hero, OG image, favicon set
 - [ ] All hero images generated (or marked manual)
 - [ ] All illustration assets generated (or marked manual)
 - [ ] All existing assets regenerated (or marked manual)
+- [ ] Enhancement opportunities identified and generated
 - [ ] OG image + favicon generated
 - [ ] No `data-asset=` placeholders remaining in code
 - [ ] E2E tests still pass (if they exist)
@@ -166,3 +207,5 @@ frontend/public/assets/
 - **Generating before reading MASTER.md** — assets won't match the design system. Always extract style context first.
 - **Hardcoding asset paths** — use the `{category}/{filename}` convention so paths stay consistent.
 - **Skipping failed assets** — mark them "manual needed" in the log, don't silently skip.
+- **Only generating what's explicitly placeholdered** — the skill should proactively enhance the product. Few placeholders ≠ few assets needed. Walk every page and think about what visuals would elevate the experience.
+- **Ignoring audience context** — a kids' app needs playful, colorful illustrations; a finance dashboard needs subtle, professional graphics. Always read CLAUDE.md for target audience before generating.
