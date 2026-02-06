@@ -10,7 +10,7 @@ argument-hint: "[spec-file-path] (optional)"
 
 # Design Polish (Asset Generation)
 
-Replace placeholder assets in a React frontend with AI-generated visuals that match the project's design system. Uses `nanobanana-skill` for image generation.
+Replace placeholder assets in a React frontend with AI-generated visuals that match the project's design system. Uses `nano-banana-pro` for image generation.
 
 ## When to Use
 
@@ -80,7 +80,7 @@ For each asset in inventory:
     Format: PNG transparent (illustrations) / JPG (photos).
     Context: {product_description} for {target_users}."
    ```
-3. Invoke `nanobanana-skill` via Skill tool with the prompt
+3. Invoke `nano-banana-pro` via Skill tool with the prompt
 4. Save to `frontend/public/assets/{category}/{filename}`
 5. Verify file exists and has expected dimensions
 6. Log to `_docs/design-polish/generation-log.md`

@@ -38,7 +38,7 @@ Implement the [StyleName] design for [ProjectName].
    → Write and refine all copy to match design tone/voice
    → Content must be in [content-language]
 
-7. Invoke the Skill tool with skill "nanobanana"
+7. Invoke the Skill tool with skill "nano-banana-pro"
    → Generate images based on graphics preference:
      - Lots: Hero (16:9) + 2-3 accent graphics (4:3, 1:1)
      - Minimal: Hero image only (16:9)

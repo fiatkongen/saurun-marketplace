@@ -88,7 +88,7 @@ Before anything else:
    Required agents (have skills pre-loaded):
    - `saurun:backend-implementer` (has `dotnet-tactical-ddd` + `dotnet-tdd`) — Phase 3
    - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`) — Phase 3
-   - `saurun:design-polish-agent` (has `design-polish` + `nanobanana-skill`) — Phase 6
+   - `saurun:design-polish-agent` (has `design-polish` + `nano-banana-pro`) — Phase 6
 
 7. **Read context layers** (in priority order):
 
@@ -796,7 +796,7 @@ Add E2E results section (see updated template below).
 
 **Skip if:** Extension mode AND no new UI components were added in Phase 3.
 
-**Runs as:** Controller dispatches `saurun:design-polish-agent` (has `design-polish` + `nanobanana-skill` pre-loaded).
+**Runs as:** Controller dispatches `saurun:design-polish-agent` (has `design-polish` + `nano-banana-pro` pre-loaded).
 
 **Dispatch subagent:**
 
@@ -811,7 +811,7 @@ Spec path: {spec_path}
 STATE CONTEXT (for reference — what was built in prior phases):
 {summary of Phase 3 completed tasks and frontend components}
 
-Follow the design-polish skill process. Both skills (design-polish + nanobanana-skill) are pre-loaded.
+Follow the design-polish skill process. Both skills (design-polish + nano-banana-pro) are pre-loaded.
 
 When complete, report: assets generated count, manual-needed count, placeholder status.
 """)

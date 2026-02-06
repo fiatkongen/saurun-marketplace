@@ -148,7 +148,7 @@ Key points for each sub-agent:
 - Use `superpowers:using-git-worktrees` to create worktree at `.worktrees/[style-name]/`
 - Create React + Vite project: `npm create vite@latest . -- --template react`
 - Read design spec from `design-system/pages/[style-name].md`
-- Use `Skill` tool to invoke: `frontend-design`, `vercel-react-best-practices`, `copywriting`, `nanobanana`
+- Use `Skill` tool to invoke: `frontend-design`, `vercel-react-best-practices`, `copywriting`, `nano-banana-pro`
 - Generate images per graphics preference
 - Build with `npm run build` to verify
 - Commit all changes
