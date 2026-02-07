@@ -1,7 +1,6 @@
 ---
 name: dotnet-implementer-prompt
 description: Use when dispatching subagents for .NET backend implementation tasks, whether from a plan or ad-hoc work requiring TDD and self-review
-model: haiku
 ---
 
 # .NET Implementer Subagent Prompt Guide
