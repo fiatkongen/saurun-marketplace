@@ -1,6 +1,7 @@
 ---
 name: test-deploy
 description: Use when testing marketplace deployment. Simple test skill for validating deploy workflow.
+model: haiku
 ---
 
 # Test Deploy Skill

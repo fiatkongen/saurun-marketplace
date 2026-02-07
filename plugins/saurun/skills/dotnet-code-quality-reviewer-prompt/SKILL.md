@@ -1,6 +1,7 @@
 ---
 name: dotnet-code-quality-reviewer-prompt
 description: Use when a .NET/C# implementation task is complete and needs quality-focused code review, especially xUnit test quality (behavioral tests, assertion counts, NSubstitute mock boundaries, anti-patterns like getter/setter tests)
+model: haiku
 ---
 
 # .NET Code Quality Reviewer Prompt Template

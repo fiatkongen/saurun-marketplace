@@ -1,6 +1,7 @@
 ---
 name: react-code-quality-reviewer-prompt
 description: Use when a React implementation task is complete and needs quality-focused code review, especially test quality validation (behavioral tests, assertion counts, mock boundaries, anti-patterns like getter/className tests)
+model: haiku
 ---
 
 # React Code Quality Reviewer Prompt Template

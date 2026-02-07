@@ -3,6 +3,7 @@ name: deploy-to-marketplace
 description: Use when user wants to deploy/publish a skill to saurun-marketplace, says "deploy [skill] to marketplace", or asks to publish a skill to the plugin marketplace.
 user-invocable: true
 disable-model-invocation: true
+model: sonnet
 ---
 
 # Deploy to Marketplace

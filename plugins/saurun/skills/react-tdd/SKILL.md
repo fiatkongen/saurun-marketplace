@@ -1,6 +1,7 @@
 ---
 name: react-tdd
 description: Use when implementing React + Vite + TypeScript features or bugfixes with Vitest + React Testing Library tests, before writing implementation code.
+model: sonnet
 ---
 
 # React Test-Driven Development (TDD)

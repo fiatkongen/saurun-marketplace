@@ -3,6 +3,7 @@ name: codex-bridge
 description: Use when user wants to ask Codex, get GPT's opinion, get a second opinion from OpenAI, compare perspectives, have Codex review code or docs, or let Codex fix/refactor/implement something.
 allowed-tools: Bash(node:*), Bash(codex:*), Read, Write
 user-invocable: true
+model: haiku
 ---
 
 # Codex Bridge

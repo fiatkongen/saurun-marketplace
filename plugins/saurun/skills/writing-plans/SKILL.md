@@ -1,6 +1,7 @@
 ---
 name: writing-plans
 description: Use when you have a spec, PRD, requirements, or feature request that needs an implementation plan before coding.
+model: haiku
 ---
 
 # Writing Plans (Router)

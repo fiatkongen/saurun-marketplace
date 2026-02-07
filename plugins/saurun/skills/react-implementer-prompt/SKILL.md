@@ -1,6 +1,7 @@
 ---
 name: react-implementer-prompt
 description: Use when dispatching a React frontend subagent from an implementation plan with React 19, Vitest/RTL/MSW, Zustand, and Tailwind v4
+model: haiku
 ---
 
 # React Implementer Subagent Prompt Template

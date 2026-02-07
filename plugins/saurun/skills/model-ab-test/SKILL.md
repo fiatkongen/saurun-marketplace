@@ -96,7 +96,7 @@ Write comparison entry per test case:
 
 ## Phase 5: Summary Report
 
-After all test cases, write `_docs/model-tests/results/comparison-report.md`:
+After all test cases, derive the report filename from the source test definition file: strip path and extension to get the stem (e.g., `01-haiku-templates` from `_docs/model-tests/01-haiku-templates.md`). Write `_docs/model-tests/results/{stem}-report.md`:
 
 ```markdown
 # Model A/B Comparison Report
