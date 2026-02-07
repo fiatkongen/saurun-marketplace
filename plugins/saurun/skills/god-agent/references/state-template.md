@@ -3,6 +3,7 @@
 ## Meta
 - **Input:** <original user input, verbatim>
 - **Mode:** Greenfield | Extension
+- **Planning Source:** god-agent-plan | self-dialogue
 - **Started:** <ISO timestamp>
 - **Last Updated:** <ISO timestamp>
 

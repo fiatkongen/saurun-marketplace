@@ -3,6 +3,8 @@ name: god-agent
 description: >
   Use when building a new greenfield app or major multi-layer feature requiring both .NET backend + React frontend.
 
+  RECOMMENDED: Run /god-agent-plan first for high-quality specs via research + interview + external review.
+
   DO NOT USE FOR: Bug fixes, small changes, single-layer work (backend-only or frontend-only), non-.NET/React projects.
 
   REQUIRED: .NET 9 + React 19 + Tailwind v4 + Zustand + SQLite.
@@ -66,7 +68,25 @@ Before anything else:
    - Log `[RESUMED] from Phase {X}` in STATE.md
    - Skip to the next incomplete phase (or sub-position within a phase)
 
-6. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
+6. **Check for planning artifacts.** If `_docs/plans/MANIFEST.json` exists AND at least one `_docs/specs/*-architecture.md` exists:
+   - Validate MANIFEST.json: `plans` array has >=1 entry, each entry's `path` points to an existing file on disk.
+   - Validate architecture doc: has `## Entity Model` and `## API Contract` sections.
+   - If valid:
+     - Verify `design-system/MASTER.md` exists (god-agent-plan Step 7b produces this). If missing: STOP: "Planning artifacts found but design system missing. Re-run /god-agent-plan to resume from Step 7b."
+     - Log: `[PLAN] Found god-agent-plan artifacts. Skipping Phases 0-2.`
+     - Set `planning_source = "god-agent-plan"` in STATE.md
+     - Jump directly to Phase 3: Execution
+     - **Note:** Phase -1 (Scaffold) still runs if greenfield mode and directories don't exist yet
+   - If invalid (files exist but malformed):
+     - STOP: "Planning artifacts found but invalid: {specific issue}. Fix or delete and re-run /god-agent-plan."
+
+   If no planning artifacts found:
+   - Assess input completeness (same 7 dimensions as god-agent-plan -- see god-agent-plan/references/completeness-dimensions.md)
+   - If 6+ dimensions covered (detailed spec/PRD attached): proceed with Phases 0-2 (self-dialogue)
+   - If 1-5 dimensions (partial input): Log `[PLAN] Input has {N}/7 dimensions. Proceeding with self-dialogue Phases 0-2. For higher-quality specs, use /god-agent-plan.` Proceed with Phases 0-2.
+   - If 0 dimensions (empty or trivial): STOP, recommend `/god-agent-plan`
+
+7. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
 
    Required skills (verified lazily when each phase first uses them):
    - `superpowers:brainstorming` (Phase 0)
@@ -90,7 +110,7 @@ Before anything else:
    - `saurun:frontend-implementer` (has `react-frontend-patterns` + `frontend-design` + `react-tdd`) — Phase 3
    - `saurun:design-polish-agent` (has `design-polish` + `nano-banana-pro`) — Phase 6
 
-7. **Read context layers** (in priority order):
+8. **Read context layers** (in priority order):
 
    | Layer | Source | When |
    |-------|--------|------|
@@ -98,7 +118,7 @@ Before anything else:
    | Project context | `CLAUDE.md`, `_docs/`, `agent-os/` | Extension mode only |
    | Stack defaults | .NET 9, React 19, Tailwind v4, Zustand, SQLite | Always (hardcoded) |
 
-8. **Write initial STATE.md** to `.god-agent/STATE.md` (see STATE.md Protocol below).
+9. **Write initial STATE.md** to `.god-agent/STATE.md` (see STATE.md Protocol below).
 
 ---
 
