@@ -1,0 +1,11 @@
+Complete tactical DDD implementation with:
+- Money value object (private ctor, Result<T> factory, GetEqualityComponents)
+- Product aggregate root (private setters, Create() factory, UpdatePrice() behavior method returning Result)
+- Domain events (ProductCreatedEvent, ProductPriceUpdatedEvent as immutable records)
+- IProductRepository (specific interface, not generic)
+- ProductDto, CreateProductRequest, UpdatePriceRequest (immutable records)
+- ProductMappingExtensions (ToDto(), extension methods, no AutoMapper)
+- ProductConfiguration (EF Core OwnsOne for Money, column mapping)
+- ProductsController (returns DTOs, uses Result for error handling)
+- Protected parameterless constructor for EF Core
+- Dependency rule respected (Domain has zero external dependencies)

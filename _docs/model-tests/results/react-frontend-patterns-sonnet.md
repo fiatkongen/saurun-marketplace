@@ -1,0 +1,12 @@
+Complete shopping cart implementation with:
+- Zustand store (useCartStore) with addItem, removeItem, updateQuantity, clearCart
+- Selector hooks: useCartItems(), useCartActions() with useShallow
+- Derived total computed via useMemo in CartPage (never stored)
+- TanStack Query: useProducts(), useProductsByIds() with staleTime
+- Query keys: ['products', 'list'], ['products', 'byIds', productIds]
+- CartErrorBoundary class component with retry
+- CartItem component with data-testid on all interactive elements
+- CartPage with empty state, loading, error handling
+- Error boundary wrapping at page level
+- data-testid naming: cart-item-{id}, cart-item-remove-{id}, cart-total-amount, etc.
+- No bare useStore() calls

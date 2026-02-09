@@ -61,3 +61,21 @@ Template vars in skill body: `$ARGUMENTS`, `$ARGUMENTS[N]`, `$1`/`$2`, `${CLAUDE
 Dynamic context: `` !`shell command` `` — stdout injected at load time.
 
 See `docs/claude-code-skills-reference.md` for full reference.
+
+## Agent Teams (Experimental)
+
+Multi-agent orchestration for parallel work. Enable with:
+```json
+// settings.json
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
+```
+
+**Usage**: Describe task and team structure in natural language. Lead coordinates, teammates work independently.
+
+**Controls**: `Shift+Up/Down` (select teammate), `Shift+Tab` (delegate mode — lead won't code), `Ctrl+T` (task list), `Escape` (interrupt teammate).
+
+**Display modes**: `in-process` (default, all in terminal) or `tmux`/iTerm2 split panes (`"teammateMode": "tmux"` in settings.json).
+
+**Best for**: Parallel code review, competing-hypothesis debugging, cross-layer features, independent module work. **Not for**: Sequential tasks, same-file edits, simple changes.
+
+See `_docs/opus-4.6-agent-teams-research.md` for full reference including orchestration patterns, subagent enhancements, and Agent SDK details.
