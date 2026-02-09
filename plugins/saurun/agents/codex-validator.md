@@ -2,6 +2,7 @@
 name: codex-validator
 description: Validate whether a gap identified by Codex is a genuine completeness gap that needs fixing. Compares against source plan.
 tools: Read
+model: opus
 ---
 
 # Codex Validator Agent

@@ -2,6 +2,7 @@
 name: requirement-verifier
 description: Verify that all requirements from source plan were preserved in the new PLAN.md. Critical check after Phase 0. Detects missing AND mutated content.
 tools: Read
+model: opus
 ---
 
 # Requirement Verifier Agent

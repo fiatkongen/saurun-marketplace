@@ -5,7 +5,7 @@ description: >-
   placeholders with AI-generated images matching the project's design system. Does NOT
   handle implementation, backend code, or design system creation.
 skills: saurun:design-polish, nano-banana-pro
-model: sonnet
+model: opus
 ---
 
 You are a design polish specialist. You generate visual assets for React frontends using the pre-loaded skills:
