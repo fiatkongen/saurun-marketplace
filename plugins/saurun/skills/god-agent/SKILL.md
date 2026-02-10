@@ -89,6 +89,7 @@ Before anything else:
 7. **Verify required skills exist.** Load `superpowers:brainstorming` via the Skill tool. If it loads successfully, the plugin system is working and remaining skills can be verified lazily (each phase loads its own skills — if one is missing, the Skill tool will error and you STOP). If `superpowers:brainstorming` fails to load, STOP immediately — the plugin system is broken.
 
    Required skills (verified lazily when each phase first uses them):
+   - `saurun:scaffold` (Phase -1)
    - `superpowers:brainstorming` (Phase 0)
    - `ui-ux-pro-max` (Phase 0 — style selection)
    - `saurun:dotnet-tactical-ddd` (Phase 1)
@@ -146,119 +147,11 @@ Run phases -1 through 6 sequentially. ALL phases MUST be executed. After each ph
 
 **Skip if:** Extension mode (CLAUDE.md exists).
 
-**Runs as:** Controller executes directly (no subagent).
+**Runs as:** Controller loads and executes `saurun:scaffold` skill.
 
-**Steps:**
+Load `saurun:scaffold` via Skill tool with argument: `{project-path}`
 
-1. Create directory structure:
-   ```
-   {project}/
-   ├── backend/
-   ├── frontend/
-   └── _docs/
-   ```
-
-2. Create `.gitignore`:
-   ```
-   # .NET
-   bin/
-   obj/
-   *.user
-   .vs/
-
-   # Node
-   node_modules/
-   dist/
-   .vite/
-
-   # IDE
-   .idea/
-
-   # OS
-   .DS_Store
-
-   # Environment
-   .env
-   .env.local
-
-   # SQLite
-   *.db
-   *.db-journal
-   ```
-
-3. Create placeholder `CLAUDE.md` (populated after Phase 0):
-   ```markdown
-   # CLAUDE.md — {project_name}
-
-   ## Project
-   {to be populated after Phase 0}
-
-   ## Tech Stack
-   - Backend: .NET 9, ASP.NET Core, EF Core 9, SQLite
-   - Frontend: React 19, Vite, TypeScript, Tailwind CSS v4, Zustand
-
-   ## Implementation Status
-   <!-- Updated by god-agent after each feature completion -->
-
-   *No features implemented yet.*
-
-   ## Commands
-
-   ### Backend
-   ```bash
-   cd backend && dotnet restore && dotnet build && dotnet run
-   ```
-
-   ### Frontend
-   ```bash
-   cd frontend && npm install && npm run dev
-   ```
-
-   ### Tests
-   ```bash
-   cd backend && dotnet test
-   cd frontend && npm test
-   ```
-   ```
-
-4. Create minimal backend with health endpoint:
-   ```bash
-   cd backend && dotnet new web -n Api
-   ```
-
-   Update `backend/Api/Program.cs`:
-   ```csharp
-   var builder = WebApplication.CreateBuilder(args);
-
-   builder.Services.AddCors(options =>
-   {
-       options.AddDefaultPolicy(policy =>
-           policy.AllowAnyOrigin()
-                 .AllowAnyHeader()
-                 .AllowAnyMethod());
-   });
-
-   var app = builder.Build();
-   app.UseCors();
-
-   app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-
-   app.Run();
-   ```
-
-   This provides:
-   - `/health` endpoint for E2E test startup detection
-   - Permissive CORS for dev (Phase 3 will configure properly)
-   - Minimal foundation for Phase 3 backend implementation
-
-5. Git init + initial commit:
-   ```bash
-   git init
-   git add .
-   git commit -m "chore: initial scaffold"
-   ```
-
-**Gate -1 Checklist:**
+**Gate -1 Checklist** (verified by controller after skill completes):
 - [ ] Directory `backend/` exists
 - [ ] Directory `frontend/` exists
 - [ ] Directory `_docs/` exists
