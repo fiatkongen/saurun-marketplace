@@ -8,6 +8,8 @@ user-invocable: true
 argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-first"
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # God-Agent Plan: Interactive Planning Pipeline
 
 **Version: 1.0.0** -- Interactive planning with research, interview, external review

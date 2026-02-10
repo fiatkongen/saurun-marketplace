@@ -4,6 +4,8 @@ description: Use when you have a spec, PRD, requirements, or feature request tha
 model: haiku
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # Writing Plans (Router)
 
 ## Overview

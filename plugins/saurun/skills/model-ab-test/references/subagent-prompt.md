@@ -1,3 +1,5 @@
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # Subagent Dispatch Prompt Template
 
 Assembled by the harness for each A/B subagent. Both models receive the **identical** prompt — only the `model` parameter differs.

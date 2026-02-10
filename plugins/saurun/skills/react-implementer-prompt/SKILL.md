@@ -3,6 +3,8 @@ name: react-implementer-prompt
 description: Use when dispatching a React frontend subagent from an implementation plan with React 19, Vitest/RTL/MSW, Zustand, and Tailwind v4
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # React Implementer Subagent Prompt Template
 
 ## Overview

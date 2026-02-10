@@ -3,6 +3,8 @@ name: dotnet-implementer-prompt
 description: Use when dispatching subagents for .NET backend implementation tasks, whether from a plan or ad-hoc work requiring TDD and self-review
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # .NET Implementer Subagent Prompt Guide
 
 ## Overview

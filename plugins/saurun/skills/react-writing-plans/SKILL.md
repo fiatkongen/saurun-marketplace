@@ -3,6 +3,8 @@ name: react-writing-plans
 description: Use when you have a spec, PRD, or requirements for a React frontend feature requiring multiple components, stores, or API integrations, before writing any code. Creates concise implementation plans that reference architecture contracts.
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # React Writing Plans
 
 ## Overview

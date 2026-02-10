@@ -6,6 +6,8 @@ allowed-tools: Task, Read, Write, Edit, Bash, AskUserQuestion, Skill, Glob
 user-invocable: true
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # Web Design Wizard
 
 Generate multiple distinct design styles for a web page, let the user refine selections, then implement chosen designs in parallel worktrees.

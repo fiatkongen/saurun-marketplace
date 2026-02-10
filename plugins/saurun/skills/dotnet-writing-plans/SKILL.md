@@ -3,6 +3,8 @@ name: dotnet-writing-plans
 description: Use when you have a spec or requirements for a multi-step .NET backend task, before touching code. Creates concise implementation plans that reference architecture contracts.
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # .NET Writing Plans
 
 ## Overview

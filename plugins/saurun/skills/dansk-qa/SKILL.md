@@ -3,6 +3,8 @@ name: dansk-qa
 description: Use when reviewing Danish copy for anglicisms, technical jargon, defensive tone, vague formulations, English words, and overly formal language. Scans uncommitted files by default or specific files with --file flag.
 ---
 
+> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
+
 # Dansk Tekstkvalitet (Danish Copy Quality Assurance)
 
 ## Overview
