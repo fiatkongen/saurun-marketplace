@@ -50,6 +50,12 @@
 ### Stack Defaults
 .NET 9, ASP.NET Core, EF Core 9, SQLite, SignalR, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand
 
+## Token Usage
+| Phase | Task | Role | Tokens | Tools | Duration |
+|-------|------|------|--------|-------|----------|
+
+**Cumulative:** 0 tokens across 0 subagent dispatches
+
 ## Failures
 | Phase | Task | Attempts | Resolution |
 |-------|------|----------|------------|

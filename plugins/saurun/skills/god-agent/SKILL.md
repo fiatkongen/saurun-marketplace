@@ -20,15 +20,26 @@ argument-hint: "Build a recipe sharing app. Preferences: Danish market, mobile-f
 
 # God-Agent: Autonomous Development Pipeline
 
-**Version: 1.0.33** — Visual style integration
+**Version: 1.0.34** — Token usage tracking
 
-> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.33 (visual style integration)"
+> **ANNOUNCE AT STARTUP:** "Starting god-agent v1.0.34 (token usage tracking)"
 
 Take any input (one-liner, rough spec, or product brief) and deliver working, tested, reviewed, committed code. No human interaction during execution.
 
 **Tech stack (always):** .NET 9, ASP.NET Core, EF Core 9, SQLite, SignalR, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand.
 
 **Subagent dispatch (always):** Run subagents in foreground. Never use `run_in_background`. When tasks are independent (e.g., Phase 2 planning for different work units), dispatch them in parallel by including multiple Task calls in a single message. Wait for all to complete before proceeding.
+
+**Token tracking (always):** Every Task tool response includes a `<usage>` block with `total_tokens`, `tool_uses`, and `duration_ms`. After EVERY subagent dispatch (all phases), append a row to STATE.md `## Token Usage` table:
+
+```
+| {phase_number} | {task_or_phase_name} | {role} | {total_tokens} | {tool_uses} | {duration_ms}ms |
+```
+
+Phase column: use number only (e.g., `3`, not `Phase 3`).
+Role values: `implementer`, `reviewer`, `planner`, `debugger`. For retries, append `-retry` (e.g., `implementer-retry`, `reviewer-retry`).
+
+Update the cumulative line: `**Cumulative:** {sum} tokens across {count} subagent dispatches`
 
 ## Phase Overview
 
@@ -456,7 +467,9 @@ For each plan (in array order):
        - Pass -> continue
        - Fail (Critical/Important) -> resume implementer with fix instructions -> re-review (up to 2 retries)
        - Fail (Minor) -> note and continue
-    5. Update STATE.md: task complete
+    5. Log token usage: read <usage> from implementer + reviewer responses,
+       append rows to STATE.md ## Token Usage, update cumulative line
+    6. Update STATE.md: task complete
   After all tasks in plan:
     Run full test suite: dotnet test backend/ && npm test (if frontend exists)
     Pass -> next plan
@@ -787,7 +800,7 @@ Re-dispatch same phase subagent with feedback listing specific issues. Up to 2 r
 Dispatch `superpowers:systematic-debugging` with failing test output + recent git diff + plan spec. Up to 2 debugging retries. Still failing -> STOP.
 
 **Context exhaustion:**
-STATE.md has exact position. All completed code is committed. All plan docs are on disk. Re-invoking `/god-agent` reads STATE.md and resumes from exact checkpoint.
+STATE.md has exact position. All completed code is committed. All plan docs are on disk. Re-invoking `/god-agent` reads STATE.md and resumes from exact checkpoint. The `## Token Usage` table in STATE.md provides a cumulative token count — use this to gauge how much context you've consumed and whether a clean stop is approaching.
 
 ---
 
