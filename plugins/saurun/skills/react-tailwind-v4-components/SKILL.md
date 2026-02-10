@@ -99,7 +99,7 @@ const variants = cva("base", {
 
 ### Important Modifier
 
-Use suffix `!` for important: `text-red-500!`, `font-bold!`
+Append **!** suffix for important — e.g. `text-red-500` becomes text-red-500**!**
 
 ### Opacity Utilities
 
@@ -311,7 +311,7 @@ components/
 | `bg-[var(--brand)]` | `bg-(--brand)` | No need for `var()` wrapper |
 | `ring` for 3px ring | `ring-3` | `ring` = 1px width |
 | `ring-offset-2` | `outline-2 outline-offset-2` | Use outline for ring-with-gap |
-| `!text-red-500` | `text-red-500!` | Important modifier is suffix |
+| prefix **!** (wrong) | suffix **!** after class | Important modifier is suffix, not prefix |
 | `shadow-inset` | `inset-shadow-sm` | Separate utility namespace |
 | `outline-none` to hide | `outline-hidden` | `outline-none` sets style:none |
 | `` `base ${x}` `` | `cn("base", x)` | Use cn() for class merging |
@@ -328,7 +328,7 @@ components/
 - CSS variables use parentheses: `(--var)` not `[--var]`
 - Smallest sizes use `-xs`: `shadow-xs`, `rounded-xs`
 - Ring with gap uses `outline-offset-*` not `ring-offset-*`
-- Important modifier is suffix: `text-red-500!` not `!text-red-500`
+- Important modifier is suffix (append **!**), not prefix
 - Inset shadows use `inset-shadow-*` namespace
 - Hide outlines with `outline-hidden` not `outline-none`
 - Class strings use `cn()` not template literals
