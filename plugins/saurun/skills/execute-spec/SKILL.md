@@ -83,16 +83,15 @@ Before anything else:
    - Log `[RESUMED] from Phase {X}` in STATE.md
    - Skip to the next incomplete phase (or sub-position within a phase)
 
-7. **Verify required skills exist.** Load `saurun:dotnet-tactical-ddd` via Skill tool. If it loads, plugin system is working. Remaining skills verified lazily per phase.
+7. **Required skills and agents (verified lazily per phase):**
 
-   Required skills (verified lazily):
+   Skills (loaded by subagents, never by the controller):
    - `saurun:scaffold` (Pre-flight — greenfield only)
    - `saurun:dotnet-tactical-ddd` (Phase 1)
    - `saurun:react-frontend-patterns` (Phase 1)
    - `saurun:dotnet-writing-plans` (Phase 2 — backend)
    - `saurun:react-writing-plans` (Phase 2 — frontend)
    - `saurun:verify-plan-coverage` (Phase 2b)
-   - `superpowers:subagent-driven-development` (Phase 3)
    - `saurun:dotnet-code-quality-reviewer-prompt` (Phase 3)
    - `saurun:react-code-quality-reviewer-prompt` (Phase 3)
    - `superpowers:systematic-debugging` (Phase 3)
@@ -335,7 +334,14 @@ OUTPUT: Print the full PLAN COVERAGE REPORT to stdout.
 
 **You (the controller) run this directly.** Do NOT delegate Phase 3 to a single subagent. You orchestrate the task loop yourself, dispatching individual implementer/reviewer subagents per task. This preserves cross-phase context from Phases 1-2.
 
-**Load skill:** `superpowers:subagent-driven-development` — follow its process for the implement/review loop.
+**Do NOT load any skills in the controller.** The orchestration logic is fully defined below. All skill usage happens inside dispatched subagents.
+
+**Orchestration guardrails:**
+- Never dispatch multiple implementation subagents in parallel (file conflicts)
+- Never skip reviews — every task gets reviewed, no exceptions
+- If reviewer finds issues → implementer fixes → re-review. Do NOT skip the re-review.
+- If implementer asks questions → answer from spec/architecture context before letting them proceed
+- Do not fix implementer failures manually (context pollution) — re-dispatch or escalate to `systematic-debugging`
 
 **Orchestration loop:**
 
@@ -568,11 +574,26 @@ COMPLETION REPORT TEMPLATE:
 
 ### Post-Completion: Knowledge Capture
 
-After Phase 4 gate passes, the **controller** runs one final step:
+After Phase 4 gate passes, the **controller** dispatches one final subagent:
 
-**Invoke skill:** `claude-md-management:revise-claude-md`
+```
+Task(subagent_type="general-purpose", prompt="""
+{AUTONOMOUS_PREAMBLE}
 
-This captures learnings into the project's CLAUDE.md. Non-blocking — if it fails, log and continue. Pipeline is complete regardless.
+You are executing Post-Completion (Knowledge Capture) of the execute-spec pipeline.
+
+SKILL TO LOAD: claude-md-management:revise-claude-md (use Skill tool)
+
+FEATURE SUMMARY: {spec title and one-line description}
+ARCHITECTURE SUMMARY: {key entities, endpoints, components built}
+STATE: {STATE.md contents}
+
+Analyze what was built in this session and update the project's CLAUDE.md
+with patterns, conventions, and implementation details that future sessions should know.
+""")
+```
+
+Non-blocking — if it fails, log and continue. Pipeline is complete regardless.
 
 **Done.**
 
@@ -612,6 +633,7 @@ If you catch yourself thinking any of these, you are rationalizing. Stop and fol
 
 | Rationalization | Reality |
 |----------------|---------|
+| "I'll dispatch multiple implementers in parallel to go faster" | File conflicts. One implementer at a time, always. |
 | "Tests pass, reviewer is unnecessary" | Every task gets reviewed. No exceptions. |
 | "This task is trivial / similar to the last one, skip it" | Every task in the plan gets implemented. Plans are the contract. |
 | "This gate item is pedantic, it's fine" | Gates are the quality mechanism. Check every item. |
