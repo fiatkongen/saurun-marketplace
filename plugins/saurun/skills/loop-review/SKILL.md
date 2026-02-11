@@ -1,9 +1,9 @@
 ---
 name: loop-review
 description: >
-  Iterative plan review loop. Spawns parallel reviewer subagents to check
-  intent coverage and standalone quality. Fixes HIGH/MEDIUM issues.
-  Accepts at score >=9 or 0 critical issues. Max 3 iterations.
+  Use when a plan needs quality assurance before execution, especially
+  after writing-plans completes. Catches intent gaps (missing user
+  requirements) and quality gaps (vague, inconsistent, or unexecutable tasks).
 allowed-tools: Read, Glob, Grep, Edit, Task, AskUserQuestion
 user-invocable: true
 argument-hint: <plan-file-path>
@@ -128,7 +128,7 @@ ELSE:
 
 ## Shared Output Format
 
-Both reviewer prompts instruct subagents to return this EXACT format:
+Both reviewer prompts include this core format (intent reviewer adds additional sections before DIMENSION_SCORES):
 
 ```
 VERDICT: ACCEPT | REVISE | ABORT
