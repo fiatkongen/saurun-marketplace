@@ -1,0 +1,28 @@
+You are testing as an Opus model for react-implementer-prompt skill evaluation.
+
+Generate a structured dispatch prompt for this React implementation task:
+
+**Task 3: Add Product Filter Component**
+- Create a ProductFilter component in components/products/
+- Filter by category (dropdown), price range (dual slider), and availability (checkbox)
+- Use Zustand productStore for filter state
+- Apply filters on client side (filter products array)
+- Reset button clears all filters
+- Mobile responsive (stack vertically on sm)
+
+**Context:**
+- Stack: React 19 + Vite + TypeScript + Tailwind v4 + Zustand
+- Testing: Vitest + React Testing Library + MSW
+- Working directory: /Users/dev/shopping-app/frontend
+- Dependencies: Task 1 (ProductList component) is already complete
+
+Your dispatch prompt must include these 7 sections:
+1. Task Description (full task text, not reference)
+2. Context (stack, directory, dependencies)
+3. Before You Begin (pre-checks)
+4. Your Job (reference saurun:react-tdd and saurun:react-tailwind-v4-components)
+5. TDD Workflow (must say "REQUIRED SUB-SKILL: Follow saurun:react-tdd")
+6. Self-Review (5 categories: Completeness, Quality, Discipline, Testing, Tailwind v4)
+7. Report Format (5 outputs: what implemented, test results, files changed, self-review findings, issues/concerns)
+
+Generate the complete dispatch prompt.
