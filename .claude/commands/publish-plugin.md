@@ -34,8 +34,7 @@ Users get updates via `/plugin marketplace update saurun-marketplace` or enable 
 
 4. Report the result:
    - Show new version (if bumped)
-   - Confirm repo pushed successfully
-   - Remind user: `/plugin marketplace update saurun-marketplace` to refresh
+   - Confirm repo pushed
 
 ## Examples
 
@@ -53,8 +52,8 @@ Users get updates via `/plugin marketplace update saurun-marketplace` or enable 
 
 ## Updating
 
+To refresh your local plugin cache manually:
+
 ```
 /plugin marketplace update saurun-marketplace
 ```
-
-Or enable auto-update in `/plugin` settings for automatic updates on startup.
