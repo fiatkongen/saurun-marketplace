@@ -2,56 +2,56 @@
 name: design-phase
 description: >
   Use when needing to plan and design a product before writing implementation
-  code. Sets up a Design OS workspace as a _design/ subdirectory.
+  code. Sets up a standalone Design OS workspace.
 user-invocable: true
 allowed-tools: Bash, Write, Read, Glob
-argument-hint: ~/repos/my-app
+argument-hint: ~/repos/my-app-design
 ---
 
 # Design Phase: Design OS Workspace
 
-Sets up a [Design OS](https://github.com/buildermethods/design-os) workspace inside your project at `{path}/_design/`. Design first, then implement.
+Sets up a standalone [Design OS](https://github.com/buildermethods/design-os) workspace for product planning and UI design. This is a **separate project** from your implementation codebase — design first, then scaffold your real project with `/scaffold`.
 
-**When to use:** Any project (greenfield or existing) where you want to plan vision, data model, and UI before implementation.
+**When to use:** Any product (greenfield or existing) where you want to plan vision, data model, and UI before implementation.
 
 ## Input
 
-`$ARGUMENTS` = absolute or relative path to your project root (e.g., `~/repos/my-app`).
+`$ARGUMENTS` = absolute or relative path for the design workspace (e.g., `~/repos/my-app-design`).
 
-**Validation:** If `$ARGUMENTS` is empty or missing, STOP with error: "Usage: /design-phase <project-path>"
+**Validation:** If `$ARGUMENTS` is empty or missing, STOP with error: "Usage: /design-phase <workspace-path>"
 
 Expand `~` to the user's home directory. Resolve relative paths against the current working directory.
 
-If `{path}/_design/package.json` already exists, STOP: "Design workspace already exists at {path}/_design/. Run `cd {path}/_design && npm run dev` to resume."
+If the target directory already exists AND contains a `package.json`, STOP: "Design workspace already exists at {path}. Run `cd {path} && npm run dev` to resume."
 
 ## Steps
 
 ### 1. Clone Design OS
 
 ```bash
-git clone https://github.com/buildermethods/design-os.git {path}/_design
+git clone https://github.com/buildermethods/design-os.git {path}
 ```
 
 If clone fails, verify network connectivity and that the repo exists at https://github.com/buildermethods/design-os.
 
-### 2. Remove nested git
+### 2. Detach from upstream
 
 ```bash
-rm -rf {path}/_design/.git
+cd {path} && git remote remove origin
 ```
 
-Makes `_design/` regular files — part of your project's git repo, not a nested repo.
+This makes the workspace yours — no accidental pushes to the Design OS repo.
 
 ### 3. Install dependencies
 
 ```bash
-cd {path}/_design && npm install
+cd {path} && npm install
 ```
 
 ### 4. Start dev server
 
 ```bash
-cd {path}/_design && npm run dev &
+cd {path} && npm run dev &
 DEV_PID=$!
 ```
 
@@ -62,7 +62,7 @@ Wait for the server to be ready before verifying:
 for i in $(seq 1 10); do curl -s -o /dev/null http://localhost:3000 && break || sleep 1; done
 ```
 
-**If port 3000 is already in use:** kill the conflicting process or change the port in `{path}/_design/vite.config.ts`.
+**If port 3000 is already in use:** kill the conflicting process or change the port in `{path}/vite.config.ts`.
 
 **To stop the server later:** `kill $DEV_PID` or `lsof -ti:3000 | xargs kill`.
 
@@ -70,7 +70,7 @@ for i in $(seq 1 10); do curl -s -o /dev/null http://localhost:3000 && break || 
 
 After the dev server starts, report:
 
-> Design workspace ready at {path}/_design. Open http://localhost:3000. Start with `/product-vision`.
+> Design workspace ready at {path}. Open http://localhost:3000. Start with `/product-vision`.
 
 Then print the workflow quick-reference below.
 
@@ -78,33 +78,24 @@ Then print the workflow quick-reference below.
 
 After completing all steps, verify EVERY item. If ANY fails, fix before reporting success.
 
-- [ ] Directory `{path}/_design` exists
-- [ ] `{path}/_design/.git` does NOT exist (nested git removed)
-- [ ] `{path}/_design/node_modules` exists (npm install succeeded)
+- [ ] Directory `{path}` exists
+- [ ] `{path}/node_modules` exists (npm install succeeded)
 - [ ] Dev server responding on port 3000
 
 **Verification commands:**
 ```bash
-test -d {path}/_design && echo "PASS: _design dir" || echo "FAIL: _design dir"
-test ! -d {path}/_design/.git && echo "PASS: no nested .git" || echo "FAIL: nested .git still exists"
-test -d {path}/_design/node_modules && echo "PASS: node_modules" || echo "FAIL: node_modules"
+test -d {path} && echo "PASS: workspace dir" || echo "FAIL: workspace dir"
+test -d {path}/node_modules && echo "PASS: node_modules" || echo "FAIL: node_modules"
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -q "200" && echo "PASS: dev server" || echo "FAIL: dev server"
 ```
 
-All 4 gates must pass before reporting success.
-
-## Cleanup
-
-When you're done designing, remove the workspace:
-```bash
-rm -rf {path}/_design
-```
+All 3 gates must pass before reporting success.
 
 ## Design OS Workflow Quick-Reference
 
 Print this after successful setup so the user knows the full design flow.
 
-**These commands are provided by Design OS** (in `_design/.claude/commands/`), not saurun skills. Run them from within the design workspace.
+**These commands are provided by Design OS** (in the workspace's `.claude/commands/`), not saurun skills. Run them from within the design workspace.
 
 ### Phase 1 — Product Planning
 
@@ -128,4 +119,4 @@ Print this after successful setup so the user knows the full design flow.
 |---------|---------|
 | `/export-product` | Generate complete handoff package |
 
-**After export:** `/export-product` generates a handoff directory with React components, TypeScript types, and design specs. These live inside `_design/` and can be referenced or copied into your implementation code. When done, `rm -rf _design/`.
+**After export:** `/export-product` generates a handoff directory with React components, TypeScript types, and design specs. Use `/scaffold` to create your implementation project, then copy the exported artifacts into it.
