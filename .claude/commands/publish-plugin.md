@@ -35,6 +35,7 @@ Users get updates via `/plugin marketplace update saurun-marketplace` or enable 
 4. Report the result:
    - Show new version (if bumped)
    - Confirm repo pushed
+   - Always end with: "To update your local plugin: `/plugin marketplace update saurun-marketplace`"
 
 ## Examples
 
