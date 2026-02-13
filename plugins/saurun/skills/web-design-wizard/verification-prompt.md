@@ -18,8 +18,14 @@ Design spec: [absolute-path-to-repo-root]/design-system/pages/[style-name].md
 
 1. **Dev server**
    → cd to worktree
-   → Start in background and save PID (single bash call):
-     `npm run dev -- --port [assigned-port] & echo $! > .dev-pid && sleep 5 && curl -s http://localhost:[assigned-port] > /dev/null && echo "OK" || echo "FAILED"`
+   → Start dev server in background and verify it responds:
+
+   **Unix/macOS:**
+   `npm run dev -- --port [assigned-port] & echo $! > .dev-pid && sleep 5 && curl -s http://localhost:[assigned-port] > /dev/null && echo "OK" || echo "FAILED"`
+
+   **Windows (PowerShell):**
+   `Start-Process -NoNewWindow npm -ArgumentList "run","dev","--","--port","[assigned-port]" ; Start-Sleep 5 ; try { Invoke-WebRequest -Uri http://localhost:[assigned-port] -UseBasicParsing | Out-Null; "OK" } catch { "FAILED" }`
+
    → Check output for errors
 
 2. **URL validation**
@@ -57,6 +63,8 @@ Design spec: [absolute-path-to-repo-root]/design-system/pages/[style-name].md
 Issues found: [list or "None"]
 
 ## Important
-- After all checks complete, stop the dev server: `kill $(cat .dev-pid) && rm .dev-pid`
+- After all checks complete, stop the dev server:
+  - **Unix/macOS:** `kill $(cat .dev-pid) && rm .dev-pid`
+  - **Windows:** `npx kill-port [assigned-port]`
 - The orchestrator assigns ports: style 1 → 5173, style 2 → 5174, style 3 → 5175, etc.
 ```

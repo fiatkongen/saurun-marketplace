@@ -1,16 +1,16 @@
 ---
 name: web-design-wizard
-description: Use when user wants to explore or compare multiple design styles for a web page, or needs visual direction before implementation begins.
+description: Use when user wants to explore, compare, or A/B test multiple design styles, visual directions, or mockups for a web page before implementation begins. Triggers on "show me design options", "style exploration", "design comparison", "visual options".
 context: fork
 allowed-tools: Task, Read, Write, Edit, Bash, AskUserQuestion, Skill, Glob
 user-invocable: true
 ---
 
-> ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"
-
 # Web Design Wizard
 
-Generate multiple distinct design styles for a web page, let the user refine selections, then implement chosen designs in parallel worktrees.
+## Overview
+
+Generate multiple distinct design styles for a web page in parallel worktrees, letting the user compare and refine before committing to a direction. Core principle: **explore divergently, then converge on the best option.**
 
 ## When to Use
 
@@ -22,6 +22,19 @@ Generate multiple distinct design styles for a web page, let the user refine sel
 - User has a specific design already defined → use `saurun:react-tailwind-v4-components` or `frontend-design` directly
 - User wants to modify an existing design, not create new ones
 
+### Prerequisites
+
+All skills below must be installed. **If any are missing, stop and inform the user.**
+
+| Skill | Used In | Purpose |
+|-------|---------|---------|
+| `ui-ux-pro-max` | Phase 2 | Design system generation |
+| `superpowers:using-git-worktrees` | Phase 6 | Parallel worktree setup |
+| `frontend-design` | Phase 6 | Production-grade implementation |
+| `vercel-react-best-practices` | Phase 6 | React optimization |
+| `copywriting` | Phase 6 | Copy refinement |
+| `nano-banana-pro` | Phase 6 | Image generation — install: `npx skills add intellectronica/agent-skills@nano-banana-pro -g -y` |
+
 ## Workflow
 
 ```dot
@@ -31,6 +44,7 @@ digraph design_wizard {
     "Style Generation" [shape=box];
     "User satisfied?" [shape=diamond];
     "Refinement" [shape=box];
+    "Graphics Preference" [shape=box];
     "Project Setup" [shape=box];
     "Parallel Implementation" [shape=box];
     "Parallel Verification" [shape=box];
@@ -41,7 +55,8 @@ digraph design_wizard {
     "Style Generation" -> "User satisfied?";
     "User satisfied?" -> "Refinement" [label="no"];
     "Refinement" -> "User satisfied?";
-    "User satisfied?" -> "Project Setup" [label="yes"];
+    "User satisfied?" -> "Graphics Preference" [label="yes"];
+    "Graphics Preference" -> "Project Setup";
     "Project Setup" -> "Parallel Implementation";
     "Parallel Implementation" -> "Parallel Verification";
     "Parallel Verification" -> "Complete";
@@ -72,11 +87,8 @@ For each style:
 
 1. **Craft diverse keywords** from discovery responses. Combine: page type + audience + mood + unique aesthetic. Ensure variety across all styles.
 
-2. **Generate design system:**
-   ```bash
-   python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py "[keywords]" \
-     --design-system --persist -p "[ProjectName]" --page "[style-name]"
-   ```
+2. **Generate design system:** Invoke `ui-ux-pro-max` via the `Skill` tool with arguments:
+   `"[keywords]" --design-system --persist -p "[ProjectName]" --page "[style-name]"`
    Saves to: `design-system/pages/[style-name].md` in current working directory.
 
 3. **Present to user** with: style name, key colors, typography, mood adjectives, and best use case.
@@ -117,11 +129,10 @@ Ask user to confirm or override.
 
 1. `mkdir -p [location]`
 2. Write `concept.md` — see [concept-template.md](concept-template.md) for template. Populate from discovery responses. **Only fill fields you have data for — omit sections with no info.**
-3. Write `README.md` — include: project name, styles being explored (name + keywords + mood), directory layout, and how to preview each style (`cd .worktrees/[style]/ && npm run dev`). Keep it brief.
-4. **Do NOT run `git init`** — use the existing repo. Commit project docs to the current branch.
+3. **Do NOT run `git init`** — use the existing repo. Commit project docs to the current branch.
 
 ```bash
-git add designs/[project-name]/
+git add designs/[project-name]/concept.md
 git commit -m "docs: initialize [project-name] design exploration"
 ```
 
@@ -130,13 +141,12 @@ git commit -m "docs: initialize [project-name] design exploration"
 ```
 [repo-root]/
 ├── designs/[project-name]/
-│   ├── concept.md
-│   └── README.md
+│   └── concept.md
 ├── design-system/pages/
 │   ├── [style-1].md
 │   └── [style-2].md
 └── .worktrees/
-    ├── [style-1-branch]/    # React + Vite project
+    ├── [style-1-branch]/    # React + Vite + TypeScript project
     └── [style-2-branch]/
 ```
 
@@ -148,7 +158,7 @@ For each selected style, spawn one sub-agent. See [implementation-prompt.md](imp
 
 Key points for each sub-agent:
 - Use `superpowers:using-git-worktrees` to create worktree at `.worktrees/[style-name]/`
-- Create React + Vite project: `npm create vite@latest . -- --template react`
+- Create React + Vite + TypeScript project: `npm create vite@latest . -- --template react-ts`
 - Read design spec from `design-system/pages/[style-name].md`
 - Use `Skill` tool to invoke: `frontend-design`, `vercel-react-best-practices`, `copywriting`, `nano-banana-pro`
 - Generate images per graphics preference
@@ -179,6 +189,26 @@ Style 3: [Name] — ❌ Build failed — See report
 ```
 
 Recommend best-performing style based on results.
+
+## Quick Reference
+
+| Phase | Action | Key Tool |
+|-------|--------|----------|
+| 1. Discovery | Gather context via AskUserQuestion (batch up to 4) | AskUserQuestion |
+| 2. Style Generation | Generate 4 design systems via ui-ux-pro-max | Skill |
+| 3. Refinement | Iterate until user selects styles | AskUserQuestion |
+| 4. Graphics | Ask graphics preference for selected styles | AskUserQuestion |
+| 5. Project Setup | Create concept.md, commit scaffolding | Write, Bash |
+| 6. Implementation | Spawn parallel sub-agents per style | Task |
+| 7. Verification | Spawn parallel verification agents, show comparison | Task |
+
+## Common Mistakes
+
+- **Regenerating design specs in sub-agents** — design specs are created in Phase 2. Sub-agents READ them, never re-invoke ui-ux-pro-max.
+- **Sequential sub-agent spawning** — Phase 6 and 7 MUST spawn ALL agents in a single message with multiple Task calls. Never one-at-a-time.
+- **Skipping Graphics Preference** — always ask before implementation. Don't assume.
+- **Using `git add .` in worktrees** — stage specific paths only to avoid committing node_modules, .env, or OS files.
+- **Identical keywords across styles** — track used keywords to ensure diversity. Duplicate keywords produce duplicate designs.
 
 ## Error Handling
 

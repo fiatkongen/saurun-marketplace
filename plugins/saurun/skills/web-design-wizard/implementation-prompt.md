@@ -21,8 +21,8 @@ Implement the [StyleName] design for [ProjectName].
 1. Invoke the Skill tool with skill "superpowers:using-git-worktrees"
    → Create worktree at: .worktrees/[style-name]/
 
-2. Create React + Vite project in the worktree:
-   → npm create vite@latest . -- --template react
+2. Create React + Vite + TypeScript project in the worktree:
+   → npm create vite@latest . -- --template react-ts
    → npm install
 
 3. Read the design specification: [absolute-path-to-repo-root]/design-system/pages/[style-name].md
@@ -51,7 +51,7 @@ Implement the [StyleName] design for [ProjectName].
    → Must succeed without errors
 
 9. Commit all changes:
-   → git add .
+   → git add src/ public/ index.html package.json tsconfig*.json vite.config.ts
    → git commit -m "feat: implement [style-name] design for [project-name]"
 
 ## Important
