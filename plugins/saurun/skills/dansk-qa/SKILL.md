@@ -9,7 +9,7 @@ description: Use when reviewing Danish copy for anglicisms, technical jargon, de
 
 ## Overview
 
-Systematisk gennemgang af danske tekster for at finde seks typer problemer: anglicismer (fordanskninger), teknisk jargon der skræmmer, defensiv/undskyldende tone, vage buzzwords, engelske ord i dansk tekst, og unødvendigt formelt sprog.
+Systematisk gennemgang af danske tekster for at finde otte typer problemer: anglicismer (fordanskninger), teknisk jargon der skræmmer, defensiv/undskyldende tone, vage buzzwords, engelske ord i dansk tekst, unødvendigt formelt sprog, manglende trykaccenter, og forkert en/et (grammatisk køn).
 
 ## Role & Expertise
 
@@ -78,7 +78,7 @@ digraph dansk_qa {
     "For each file" [shape=box];
     "Read file" [shape=box];
     "Extract prose (skip code blocks)" [shape=box];
-    "Run 6 checks" [shape=box];
+    "Run 8 checks" [shape=box];
     "Interactive mode?" [shape=diamond];
     "Present problem + fixes" [shape=box];
     "Get user choice" [shape=box];
@@ -96,7 +96,7 @@ digraph dansk_qa {
     "For each file" -> "Read file";
     "Read file" -> "Extract prose (skip code blocks)";
     "Extract prose (skip code blocks)" -> "Run 6 checks";
-    "Run 6 checks" -> "Interactive mode?";
+    "Run 8 checks" -> "Interactive mode?";
     "Interactive mode?" -> "Present problem + fixes" [label="yes"];
     "Interactive mode?" -> "Generate report" [label="no"];
     "Present problem + fixes" -> "Get user choice";
@@ -106,7 +106,7 @@ digraph dansk_qa {
 }
 ```
 
-## The Six Checks
+## The Eight Checks
 
 ### 1. Anglicismer (Fordanskninger)
 
@@ -301,6 +301,85 @@ Pattern: Engelsk ord + dansk artikel/bøjning (-en, -et, -erne)
 | "faciliterer samarbejde" | "gør samarbejde lettere", "hjælper samarbejde" |
 
 **Test:** Would you say this to a friend? If not, simplify it.
+
+### 7. Manglende Trykaccent (Akut Accent)
+
+**Hvad:** Dansk bruger akut accent (´) til at markere tryk på verber i imperativ, hvor formen ellers er tvetydig med andre ordklasser.
+
+**Hvorfor:** Uden accent læser modtageren ofte det forkerte ord. "Lever hurtigt" = "lives quickly" vs. "Levér hurtigt" = "deliver quickly".
+
+**Almindelige fejl:**
+
+| ❌ Uden accent | ✅ Med accent | Forklaring |
+|---------------|--------------|------------|
+| "lever" (imperativ) | "levér" | vs. "lever" (nutid af "at leve") |
+| "juster" (imperativ) | "justér" | vs. "juster" (substantiv, sjældent) |
+| "former" (imperativ) | "formér" | vs. "former" (substantiv: "former") |
+| "planer" (imperativ) | "planér" | vs. "planer" (substantiv: "planer") |
+| "noter" (imperativ) | "notér" | vs. "noter" (substantiv: "noter") |
+| "koder" (imperativ) | "kodér" | vs. "koder" (substantiv: "koder") |
+| "tester" (imperativ) | "testér" | vs. "tester" (substantiv: "tester") |
+| "kontakter" (imperativ) | "kontaktér" | vs. "kontakter" (substantiv) |
+| "installer" (imperativ) | "installér" | vs. "installer" (substantiv) |
+| "generer" (imperativ) | "generér" | vs. "generer" (nutid: "det generer mig") |
+| "presenter" (imperativ) | "præsentér" | vs. "presenter" (substantiv) |
+| "fokuser" (imperativ) | "fokusér" | |
+
+**Detektionsstrategi:**
+1. Find verber i imperativ form (typisk starten af en sætning, efter punktum, eller efter komma i opfordringer)
+2. Tjek om verbet har en tvetydig form uden accent
+3. Kontekst er afgørende: "Vi lever godt" (nutid) vs. "Levér hurtigt!" (imperativ)
+4. Imperativ-kontekst: efter punktum som ny sætning, i overskrifter, i opfordringer/CTA'er
+
+**Undtagelser:**
+- Verber der IKKE er tvetydige behøver ikke accent
+- Kontekst gør betydningen klar → accent er valgfrit men anbefalet
+- Dansk Sprognævn: accent er valgfrit, men anbefales ved tvetydighed
+
+### 8. Forkert En/Et (Grammatisk Køn)
+
+**Hvad:** Danske substantiver har grammatisk køn (fælleskøn = en, intetkøn = et). AI-genereret tekst blander ofte disse, især ved sammensatte ord og fagtermer.
+
+**Hvorfor:** Forkert en/et afslører øjeblikkeligt at teksten er maskin-genereret. Det er den mest basale grammatikfejl i dansk.
+
+**Almindelige AI-fejl:**
+
+| ❌ Forkert | ✅ Korrekt | Regel |
+|-----------|-----------|-------|
+| "et software" | "en software" | fælleskøn |
+| "en system" | "et system" | intetkøn |
+| "en produkt" | "et produkt" | intetkøn |
+| "et løsning" | "en løsning" | fælleskøn |
+| "en projekt" | "et projekt" | intetkøn |
+| "et virksomhed" | "en virksomhed" | fælleskøn |
+| "en website" | "et website" | intetkøn |
+| "et platform" | "en platform" | fælleskøn |
+| "en design" | "et design" | intetkøn |
+| "et funktion" | "en funktion" | fælleskøn |
+| "en værktøj" | "et værktøj" | intetkøn |
+| "et idé" | "en idé" | fælleskøn |
+| "en overblik" | "et overblik" | intetkøn |
+| "et garanti" | "en garanti" | fælleskøn |
+| "en resultat" | "et resultat" | intetkøn |
+| "en tilbud" | "et tilbud" | intetkøn |
+| "et pris" | "en pris" | fælleskøn |
+| "en firma" | "et firma" | intetkøn |
+
+**Sammensatte ord — køn følger SIDSTELEDDET:**
+- "kunde**løsning**" → en (løsning = fælleskøn)
+- "software**produkt**" → et (produkt = intetkøn)
+- "bruger**flade**" → en (flade = fælleskøn)
+- "data**grundlag**" → et (grundlag = intetkøn)
+
+**Detektionsstrategi:**
+1. Find artikler (en/et/den/det) efterfulgt af substantiv
+2. Tjek mod liste over kendte køn
+3. Tjek sammensatte ord mod sidsteleddet
+4. Flag også forkert bestemt form: "softwaren" (korrekt) vs. "softwaret" (forkert)
+
+**Undtagelser:**
+- Ord med valgfrit køn (få tilfælde, f.eks. "en/et øjeblik")
+- Citater og brandnavne
 
 ## Context Awareness (NYT)
 
