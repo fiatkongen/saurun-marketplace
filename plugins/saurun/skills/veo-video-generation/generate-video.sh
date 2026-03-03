@@ -95,9 +95,11 @@ if [[ -n "$IMAGE_PATH" ]]; then
     webp) MIME="image/webp" ;;
     *) echo "Error: Unsupported image format: $EXT (use png/jpg/jpeg/webp)"; exit 1 ;;
   esac
-  BASE64_DATA=$(base64 < "$IMAGE_PATH")
-  IMAGE_JSON=$(jq -n --arg mime "$MIME" --arg data "$BASE64_DATA" \
+  BASE64_FILE=$(mktemp)
+  base64 < "$IMAGE_PATH" | tr -d '\n' > "$BASE64_FILE"
+  IMAGE_JSON=$(jq -n --arg mime "$MIME" --rawfile data "$BASE64_FILE" \
     '{"mimeType": $mime, "bytesBase64Encoded": $data}')
+  rm -f "$BASE64_FILE"
 fi
 
 # --- Build request body ---
