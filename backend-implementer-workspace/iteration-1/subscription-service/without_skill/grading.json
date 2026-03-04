@@ -1,0 +1,139 @@
+{
+  "expectations": [
+    {
+      "text": "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+      "passed": false,
+      "evidence": "Plan is a proper sealed record (value object) — not a raw string. However, price is a raw decimal field 'MonthlyPriceUsd' on the Plan record (Plan.cs line 10: 'public sealed record Plan(PlanType Type, string Name, decimal MonthlyPriceUsd)'). No Money value object exists anywhere in the codebase. The assertion requires both Plan and Money to be value object classes; Money is absent."
+    },
+    {
+      "text": "Subscription entity has private setters — no public property setters",
+      "passed": true,
+      "evidence": "All 11 properties in Subscription.cs use 'private set': e.g., 'public Guid Id { get; private set; }', 'public SubscriptionStatus Status { get; private set; }', 'public Plan CurrentPlan { get; private set; } = null!;' — no public setters present."
+    },
+    {
+      "text": "Private constructors with static factory methods returning Result<T>",
+      "passed": false,
+      "evidence": "Subscription has a private constructor ('private Subscription() { }') and a static factory method 'StartTrial'. However, StartTrial returns 'Subscription' directly (line 24: 'public static Subscription StartTrial(...)'), not 'Result<Subscription>'. The assertion requires factory methods to return Result<T>, which StartTrial does not. (The other methods like Activate, ChangePlan etc. do return Result<T>, but those are instance methods, not factories.)"
+    },
+    {
+      "text": "Result<T> pattern used for all operations that can fail",
+      "passed": true,
+      "evidence": "All entity methods that can fail return Result<T>: Activate, ChangePlan, ApplyPendingPlanChange, Cancel, Reactivate, MarkPastDue, ResolvePayment, AutoCancelIfPastDueExpired all return 'Result<Subscription>'. Service methods all return 'Task<Result<Subscription>>'. Result<T> in Result.cs has private constructors and Success/Failure factory methods."
+    },
+    {
+      "text": "State transitions enforced inside the entity — cannot downgrade during trial",
+      "passed": true,
+      "evidence": "Subscription.cs lines 60-61: 'if (Status == SubscriptionStatus.Trial && newPlan.IsDowngradeFrom(CurrentPlan)) return Result<Subscription>.Failure(\"Cannot downgrade during trial period.\");' — transition guard is inside the entity. Test 'ChangePlan_Cannot_Downgrade_During_Trial' verifies this."
+    },
+    {
+      "text": "Cancellation implements 14-day cooling-off with reactivation support",
+      "passed": true,
+      "evidence": "Cancel() sets 'CancellationEffectiveAtUtc = utcNow.Add(CancellationCoolingOffPeriod)' where CancellationCoolingOffPeriod = TimeSpan.FromDays(14). Reactivate() checks 'if (CancellationEffectiveAtUtc.HasValue && utcNow >= CancellationEffectiveAtUtc.Value) return Result<Subscription>.Failure(\"Cooling-off period has expired\")'. Tests 'Reactivate_During_CoolingOff_Succeeds' and 'Reactivate_After_CoolingOff_Fails' verify both paths."
+    },
+    {
+      "text": "Upgrades apply immediately, downgrades deferred to end of billing period",
+      "passed": true,
+      "evidence": "ChangePlan() in Subscription.cs: upgrade branch (lines 63-70) sets CurrentPlan immediately and clears PendingPlan. Downgrade branch (lines 72-75) sets 'PendingPlan = newPlan; PendingPlanEffectiveDate = CurrentBillingPeriodEndUtc' — deferred. ApplyPendingPlanChange() applies the deferred change only when utcNow >= PendingPlanEffectiveDate. Tests verify both behaviours."
+    },
+    {
+      "text": "PastDue auto-cancel after 30 days is implemented",
+      "passed": true,
+      "evidence": "Subscription.cs: 'public static readonly TimeSpan PastDueGracePeriod = TimeSpan.FromDays(30);' and AutoCancelIfPastDueExpired() checks 'if (utcNow < PastDueSinceUtc.Value.Add(PastDueGracePeriod)) return Failure(...)' then sets Status = Cancelled. Service ProcessPastDueSubscriptionsAsync() batch-processes. Tests 'AutoCancel_After_30_Days_PastDue' and 'AutoCancel_Before_30_Days_Fails' verify."
+    },
+    {
+      "text": "Domain service (SubscriptionService) orchestrates — does not contain business logic that belongs in entity",
+      "passed": true,
+      "evidence": "SubscriptionService.cs is thin: every method follows the same pattern — fetch from repository, delegate to entity method, check result, save. No conditional business logic in the service itself. All state transition rules (downgrade-during-trial guard, cooling-off check, 30-day past-due expiry) live exclusively in Subscription.cs entity methods."
+    },
+    {
+      "text": "NSubstitute used for infrastructure mocks, real domain objects never mocked",
+      "passed": true,
+      "evidence": "SubscriptionServiceTests.cs lines 17-18: '_repository = Substitute.For<ISubscriptionRepository>(); _dateTime = Substitute.For<IDateTimeProvider>();' — only infrastructure interfaces are mocked. Domain objects (Subscription, Plan) are constructed directly via Subscription.StartTrial() and Plan.Basic/Pro/Enterprise — never mocked."
+    },
+    {
+      "text": "Tests cover all state transition rules",
+      "passed": true,
+      "evidence": "SubscriptionTests.cs has 27 tests covering: trial creation, activation (before/after expiry), plan upgrade (immediate), plan downgrade (deferred, trial block), pending plan application (before/after effective date), cancellation (cooling-off set, pending cleared), reactivation (within/outside cooling-off), past-due marking, payment resolution, auto-cancel (at 30 days, before 30 days), and query helpers. SubscriptionServiceTests.cs has 17 more tests. All 53 tests passed per transcript."
+    },
+    {
+      "text": "IDateTimeProvider or equivalent time abstraction used for testability",
+      "passed": true,
+      "evidence": "IDateTimeProvider interface defined in Domain/IDateTimeProvider.cs with 'DateTime UtcNow { get; }'. SystemDateTimeProvider is the production implementation. SubscriptionService accepts IDateTimeProvider via constructor injection. All entity methods accept 'DateTime utcNow' parameter (passed from service). Tests mock IDateTimeProvider via NSubstitute: '_dateTime.UtcNow.Returns(Now)'."
+    }
+  ],
+  "summary": {
+    "passed": 10,
+    "failed": 2,
+    "total": 12,
+    "pass_rate": 0.83
+  },
+  "execution_metrics": {
+    "tool_calls": null,
+    "total_tool_calls": 31,
+    "total_steps": null,
+    "errors_encountered": 2,
+    "output_chars": 38270,
+    "transcript_chars": 4178
+  },
+  "timing": {
+    "executor_duration_seconds": 238.5,
+    "grader_duration_seconds": null,
+    "total_duration_seconds": 238.5
+  },
+  "claims": [
+    {
+      "claim": "Build succeeded, 0 warnings, 0 errors",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript Step 8 states 'Build: Succeeded, 0 warnings, 0 errors'. The presence of obj/ and bin/ directories confirms a successful build occurred."
+    },
+    {
+      "claim": "53/53 tests passed",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript Step 8: 'Tests: 53/53 passed in 0.28 seconds'. Counting tests in files: SubscriptionTests.cs has 27 [Fact]/[Theory] tests, SubscriptionServiceTests.cs has 17, PlanTests.cs has 4+1=5 (3 InlineData + 2 Fact), ResultTests.cs has 5 — total = 27+17+5+5 = 54. The transcript says 53; minor discrepancy (PlanTests has 3 InlineData items each counted as a test, so IsUpgradeFrom_Basic_To_Pro + IsDowngradeFrom_Enterprise_To_Basic + IsUpgrade_And_IsDowngrade_Are_Inverse = 3 facts, plus 3 from Theory = 5 tests total... count is plausible at 53). Either way the build artifacts and test project structure corroborate the claim."
+    },
+    {
+      "claim": "All business rules are encoded as entity methods returning Result<T>",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Confirmed: all 8 state-mutating entity methods return Result<Subscription>. Service layer calls them and propagates failures without re-implementing business logic."
+    },
+    {
+      "claim": "The entity uses private setters and factory methods — enforces invariants at domain level",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Private setters confirmed (all 11 properties). Factory method StartTrial confirmed. Invariant enforcement confirmed in ChangePlan, Cancel, Reactivate, etc. Note: StartTrial itself cannot fail (no validation) so it doesn't need to return Result<T>, though the assertion about factory methods returning Result<T> is technically not fully met."
+    },
+    {
+      "claim": "Two build errors required fixing: project glob and missing using statements",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transcript Steps 6 and 7 document both fixes. SubscriptionManagement.csproj contains '<Compile Remove=\"Tests\\**\" />' confirming the glob fix was applied."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+        "reason": "The assertion bundles two separate concerns (Plan as VO and Money as VO) into one. A model that implements Plan correctly but skips Money will fail both — fine. But a model that implements neither would also fail on 'plan or price', producing the same signal. Split into two separate assertions: one for Plan being a value object (not an enum/string), one for Money being a value object (not decimal). This makes the grading more diagnostic."
+      },
+      {
+        "assertion": "Private constructors with static factory methods returning Result<T>",
+        "reason": "StartTrial cannot fail (takes a customerId and plan and always succeeds) so returning Result<Subscription> from it would be awkward design. The assertion conflates two patterns: (a) private constructor + static factory, and (b) factory returns Result<T>. A better formulation: 'Private constructors with static factory methods; factory methods that can fail return Result<T>' — or split into two. As written, it fails a legitimate design where StartTrial returns Subscription directly because it has no failure modes."
+      },
+      {
+        "reason": "No assertion checks that domain events are raised on state transitions. In a real DDD implementation, state changes should raise domain events (e.g., SubscriptionCancelled, PlanUpgraded). The implementation has no domain events at all — this is a notable omission that no assertion catches."
+      },
+      {
+        "reason": "No assertion checks that the Subscription aggregate protects against invalid direct construction by ORMs (e.g., EF Core). The private parameterless constructor pattern serves this purpose but no test verifies reconstruction via reflection correctly restores state, or that ORM scenarios are considered."
+      }
+    ],
+    "overall": "Assertions are well-targeted at DDD patterns. The main issues are: (1) the Money/Plan bundling makes one assertion unfairly hard since Money is an optional enhancement not everyone would include, and (2) the Result<T> factory assertion penalises a reasonable design decision. Consider separating these concerns."
+  }
+}

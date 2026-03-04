@@ -1,0 +1,90 @@
+{
+  "assertions": [
+    {
+      "id": 1,
+      "text": "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+      "result": "PASS",
+      "evidence": "Money.cs: `public class Money : ValueObject` with `decimal Amount` + `string Currency` fields. Plan.cs: `public class Plan : ValueObject` with `Money MonthlyPrice` property. Subscription.Plan is typed `Plan`, not a string. Subscription.Plan.MonthlyPrice is typed `Money`, not a decimal. Both classes extend ValueObject base class."
+    },
+    {
+      "id": 2,
+      "text": "Subscription entity has private setters — no public property setters",
+      "result": "PASS",
+      "evidence": "Subscription.cs lines 13-22: all properties use `private set` — `CustomerId { get; private set; }`, `Plan { get; private set; }`, `PendingPlan { get; private set; }`, `Status { get; private set; }`, `CreatedAt { get; private set; }`, `TrialEndDate { get; private set; }`, `CancellationDate { get; private set; }`, `CancellationCoolingOffEndDate { get; private set; }`, `AutoCancelDate { get; private set; }`, `BillingPeriodEndDate { get; private set; }`. No public setters anywhere."
+    },
+    {
+      "id": 3,
+      "text": "Private constructors with static factory methods returning Result<T>",
+      "result": "PASS",
+      "evidence": "Subscription.cs line 26: `private Subscription(Guid id, Guid customerId, Plan plan, DateTime now)`. Static factory: `public static Result<Subscription> Create(...)` line 35. Money.cs line 10: `private Money(decimal amount, string currency)`, factory `public static Result<Money> Create(...)` line 16. Plan.cs line 12: `private Plan(string name, Money monthlyPrice, int tier)` — Plan uses static properties (Basic/Pro/Enterprise) rather than a factory method returning Result<T>, but the constructor is private."
+    },
+    {
+      "id": 4,
+      "text": "Result<T> pattern used for all operations that can fail",
+      "result": "PASS",
+      "evidence": "Result.cs defines `Result` and `Result<T>` classes. All entity methods return Result or Result<T>: Subscription.Create() returns Result<Subscription>, Activate/Cancel/Reactivate/MarkPastDue/ChangePlan/ApplyPendingPlanChange all return Result. Money.Create() returns Result<Money>. SubscriptionService methods all return Result or Result<T>. No exceptions thrown for business rule violations."
+    },
+    {
+      "id": 5,
+      "text": "State transitions enforced inside the entity — cannot downgrade during trial",
+      "result": "PASS",
+      "evidence": "Subscription.cs lines 108-109: `if (Status == SubscriptionStatus.Trial && newPlan.IsDowngradeFrom(Plan)) return Result.Failure(\"Cannot downgrade during trial period\");` — guard is inside the entity method. Test `ChangePlan_DowngradeDuringTrial_ReturnsFailure` verifies this. All state transitions (Activate, Cancel, Reactivate, MarkPastDue, ChangePlan) enforce preconditions within the entity."
+    },
+    {
+      "id": 6,
+      "text": "Cancellation implements 14-day cooling-off with reactivation support",
+      "result": "PASS",
+      "evidence": "Subscription.cs line 10: `private const int CoolingOffDays = 14;`. Cancel() sets `CancellationCoolingOffEndDate = now.AddDays(CoolingOffDays)` (line 65). Reactivate() checks `if (CancellationCoolingOffEndDate.HasValue && now > CancellationCoolingOffEndDate.Value) return Result.Failure(\"Cannot reactivate after cooling-off period has expired\")` (lines 76-77). Tests: `Reactivate_WithinCoolingOffPeriod_TransitionsToActive` and `Reactivate_AfterCoolingOffPeriod_ReturnsFailure` both pass."
+    },
+    {
+      "id": 7,
+      "text": "Upgrades apply immediately, downgrades deferred to end of billing period",
+      "result": "PASS",
+      "evidence": "Subscription.cs lines 113-125: upgrade branch sets `Plan = newPlan` immediately (line 116); downgrade branch sets `PendingPlan = newPlan` (line 123) without changing current Plan. `ApplyPendingPlanChange()` applies the pending plan when called (lines 130-138). Tests `ChangePlan_UpgradeWhenActive_TakesEffectImmediately` and `ChangePlan_DowngradeWhenActive_SchedulesForBillingPeriodEnd` both verify these behaviors."
+    },
+    {
+      "id": 8,
+      "text": "PastDue auto-cancel after 30 days is implemented",
+      "result": "PASS",
+      "evidence": "Subscription.cs line 11: `private const int PastDueAutoCancelDays = 30;`. MarkPastDue() sets `AutoCancelDate = now.AddDays(PastDueAutoCancelDays)` (line 92). ISubscriptionRepository.GetPastDueForAutoCancellationAsync() retrieves subscriptions past their auto-cancel date. SubscriptionService.ProcessPastDueAutoCancellationsAsync() (lines 80-96) queries and cancels them. Test `ProcessPastDueAutoCancellations_CancelsPastDueSubscriptions` and `MarkPastDue_SetsAutoCancel30DaysOut` both verify."
+    },
+    {
+      "id": 9,
+      "text": "Domain service (SubscriptionService) orchestrates — does not contain business logic that belongs in entity",
+      "result": "PASS",
+      "evidence": "SubscriptionService.cs contains no business rule guards — it only: fetches from repository, delegates to entity methods (e.g., `subscription.ChangePlan(newPlan, now)`, `subscription.Cancel(now)`), checks Result.IsFailure to propagate failures, and calls SaveChangesAsync. All business rules (no downgrade during trial, cooling-off period check, same plan check) live in Subscription entity methods."
+    },
+    {
+      "id": 10,
+      "text": "NSubstitute used for infrastructure mocks, real domain objects never mocked",
+      "result": "PASS",
+      "evidence": "SubscriptionServiceTests.cs line 1: `using NSubstitute;`. Only interfaces mocked: `_repository = Substitute.For<ISubscriptionRepository>()` and `_dateTimeProvider = Substitute.For<IDateTimeProvider>()`. Domain objects (Subscription, Plan, Money) are created via real factory methods: `Subscription.Create(...)`, `Plan.Basic`, `Plan.Pro`. Transcript confirms: 'Mock boundary rule followed: only ISubscriptionRepository and IDateTimeProvider mocked, all domain objects are real'."
+    },
+    {
+      "id": 11,
+      "text": "Tests cover all state transition rules",
+      "result": "PASS",
+      "evidence": "46 tests total across 4 files. SubscriptionTests.cs covers: Trial creation, 14-day trial end, Activate (Trial->Active), Activate already-active failure, Cancel (Active->Cancelled with cooling-off), Cancel (Trial->Cancelled), Cancel already-cancelled failure, Reactivate within cooling-off, Reactivate after cooling-off failure, Reactivate when not cancelled failure, MarkPastDue (Active->PastDue), MarkPastDue sets 30-day auto-cancel, MarkPastDue non-active failure, ChangePlan upgrade during trial, ChangePlan downgrade during trial failure, upgrade immediate, downgrade deferred, change on cancelled failure, change to same plan failure, ApplyPendingPlanChange. Domain event emissions tested. Service tests cover batch processing of past-due and expired trials."
+    },
+    {
+      "id": 12,
+      "text": "IDateTimeProvider or equivalent time abstraction used for testability",
+      "result": "PASS",
+      "evidence": "IDateTimeProvider.cs defines `public interface IDateTimeProvider { DateTime UtcNow { get; } }`. SubscriptionService constructor takes `IDateTimeProvider dateTimeProvider` and uses `_dateTimeProvider.UtcNow` for all time-dependent operations. SubscriptionServiceTests.cs mocks it: `_dateTimeProvider = Substitute.For<IDateTimeProvider>()` with `_dateTimeProvider.UtcNow.Returns(new DateTime(2026, 3, 1, ...))`. Domain entity methods take `DateTime now` as a parameter (injected from service), enabling deterministic tests."
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0,
+    "pass_rate": 1.0
+  },
+  "metadata": {
+    "total_tokens": 59277,
+    "tool_uses": 38,
+    "duration_ms": 260518,
+    "duration_seconds": 260.5,
+    "test_count": 46,
+    "test_result": "46 passed, 0 failed"
+  }
+}

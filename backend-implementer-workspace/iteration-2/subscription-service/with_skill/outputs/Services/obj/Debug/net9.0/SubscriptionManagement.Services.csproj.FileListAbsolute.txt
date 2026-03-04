@@ -1,0 +1,16 @@
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/bin/Debug/net9.0/SubscriptionManagement.Services.deps.json
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/bin/Debug/net9.0/SubscriptionManagement.Services.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/bin/Debug/net9.0/SubscriptionManagement.Services.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/bin/Debug/net9.0/SubscriptionManagement.Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/bin/Debug/net9.0/SubscriptionManagement.Domain.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.csproj.AssemblyReference.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.GeneratedMSBuildEditorConfig.editorconfig
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.AssemblyInfoInputs.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.AssemblyInfo.cs
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.csproj.CoreCompileInputs.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.sourcelink.json
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/Subscrip.29D9331A.Up2Date
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/refint/SubscriptionManagement.Services.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/SubscriptionManagement.Services.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Services/obj/Debug/net9.0/ref/SubscriptionManagement.Services.dll

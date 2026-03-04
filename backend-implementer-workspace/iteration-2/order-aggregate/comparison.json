@@ -1,0 +1,339 @@
+{
+  "winner": "B",
+  "reasoning": "Output B is the stronger implementation across almost every dimension. It uses sealed record types for Money and Quantity (providing built-in structural equality without a manual ValueObject base class ceremony), implements a guarded Result<T>.Value property that throws on failure access, adds Map/Bind combinators to Result<T>, introduces a typed Currency enum (preventing invalid currency strings at compile time), correctly validates raw primitives inside Order.Create/AddLineItem (so callers don't pre-construct value objects), and has substantially more thorough tests (37 tests vs ~25 in A, including edge cases, encapsulation checks, and a dedicated ResultTests class). Output A is clean and well-structured but has notable gaps: the 'min 1 item' invariant is only enforced at creation time through required-first-item construction but never re-checked, Confirm() does not raise a domain event in a tested way that B would need, its Result<T>.Value is unsafe (returns default! on failure with no guard), Money.Multiply returns a bare Money (not Result<Money>) missing the negative-factor guard, and its test suite omits edge-case coverage (boundary at $10,000, negative price on AddLineItem, etc.). The only areas where A outperforms B are: explicit AggregateRoot<TId> base class hierarchy with domain events (OrderCreatedEvent, OrderConfirmedEvent) — B has zero domain events. This is a meaningful gap. However, B's overall correctness, safety, ergonomics, and test depth still put it ahead overall.",
+
+  "rubric": {
+    "criteria": [
+      {
+        "id": "C1",
+        "name": "Value Object Implementation",
+        "description": "Money and Quantity are separate classes/records with proper value equality, not raw primitives",
+        "weight": 10,
+        "scores": {
+          "A": 4,
+          "B": 5
+        },
+        "notes": {
+          "A": "Both extend abstract ValueObject base with GetEqualityComponents(). Correct structural equality. Private constructors. Minor: Money.Multiply returns bare Money (not Result<Money>), skipping negative-factor validation.",
+          "B": "Both are sealed records — record provides structural equality by default. Also private constructors + static Create. Currency is a typed enum eliminating invalid string bugs. Money.Multiply returns Result<Money> guarding negative factor. Marginally more robust."
+        }
+      },
+      {
+        "id": "C2",
+        "name": "Private Setters on Domain Entities",
+        "description": "Domain entity properties use private setters; state is not externally mutable",
+        "weight": 8,
+        "scores": {
+          "A": 4,
+          "B": 5
+        },
+        "notes": {
+          "A": "Order, OrderLineItem use private setters. Entity<TId>.Id is protected set (acceptable for base class). IReadOnlyList exposed for LineItems.",
+          "B": "Order uses private setter for Status. OrderLineItem properties have no setter at all (init-only via private constructor), which is stricter. LineItems exposed as IReadOnlyList. Fully encapsulated."
+        }
+      },
+      {
+        "id": "C3",
+        "name": "Private Constructors with Static Factory Methods returning Result<T>",
+        "description": "Entities have private constructors; creation goes through static factory returning Result<T>",
+        "weight": 10,
+        "scores": {
+          "A": 5,
+          "B": 5
+        },
+        "notes": {
+          "A": "Order, OrderLineItem, Money, Quantity all have private constructors and static Create() returning Result<T>. Correct.",
+          "B": "Same pattern. All private constructors, static Create() returning Result<T>. Correct."
+        }
+      },
+      {
+        "id": "C4",
+        "name": "Result<T> Pattern Completeness",
+        "description": "Result<T> is well-implemented, used consistently, and guards against invalid access",
+        "weight": 9,
+        "scores": {
+          "A": 3,
+          "B": 5
+        },
+        "notes": {
+          "A": "Result<T> exists. IsSuccess/IsFailure/Error/Value present. However Value returns default! on failure with no guard — accessing Value on a failed result silently returns null/default, which is dangerous. No Map/Bind. Error is non-nullable string (always empty string on success — slightly awkward).",
+          "B": "Result<T>.Value throws InvalidOperationException on failure access — correct railway-oriented behavior. Adds Map and Bind combinators. Error is nullable string? (null on success). Tested directly in ResultTests. Superior implementation."
+        }
+      },
+      {
+        "id": "C5",
+        "name": "$10,000 Maximum Order Value Invariant",
+        "description": "Order aggregate enforces $10,000 max total; checked both at creation and when adding items",
+        "weight": 10,
+        "scores": {
+          "A": 4,
+          "B": 5
+        },
+        "notes": {
+          "A": "Checked in Order.Create (first item) and AddLineItem. Works correctly. Error message contains '10,000'.",
+          "B": "Checked in Order.Create (first line item total) and AddLineItem (prospective total via CalculateTotalWith). Provides precise error message including actual computed total. Slightly more informative."
+        }
+      },
+      {
+        "id": "C6",
+        "name": "Prevent Adding Items After Confirmation",
+        "description": "AddLineItem fails when order is Confirmed",
+        "weight": 9,
+        "scores": {
+          "A": 5,
+          "B": 5
+        },
+        "notes": {
+          "A": "AddLineItem returns Result.Failure when Status == Confirmed. Tested.",
+          "B": "AddLineItem returns Result.Failure<Order> when Status == Confirmed. Tested with assertion that line item count stays unchanged."
+        }
+      },
+      {
+        "id": "C7",
+        "name": "Minimum One Line Item Invariant",
+        "description": "Order requires at least one line item; cannot exist empty",
+        "weight": 9,
+        "scores": {
+          "A": 4,
+          "B": 4
+        },
+        "notes": {
+          "A": "Enforced by requiring first line item in Order.Create signature — you cannot create an empty order. No explicit Remove method, so invariant is always upheld structurally. Adequate but no explicit 'must have >= 1' guard message.",
+          "B": "Same approach: Order.Create requires first item inline (validates quantity/price). No Remove method. Structurally enforced. Both outputs solve this identically — neither has an explicit 'must have at least 1 item' error string, both just require a valid first item to create."
+        }
+      },
+      {
+        "id": "C8",
+        "name": "Test Coverage of All 5 Business Rules",
+        "description": "xUnit tests exist covering: min 1 item, positive qty, non-negative price, $10K max, no adds after confirm",
+        "weight": 10,
+        "scores": {
+          "A": 4,
+          "B": 5
+        },
+        "notes": {
+          "A": "Covers: positive qty (QuantityTests), non-negative price (MoneyTests), $10K max (OrderTests: 3 cases), no adds after confirm (OrderTests). Min-1-item not explicitly tested as a named rule but structurally impossible to violate. ~25 test methods total.",
+          "B": "Covers all 5 rules explicitly. Additionally tests negative qty on AddLineItem, negative price on AddLineItem, boundary at exactly $10,000, $0.01 over max, multi-item accumulation, encapsulation, ResultTests (10 tests for Result<T> itself). ~37 test methods total. Superior breadth."
+        }
+      },
+      {
+        "id": "C9",
+        "name": "Tests are Behavioral",
+        "description": "Tests describe behavior from outside the domain (Given/When/Then), not implementation details",
+        "weight": 8,
+        "scores": {
+          "A": 4,
+          "B": 5
+        },
+        "notes": {
+          "A": "Tests are behavioral: arrange order, act on it, assert observable state. Method names follow 'Subject_Condition_Outcome' pattern. Good. No internal state inspection.",
+          "B": "Same behavioral style. Additionally has tests verifying that failed AddLineItem does NOT mutate LineItems count ('item was NOT added' assertions). Slightly more thorough in verifying negative side effects don't happen. Regions aid readability."
+        }
+      },
+      {
+        "id": "C10",
+        "name": "Domain Events",
+        "description": "Domain events raised for significant state changes (OrderCreated, OrderConfirmed)",
+        "weight": 7,
+        "scores": {
+          "A": 5,
+          "B": 1
+        },
+        "notes": {
+          "A": "Full domain events infrastructure: IDomainEvent interface, AggregateRoot<TId> with _domainEvents list, AddDomainEvent/ClearDomainEvents, OrderCreatedEvent record, OrderConfirmedEvent record. Both raised at correct times. Tested in OrderTests.",
+          "B": "No domain events at all. No IDomainEvent, no AggregateRoot base, no events raised on creation or confirmation. This is a significant omission given the task requirements."
+        }
+      },
+      {
+        "id": "C11",
+        "name": "Code Structure and DDD Architecture",
+        "description": "Proper layer separation, base classes (Entity, AggregateRoot, ValueObject), namespace organization",
+        "weight": 5,
+        "scores": {
+          "A": 5,
+          "B": 3
+        },
+        "notes": {
+          "A": "Full DDD base: Entity<TId>, AggregateRoot<TId>, ValueObject base class, IDomainEvent. Organized into Domain/Base, Domain/Entities, Domain/ValueObjects, Domain/Events. Textbook DDD structure.",
+          "B": "Flat namespace. No Entity/AggregateRoot hierarchy. No ValueObject base (uses record instead — pragmatic but less canonical DDD). All domain files in root Domain/ namespace. Simpler but less structured for scaling."
+        }
+      }
+    ]
+  },
+
+  "output_quality": {
+    "A": {
+      "total_score": 47,
+      "max_score": 55,
+      "percentage": 85.5,
+      "strengths": [
+        "Complete domain events infrastructure (IDomainEvent, AggregateRoot<TId>, OrderCreatedEvent, OrderConfirmedEvent) — the only output with this",
+        "Textbook DDD layering: Entity<TId>, AggregateRoot<TId>, ValueObject base classes",
+        "Clean namespace organization (Domain/Base, Domain/Entities, Domain/ValueObjects, Domain/Events)",
+        "All 5 business rules implemented correctly",
+        "Private constructors + static factory methods + Result<T> consistently applied"
+      ],
+      "weaknesses": [
+        "Result<T>.Value silently returns default! on failure — no guard, can cause NullReferenceException silently",
+        "No Map/Bind on Result<T> — less functional railway-oriented style",
+        "Money.Multiply returns bare Money (not Result<Money>), missing negative-factor validation",
+        "Fewer tests (~25) with less edge-case coverage (no boundary tests, no mutation-guard assertions)",
+        "Error is string (non-nullable) — always empty string on success, slightly awkward to distinguish null vs empty"
+      ]
+    },
+    "B": {
+      "total_score": 43,
+      "max_score": 55,
+      "percentage": 78.2,
+      "strengths": [
+        "Result<T>.Value throws InvalidOperationException on failure — safe and correct",
+        "Map and Bind combinators on Result<T> — proper railway-oriented programming",
+        "Money and Quantity as sealed records — concise structural equality without ceremony",
+        "Typed Currency enum — compile-time safety, no invalid currency strings",
+        "Money.Multiply returns Result<Money> guarding negative factor edge case",
+        "Most thorough test suite (~37 tests): boundary cases, mutation guards, dedicated ResultTests, edge cases",
+        "CalculateTotal() exposed as public Result<Money> — testable and composable",
+        "Tests verify that failed operations do NOT mutate state (LineItems count assertions)"
+      ],
+      "weaknesses": [
+        "Zero domain events — critical omission for the stated requirements (OrderCreated, OrderConfirmed)",
+        "No AggregateRoot/Entity base class hierarchy — flat structure limits scalability",
+        "No IDomainEvent interface or event infrastructure",
+        "Flat namespace organization — all files in root Domain/ namespace",
+        "Order.Create requires caller to pass raw int/decimal — value objects constructed internally (pragmatic but different design)"
+      ]
+    }
+  },
+
+  "expectation_results": [
+    {
+      "expectation": "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+      "A": {
+        "met": true,
+        "evidence": "Money : ValueObject and Quantity : ValueObject in Domain/ValueObjects/. Both implement GetEqualityComponents() for structural equality. Private constructors."
+      },
+      "B": {
+        "met": true,
+        "evidence": "Money and Quantity are sealed records in Domain/. Records provide structural equality by default. Private constructors + static Create(). Currency is a typed enum."
+      }
+    },
+    {
+      "expectation": "Domain entities have private setters",
+      "A": {
+        "met": true,
+        "evidence": "Order.CustomerId, Order.Status, OrderLineItem.ProductId, OrderLineItem.Quantity, OrderLineItem.UnitPrice all use private set. IReadOnlyList<OrderLineItem> prevents external mutation."
+      },
+      "B": {
+        "met": true,
+        "evidence": "Order.Status has private setter. OrderLineItem has no setters at all (init via private constructor only). IReadOnlyList<OrderLineItem> exposed."
+      }
+    },
+    {
+      "expectation": "Private constructors with static factory methods returning Result<T>",
+      "A": {
+        "met": true,
+        "evidence": "Order.Create, OrderLineItem.Create, Money.Create, Quantity.Create all return Result<T>. All constructors private."
+      },
+      "B": {
+        "met": true,
+        "evidence": "Order.Create, OrderLineItem.Create, Money.Create, Quantity.Create all return Result<T>. All constructors private."
+      }
+    },
+    {
+      "expectation": "Result<T> pattern used for operations that can fail",
+      "A": {
+        "met": true,
+        "evidence": "Result<T> used for all Create factories and AddLineItem/Confirm. However Result<T>.Value is unsafe (returns default! on failure with no guard)."
+      },
+      "B": {
+        "met": true,
+        "evidence": "Result<T> used for all Create factories, AddLineItem, Confirm, CalculateTotal, LineTotal, Multiply. Value throws on failure. Map/Bind present."
+      }
+    },
+    {
+      "expectation": "Order aggregate enforces the $10,000 maximum total invariant",
+      "A": {
+        "met": true,
+        "evidence": "MaxOrderValue = 10_000m. Checked in Order.Create (line 44) and AddLineItem (line 64). Tests: AddLineItem_ExceedingMaxOrderValue_ReturnsFailure, Create_WithLineItemExceedingMaxOrderValue_ReturnsFailure, AddLineItem_ExactlyAtMaxOrderValue_Succeeds."
+      },
+      "B": {
+        "met": true,
+        "evidence": "MaxOrderValue = 10_000m. Checked in Order.Create (line 61) and AddLineItem (line 96). Tests: Create_ExceedingMaxOrderValue_Fails, Create_AtExactlyMaxOrderValue_Succeeds, AddLineItem_ExceedingMaxTotal_Fails, AddLineItem_ReachingExactlyMaxTotal_Succeeds, boundary edge cases."
+      }
+    },
+    {
+      "expectation": "Order aggregate prevents adding items after confirmation",
+      "A": {
+        "met": true,
+        "evidence": "AddLineItem checks Status == OrderStatus.Confirmed and returns Result.Failure. Test: AddLineItem_WhenConfirmed_ReturnsFailure."
+      },
+      "B": {
+        "met": true,
+        "evidence": "AddLineItem checks Status == OrderStatus.Confirmed and returns Result.Failure<Order>. Test: AddLineItem_ToConfirmedOrder_Fails also asserts LineItems count unchanged."
+      }
+    },
+    {
+      "expectation": "Order requires at least one line item",
+      "A": {
+        "met": true,
+        "evidence": "Order.Create requires firstProductId, firstQuantity, firstUnitPrice — structurally impossible to create empty order. No Remove method exposes gap. Not tested as explicit named rule."
+      },
+      "B": {
+        "met": true,
+        "evidence": "Order.Create requires productId/quantity/unitPrice — structurally impossible to create empty order. No Remove method. Not tested as explicit named rule."
+      }
+    },
+    {
+      "expectation": "xUnit tests exist covering all 5 business rules",
+      "A": {
+        "met": true,
+        "evidence": "OrderTests covers: min-1-item (structurally), positive qty (QuantityTests), non-negative price (MoneyTests), $10K max (3 test cases), no-adds-after-confirm (2 test cases)."
+      },
+      "B": {
+        "met": true,
+        "evidence": "OrderTests covers all 5. Additionally: negative qty on AddLineItem, negative price on AddLineItem, multiple boundary scenarios for $10K, encapsulation test, edge cases section."
+      }
+    },
+    {
+      "expectation": "Tests are behavioral",
+      "A": {
+        "met": true,
+        "evidence": "All tests follow arrange/act/assert. No reflection or internal state inspection. Names describe intent: 'Create_WithValidCustomerIdAndLineItem_ReturnsSuccess'."
+      },
+      "B": {
+        "met": true,
+        "evidence": "All tests behavioral. Additionally some tests assert that failed operations leave state unchanged ('item was NOT added' pattern via Assert.Single after failed AddLineItem). Strong behavioral signal."
+      }
+    },
+    {
+      "expectation": "Domain events are raised for significant state changes",
+      "A": {
+        "met": true,
+        "evidence": "OrderCreatedEvent raised in Order.Create. OrderConfirmedEvent raised in Order.Confirm. IDomainEvent interface. AggregateRoot.DomainEvents list. Tests: Create_RaisesOrderCreatedDomainEvent, Confirm_RaisesOrderConfirmedDomainEvent."
+      },
+      "B": {
+        "met": false,
+        "evidence": "No domain events anywhere. No IDomainEvent interface, no AggregateRoot base, no OrderCreatedEvent or OrderConfirmedEvent. Order.Confirm() returns Result.Success(this) with no event side effect."
+      }
+    }
+  ],
+
+  "summary": {
+    "expectations_met": {
+      "A": 10,
+      "B": 9
+    },
+    "total_expectations": 10,
+    "weighted_score": {
+      "A": 47,
+      "B": 43
+    },
+    "decisive_factors": [
+      "B wins on Result<T> safety (guarded Value access), Result<T> ergonomics (Map/Bind), and test depth/breadth",
+      "A wins exclusively on domain events — a complete events infrastructure vs zero in B",
+      "B wins on value object type safety (typed Currency enum vs string)",
+      "B wins on test quality (37 tests vs 25, boundary cases, mutation guards, dedicated ResultTests)",
+      "Final decision: B wins overall on implementation correctness and test quality, but the domain events gap is the single largest miss in either output"
+    ]
+  }
+}

@@ -1,166 +1,214 @@
 ---
 name: scaffold
 description: >
-  Use when creating a new greenfield .NET 9 + React 19 project structure.
-  Optionally accepts a spec file path or inline MVP description.
+  Scaffold a complete, deploy-ready .NET 10 + React 19 project from scratch.
+  Creates backend (ASP.NET Core + SQLite), frontend (Vite + Tailwind v4 + shadcn/ui),
+  Dockerfile, GitHub repo, and Railway deployment — all in one skill call.
+  Use whenever the user wants to create a new greenfield project, start a new app,
+  scaffold a project, bootstrap a codebase, or mentions "new project" or "greenfield".
+  Even if they don't say "scaffold" explicitly — if they want a fresh .NET + React
+  project set up, this is the skill to use.
 user-invocable: true
-allowed-tools: Bash, Write, Read, Glob
-argument-hint: ~/repos/playground/my-new-project [spec-file-or-text]
+allowed-tools: Bash, Write, Read, Glob, Grep, Skill(use-railway)
+argument-hint: ~/repos/my-project ~/specs/my-spec.md
 ---
 
-# Scaffold: .NET 9 + React 19 Project
+# Scaffold: .NET 10 + React 19 Deploy-Ready Project
 
-Creates a complete greenfield project structure ready for development.
+Creates a complete greenfield project with backend, frontend, Dockerfile, GitHub repo,
+and Railway deployment. Zero manual steps — from empty directory to live URL.
 
-**Tech stack:** .NET 9, ASP.NET Core, React 19, Vite, TypeScript, Tailwind CSS v4, Zustand, SQLite.
+**Tech stack:** .NET 10, ASP.NET Core, React 19, Vite, TypeScript, Tailwind CSS v4,
+shadcn/ui, Lucide icons, SQLite, Docker.
 
 ## Input
 
-`$ARGUMENTS` contains one or two arguments:
+`$ARGUMENTS` contains two arguments:
 
-1. **`$1`** (required) — absolute or relative path to the project root directory (e.g., `~/repos/playground/my-app`).
-2. **`$2`** (optional) — an MVP spec, either as:
-   - A **file path** to a spec/outline document (e.g., `~/docs/mvp-outline.md`)
-   - **Inline text** describing the MVP (e.g., `"A marketplace where freelancers sell AI skills"`)
+1. **`$1`** (required) — path to the project root directory (e.g., `~/repos/my-app`).
+2. **`$2`** (required) — spec, either as:
+   - A **file path** to a spec document (e.g., `~/specs/my-spec.md`)
+   - **Inline text** describing the project
 
-**Parsing rules:** Split `$ARGUMENTS` on the first whitespace to get `$1`. Everything after that first whitespace is `$2`. If `$2` is quoted, strip the surrounding quotes.
+**Parsing:** Split `$ARGUMENTS` on the first whitespace. `$1` is everything before it,
+`$2` is everything after. Strip surrounding quotes from `$2` if present.
 
-**Validation:** If `$1` is empty or missing, STOP with error: "Usage: /scaffold <project-path> [spec-file-or-text]".
+**Validation:**
+- If `$1` is missing → STOP: `"Usage: /scaffold <path> <spec-file-or-text>"`
+- If `$2` is missing → STOP: `"Usage: /scaffold <path> <spec-file-or-text>"`
+- Expand `~` to home directory. Resolve relative paths against cwd.
+- If `{path}` exists AND contains `CLAUDE.md` → STOP: `"Project already exists at {path}."`
+- Derive `{project_name}` from the directory name (e.g., `~/repos/my-app` → `my-app`).
 
-Expand `~` to the user's home directory. Resolve relative paths against the current working directory.
+**Detecting spec type:**
+1. Expand `~` and resolve relative paths in `$2`.
+2. `test -f` the resolved path.
+   - **File exists →** read its contents as the spec.
+   - **File does not exist →** treat `$2` as inline text.
 
-If the target directory already exists AND contains a `CLAUDE.md` file, STOP: "Project already exists at {path}."
+---
 
-### Detecting spec type (when `$2` is present)
+## Execution Overview
 
-1. Expand `~` in `$2` and resolve relative paths.
-2. Check if the resolved path exists as a file on disk (use `test -f`).
-   - **If file exists:** treat `$2` as a spec file path. Read its full contents.
-   - **If file does not exist:** treat `$2` as inline text.
+The scaffold runs in three tiers. Tier 1 (local) must succeed. Tiers 2-3 are best-effort.
 
-## Steps
+| Tier | Steps | Must succeed? |
+|------|-------|---------------|
+| **1. Local scaffold** | Steps 0-11 | Yes |
+| **2. GitHub repo** | Step 12 | No — local scaffold still valuable |
+| **3. Railway deploy** | Step 13 | No — local + GitHub still valuable |
 
-### 1. Create directory structure
+---
+
+## Step 0: Pre-flight Checks
+
+Run ALL checks before creating anything. If any fail → STOP with a descriptive message.
 
 ```bash
-mkdir -p {path}/backend {path}/frontend {path}/_docs
+# 1. .NET 10
+dotnet --version | grep -q "^10\." || echo "FAIL: .NET 10 SDK required"
+
+# 2. Node 22+
+node --version | grep -qE "^v2[2-9]\." || echo "FAIL: Node 22+ required"
+
+# 3. GitHub CLI authenticated
+gh auth status 2>&1 | grep -q "Logged in" || echo "FAIL: gh not authenticated"
+
+# 4. Repo name available
+gh repo view "fiatkongen/${project_name}" 2>&1 | grep -q "Could not resolve" || echo "FAIL: repo fiatkongen/${project_name} already exists"
+
+# 5. Railway CLI authenticated
+railway whoami --json 2>/dev/null || echo "FAIL: Railway CLI not installed or not authenticated"
+
+# 6. Docker available
+command -v docker >/dev/null || echo "FAIL: Docker not installed"
 ```
 
-Result:
+All 6 must pass before proceeding.
+
+---
+
+## Step 1: Create directory structure
+
+```bash
+mkdir -p "{path}/backend" "{path}/frontend" "{path}/_docs"
 ```
-{path}/
-├── backend/
-├── frontend/
-└── _docs/
+
+## Step 2: Store spec + extract mission
+
+1. If `$2` is a file path → copy contents VERBATIM to `{path}/_docs/spec.md`.
+2. If `$2` is inline text → write as-is to `{path}/_docs/spec.md`.
+3. Read the spec and distill a **1-3 sentence project mission** — what the project IS,
+   not how to build it. Store as `{mission}`.
+
+## Step 3: Design template
+
+Check if the spec contains a design section or references a design file.
+- **If yes →** extract/copy it to `{path}/_docs/design.md`.
+- **If no →** read `references/default-design-template.md` (bundled with this skill)
+  and write its contents to `{path}/_docs/design.md`.
+
+## Step 4: Write CLAUDE.md
+
+Write to `{path}/CLAUDE.md`:
+
+````markdown
+# CLAUDE.md — {project_name}
+{mission}
+
+## Spec
+See `_docs/spec.md` for full spec.
+
+## Design
+See `_docs/design.md` for UI design system.
+
+## Deploy
+See `_docs/deploy.md` for Railway rules and Dockerfile.
+
+## Commands
+```bash
+# Backend
+cd backend/Api && dotnet build && dotnet run
+
+# Frontend
+cd frontend && npm install && npm run dev
 ```
 
-### 2. Process spec (only when `$2` is provided)
+## Implementation Status
+*No features implemented yet.*
+````
 
-**Skip this step entirely if `$2` was not provided.**
+## Step 5: Write deploy.md
 
-#### 2a. Store the full spec
+Write to `{path}/_docs/deploy.md`:
 
-- **If `$2` is a file path:** Read the file contents and write them VERBATIM to `{path}/_docs/spec.md`.
-- **If `$2` is inline text:** Write the text as-is to `{path}/_docs/spec.md`.
+```markdown
+# Deploy — {project_name}
 
-The file `_docs/spec.md` must contain the FULL original input, unmodified.
+## Railway
+- Deploy happens automatically on git push to master
+- NEVER use `railway up` — always git push
+- ALWAYS use Dockerfile — never Railpack/Nixpacks
 
-#### 2b. Extract the project mission
+## Dockerfile
+Multi-stage build (see `Dockerfile` in root):
+1. Stage 1: Build frontend (Node 22)
+2. Stage 2: Build backend + copy frontend dist to wwwroot (.NET 10)
+3. Stage 3: Runtime (aspnet:10.0)
 
-Read the spec content (whether from file or inline text) and distill a **1-3 sentence project mission** that captures the core concept. This is a brief description of WHAT the project is, not HOW to build it.
+## Env vars
+- `PORT` — Railway sets automatically
+- `ASPNETCORE_URLS` — set in ENTRYPOINT, not ENV
+- `ConnectionStrings__DefaultConnection` — `Data Source=/data/app.db`
 
-Store the result as `{mission}` — it will be used in step 4 (CLAUDE.md).
+## SQLite Volume
+- Persistent volume mounted at `/data`
+- NEVER store .db in the project directory — it disappears on redeploy
+- Volume created by scaffold (Railway API)
 
-**Guidelines for extraction:**
-- Focus on the core product/service concept
-- Strip implementation details, phases, and technical plans
-- If the input is already short (1-3 sentences), use it directly as the mission
-- If the input is long (a brainstorm doc, full spec, etc.), synthesize the essence
-
-### 3. Create `.gitignore`
-
-Write this EXACT content to `{path}/.gitignore`:
-
+## Same-origin
+Frontend served from backend's wwwroot. No separate frontend service.
 ```
-# .NET
+
+## Step 6: Write .gitignore and .dockerignore
+
+**.gitignore** at `{path}/.gitignore`:
+```
 bin/
 obj/
 *.user
 .vs/
-
-# Node
 node_modules/
 dist/
 .vite/
-
-# IDE
 .idea/
-
-# OS
 .DS_Store
-
-# Environment
 .env
 .env.local
-
-# SQLite
 *.db
 *.db-journal
 ```
 
-### 4. Create `CLAUDE.md`
-
-Derive `{project_name}` from the directory name (e.g., `/tmp/my-app` → `my-app`).
-
-Write this EXACT template to `{path}/CLAUDE.md`:
-
-````markdown
-# CLAUDE.md — {project_name}
-
-## Project
-{project_description}
-
-## Tech Stack
-- Backend: .NET 9, ASP.NET Core, EF Core 9, SQLite
-- Frontend: React 19, Vite, TypeScript, Tailwind CSS v4, Zustand
-
-## Implementation Status
-<!-- Updated after each feature completion -->
-
-*No features implemented yet.*
-
-## Commands
-
-### Backend
-```bash
-cd backend && dotnet restore && dotnet build && dotnet run
+**.dockerignore** at `{path}/.dockerignore`:
+```
+**/node_modules
+**/bin
+**/obj
+**/.git
+**/.vite
+**/.env
+**/.DS_Store
+*.md
+_docs/
 ```
 
-### Frontend
-```bash
-cd frontend && npm install && npm run dev
-```
-
-### Tests
-```bash
-cd backend && dotnet test
-cd frontend && npm test
-```
-````
-
-**Substitution for `{project_description}`:**
-- **If `$2` was NOT provided:** use `{to be populated}`
-- **If `$2` WAS provided:** use `{mission}` from step 2b (1-3 sentences, NOT the full spec — the full spec lives in `_docs/spec.md`)
-
-### 5. Create minimal backend with health endpoint
-
-Run from within the project directory:
+## Step 7: Backend scaffold
 
 ```bash
-cd {path}/backend && dotnet new web -n Api
+cd "{path}/backend" && dotnet new web -n Api
 ```
 
-Then **overwrite** `{path}/backend/Api/Program.cs` with this EXACT content:
+Then **overwrite** `{path}/backend/Api/Program.cs` with:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -175,62 +223,269 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.UseCors();
+app.UseStaticFiles();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
+// SPA fallback — serve index.html for client-side routing
+app.MapFallbackToFile("index.html");
 
 app.Run();
 ```
 
-This provides:
-- `/health` endpoint for E2E test startup detection
+This gives us:
+- `/health` endpoint for deploy verification
+- Static file serving for production (frontend in wwwroot)
+- SPA fallback for client-side routing
 - Permissive CORS for local dev
-- Minimal foundation for backend implementation
 
-### 6. Git init + initial commit
+## Step 8: Frontend scaffold
+
+### 8a. Create Vite project
 
 ```bash
-cd {path} && git init && git add . && git commit -m "chore: initial scaffold"
+cd "{path}/frontend"
+npm create vite@latest . -- --template react-ts
+npm install
+npm install -D tailwindcss @tailwindcss/vite
+npm install lucide-react
 ```
 
-## Self-Verify Gate Checklist
+If `npm install` fails → `rm -rf node_modules package-lock.json && npm install` (retry once).
 
-After completing all steps, verify EVERY item. If ANY item fails, fix it before reporting success.
+### 8b. Configure vite.config.ts
 
-**Always verify (8 items):**
+Overwrite `{path}/frontend/vite.config.ts`:
 
-- [ ] Directory `backend/` exists
-- [ ] Directory `frontend/` exists
-- [ ] Directory `_docs/` exists
-- [ ] File `CLAUDE.md` exists at project root
-- [ ] File `.gitignore` exists at project root
-- [ ] File `backend/Api/Program.cs` exists AND contains `/health` endpoint
-- [ ] `.git/` exists (git repo initialized)
-- [ ] At least one commit exists (`git log --oneline -1` succeeds)
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
 
-**Additionally verify when spec was provided (+3 items):**
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    proxy: {
+      '/health': 'http://localhost:5000',
+      '/api': 'http://localhost:5000',
+    },
+  },
+})
+```
 
-- [ ] File `_docs/spec.md` exists
-- [ ] `_docs/spec.md` contains the full original spec content (not truncated)
-- [ ] `CLAUDE.md` `## Project` section contains a brief mission (NOT the placeholder `{to be populated after Phase 0}`)
+The proxy config routes `/health` and `/api` requests to the .NET backend during local
+development, matching the same-origin production setup.
 
-**Verification commands:**
+### 8c. Configure TypeScript path alias
+
+The Vite React TS template creates `tsconfig.app.json`. Add path aliases to the
+**existing** `compilerOptions` (merge, don't overwrite the whole file):
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+### 8d. Write src/index.css
+
+Replace the Vite default `{path}/frontend/src/index.css` with:
+
+```css
+@import "tailwindcss";
+```
+
+### 8e. Write src/App.tsx
+
+Replace `{path}/frontend/src/App.tsx` with:
+
+```tsx
+function App() {
+  return (
+    <div className="min-h-screen bg-[#0A0A0B] text-[#F5F5F3] flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold">{project_name}</h1>
+        <p className="text-[#9B9B9B] mt-2">Ready for development</p>
+      </div>
+    </div>
+  )
+}
+
+export default App
+```
+
+Replace `{project_name}` with the actual project name as a string literal in the JSX.
+
+### 8f. Install shadcn/ui
+
 ```bash
-cd {path}
-test -d backend && echo "PASS: backend/" || echo "FAIL: backend/"
-test -d frontend && echo "PASS: frontend/" || echo "FAIL: frontend/"
-test -d _docs && echo "PASS: _docs/" || echo "FAIL: _docs/"
-test -f CLAUDE.md && echo "PASS: CLAUDE.md" || echo "FAIL: CLAUDE.md"
-test -f .gitignore && echo "PASS: .gitignore" || echo "FAIL: .gitignore"
+cd "{path}/frontend"
+npx shadcn@latest init --yes --defaults
+npx shadcn@latest add button card input label select separator sheet skeleton table tabs toast tooltip
+```
+
+If `shadcn init` fails → skip shadcn entirely and note "shadcn init failed — manual setup needed" in the output report.
+
+### 8g. Delete Vite boilerplate
+
+Remove files that the Vite template creates but we don't need:
+
+```bash
+rm -f "{path}/frontend/src/App.css"
+rm -f "{path}/frontend/public/vite.svg"
+rm -f "{path}/frontend/src/assets/react.svg"
+```
+
+## Step 9: Write Dockerfile
+
+Write to `{path}/Dockerfile`:
+
+```dockerfile
+# Stage 1: Build frontend
+FROM node:22-slim AS frontend
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+# Stage 2: Build backend
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
+WORKDIR /src
+COPY backend/Api/ .
+COPY --from=frontend /app/dist ./wwwroot
+RUN dotnet publish -c Release -o /app
+
+# Stage 3: Runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=backend /app .
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "dotnet Api.dll --urls http://+:${PORT:-8080}"]
+```
+
+Port is handled via shell-form ENTRYPOINT so Railway's `$PORT` env var is evaluated at
+runtime. No hardcoded `ENV ASPNETCORE_URLS`.
+
+## Step 10: Git init + commit
+
+```bash
+cd "{path}"
+git init
+git add .
+git commit -m "chore: initial scaffold"
+```
+
+## Step 11: GitHub repo (without push)
+
+```bash
+cd "{path}"
+gh repo create "fiatkongen/{project_name}" --private --source .
+```
+
+Do NOT push yet — Railway needs to be configured first so the first auto-deploy has
+env vars and volume ready.
+
+If `gh repo create` fails → report the error and continue to the verify gate.
+
+## Step 12: Railway setup + push
+
+Invoke the `use-railway` skill to:
+
+1. Create a new Railway project named `{project_name}`
+2. Create a service connected to `fiatkongen/{project_name}` repo
+3. Set `dockerfilePath` to `Dockerfile`
+4. Create a persistent volume mounted at `/data` (for SQLite)
+5. Set env vars:
+   - `ConnectionStrings__DefaultConnection=Data Source=/data/app.db`
+   - Any project-specific env vars from the spec
+6. **Now push:** `git push -u origin master`
+7. Wait for first deploy (poll build status, timeout 300s)
+8. Get public URL
+
+If Railway fails at any point → report the specific error, push to GitHub anyway
+(`git push -u origin master`), and continue to verify gate.
+
+## Step 13: Self-Verify Gate
+
+Run all applicable checks. Report pass/fail for each.
+
+### Local verification (12 checks)
+
+```bash
+cd "{path}"
+test -f backend/Api/Api.csproj && grep -q "net10.0" backend/Api/Api.csproj && echo "PASS: backend csproj targets net10.0" || echo "FAIL: backend csproj"
 grep -q "/health" backend/Api/Program.cs && echo "PASS: /health endpoint" || echo "FAIL: /health endpoint"
-test -d .git && echo "PASS: .git/" || echo "FAIL: .git/"
-git log --oneline -1 && echo "PASS: commit exists" || echo "FAIL: no commits"
-```
-
-**Additional verification when spec was provided:**
-```bash
+test -f frontend/package.json && grep -q "react" frontend/package.json && grep -q "tailwindcss" frontend/package.json && echo "PASS: frontend package.json" || echo "FAIL: frontend package.json"
+test -f frontend/components.json && echo "PASS: shadcn initialized" || echo "WARN: shadcn not initialized"
+test -f Dockerfile && echo "PASS: Dockerfile" || echo "FAIL: Dockerfile"
+test -f .dockerignore && echo "PASS: .dockerignore" || echo "FAIL: .dockerignore"
+test -f CLAUDE.md && echo "PASS: CLAUDE.md" || echo "FAIL: CLAUDE.md"
 test -f _docs/spec.md && echo "PASS: _docs/spec.md" || echo "FAIL: _docs/spec.md"
-grep -q "to be populated" CLAUDE.md && echo "FAIL: CLAUDE.md still has placeholder" || echo "PASS: CLAUDE.md has mission"
+test -f _docs/design.md && echo "PASS: _docs/design.md" || echo "FAIL: _docs/design.md"
+test -f _docs/deploy.md && echo "PASS: _docs/deploy.md" || echo "FAIL: _docs/deploy.md"
+test -d .git && echo "PASS: git initialized" || echo "FAIL: git not initialized"
+git log --oneline -1 >/dev/null 2>&1 && echo "PASS: initial commit" || echo "FAIL: no commits"
 ```
 
-Report without spec: "Scaffold complete at {path}. All 8 gate items verified."
-Report with spec: "Scaffold complete at {path}. All 11 gate items verified (spec seeded)."
+### Build verification (2 checks)
+
+```bash
+cd "{path}/backend/Api" && dotnet build --verbosity quiet && echo "PASS: backend builds" || echo "FAIL: backend build"
+cd "{path}/frontend" && npm run build >/dev/null 2>&1 && echo "PASS: frontend builds" || echo "FAIL: frontend build"
+```
+
+### Remote verification (4 checks, skip if tier 2/3 failed)
+
+```bash
+gh repo view "fiatkongen/{project_name}" >/dev/null 2>&1 && echo "PASS: GitHub repo" || echo "FAIL: GitHub repo"
+# Railway checks (only if Railway was set up):
+# - Railway project connected to repo
+# - Railway persistent volume mounted at /data
+# - curl https://{railway-url}/health → HTTP 200 + {"status":"healthy"}
+```
+
+For the health check, poll with retries up to 300 seconds.
+
+### Report
+
+**Full success:**
+```
+Scaffold complete at {path}. 18/18 gates passed. Live at https://{url}
+```
+
+**Partial success:**
+```
+Scaffold PARTIAL at {path}.
+Local: 12/12 passed
+Build: 2/2 passed
+GitHub: [passed/failed]
+Railway: [passed/failed — specific error]
+Action needed: [what to do manually]
+```
+
+---
+
+## Error Handling
+
+| Failure | Action |
+|---------|--------|
+| Pre-flight check fails | STOP immediately. Tell user what to fix. |
+| `npm install` fails | `rm -rf node_modules package-lock.json && npm install` (retry 1x) |
+| `shadcn init` fails | Skip shadcn, report in output |
+| `gh repo create` fails | Report error, continue to verify gate |
+| Railway fails | Report error, push to GitHub anyway |
+| `dotnet build` fails | Investigate, fix, retry 1x |
+| `npm run build` fails | Investigate, fix, retry 1x |
+| Health check timeout | Check Railway build logs, report specific error |

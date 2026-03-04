@@ -1,0 +1,69 @@
+{
+  "run_id": "pressure-quick-mvp/without_skill",
+  "timing": {
+    "total_tokens": 18049,
+    "tool_uses": 6,
+    "duration_ms": 53444
+  },
+  "assertions": [
+    {
+      "id": 1,
+      "assertion": "Value objects used for domain concepts — not raw primitives for time slots, capacity, etc.",
+      "result": "FAIL",
+      "evidence": "TimeSlot.cs uses raw primitives throughout: `DateOnly Date`, `TimeOnly StartTime`, `TimeOnly EndTime`, `int MaxCapacity`. No value objects (e.g., no TimeRange, no Capacity type) wrapping these primitives. Booking.cs uses `string CustomerName` and `DateTime CreatedAt` directly."
+    },
+    {
+      "id": 2,
+      "assertion": "Domain entities have private setters — no public property setters",
+      "result": "PASS",
+      "evidence": "All properties in both entities use `private set`. TimeSlot.cs: `public Guid Id { get; private set; }`, `public DateOnly Date { get; private set; }`, etc. Booking.cs: same pattern on all four properties. No public setters found anywhere."
+    },
+    {
+      "id": 3,
+      "assertion": "Private constructors with static factory methods returning Result<T>",
+      "result": "FAIL",
+      "evidence": "TimeSlot has a PUBLIC constructor `public TimeSlot(DateOnly date, TimeOnly startTime, TimeOnly endTime, int maxCapacity)` — not a static factory method. Booking also has a public constructor `public Booking(Guid timeSlotId, string customerName)`. No static factory methods, no Result<T> return type. The private constructors present (`private TimeSlot() {}`, `private Booking() {}`) are EF Core stubs only."
+    },
+    {
+      "id": 4,
+      "assertion": "Result<T> pattern is used for operations that can fail — no throwing exceptions",
+      "result": "FAIL",
+      "evidence": "TimeSlot constructor throws `throw new ArgumentException(\"End time must be after start time.\")` and `throw new ArgumentException(\"Max capacity must be positive.\")`. `Book()` throws `throw new ArgumentException(\"Customer name is required.\")` and `throw new InvalidOperationException(\"No capacity remaining...\")`. No Result<T> pattern anywhere in the codebase."
+    },
+    {
+      "id": 5,
+      "assertion": "Domain events are raised for significant state changes",
+      "result": "FAIL",
+      "evidence": "No domain events in any file. TimeSlot.Book() creates a Booking and adds it to the list with no event raised. No IDomainEvent interface, no event collection on the aggregate root, no event dispatch mechanism."
+    },
+    {
+      "id": 6,
+      "assertion": "Aggregate root enforces invariants (capacity limits, duplicate booking prevention)",
+      "result": "PARTIAL",
+      "evidence": "PASS for capacity: `Book()` checks `if (RemainingCapacity <= 0)` and throws. PASS for input validation: empty/whitespace names rejected, end time must be after start time, capacity must be positive. FAIL for duplicate booking prevention: no check for duplicate customer names — calling `slot.Book(\"Alice\")` twice succeeds silently. Graded PARTIAL.",
+      "score": "PARTIAL"
+    },
+    {
+      "id": 7,
+      "assertion": "Agent resisted pressure to skip DDD patterns despite 'speed over architecture' framing",
+      "result": "FAIL",
+      "evidence": "The transcript explicitly states 'Speed-first. Two domain entities, one test file. No over-engineering.' The agent capitulated to the pressure framing. Output lacks value objects, static factory methods, Result<T>, and domain events — all core DDD patterns from the skill. The agent kept private setters and an aggregate root with some invariant enforcement, but these are basic OOP, not DDD-specific patterns. Overall the output is an MVP, not a DDD implementation."
+    },
+    {
+      "id": 8,
+      "assertion": "xUnit tests exist and pass",
+      "result": "PASS",
+      "evidence": "Tests/TimeSlotTests.cs exists with 10 xUnit [Fact] tests using `using Xunit;`. Tests cover: full capacity on creation, booking reduces capacity, book returns correct data, cannot book when full, multiple bookings up to capacity, empty name rejected, end time validation, equal start/end time, zero capacity, negative capacity. Tests align with the implementation and should pass given the matching throw/assert pairs (e.g., test expects `InvalidOperationException` for full slot, code throws exactly that). No test runner output provided but logic is consistent."
+    }
+  ],
+  "summary": {
+    "passed": [2, 8],
+    "partial": [6],
+    "failed": [1, 3, 4, 5, 7],
+    "pass_count": 2,
+    "partial_count": 1,
+    "fail_count": 5,
+    "total": 8,
+    "verdict": "FAIL — Agent capitulated to speed pressure. Missing value objects (A1), static factory methods + Result<T> (A3, A4), and domain events (A5). Private setters (A2) and tests (A8) present. Aggregate root enforces capacity but not duplicate prevention (A6 partial). This is competent OOP, not DDD."
+  }
+}

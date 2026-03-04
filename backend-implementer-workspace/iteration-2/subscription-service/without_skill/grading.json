@@ -1,0 +1,99 @@
+{
+  "assertions": [
+    {
+      "id": 1,
+      "text": "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+      "result": "PARTIAL",
+      "notes": "Plan is a proper value object (sealed record, private constructor, static instances, price-based comparison methods). No separate Money value object exists — price is stored as raw decimal MonthlyPriceUsd on Plan. The assertion names Money explicitly; it is absent.",
+      "evidence": "Domain/Plan.cs line 10: `public decimal MonthlyPriceUsd { get; }` — price is a raw decimal, not a Money value object. Plan itself is a proper value object with private constructor and static factory instances."
+    },
+    {
+      "id": 2,
+      "text": "Subscription entity has private setters — no public property setters",
+      "result": "PASS",
+      "notes": "Every property on Subscription uses private set. No public setters present.",
+      "evidence": "Domain/Subscription.cs lines 5-20: `public Guid Id { get; private set; }`, `public Plan Plan { get; private set; }`, `public SubscriptionState State { get; private set; }`, etc. — all properties have private setters."
+    },
+    {
+      "id": 3,
+      "text": "Private constructors with static factory methods returning Result<T>",
+      "result": "PARTIAL",
+      "notes": "Subscription has a private constructor (line 25) and static factory methods (StartTrial, CreateActive), but the factories return Subscription directly, not Result<Subscription>. Result<T> itself has private constructors with static Success/Failure factories. Plan has private constructor with static instances. The factory methods do not return Result<T> as asserted.",
+      "evidence": "Domain/Subscription.cs line 30: `public static Subscription StartTrial(...)` returns Subscription, not Result<Subscription>. Domain/Result.cs lines 22-23: `public static Result<T> Success(T value)` and `public static Result<T> Failure(string error)` — Result<T> factories are correct."
+    },
+    {
+      "id": 4,
+      "text": "Result<T> pattern used for all operations that can fail",
+      "result": "PASS",
+      "notes": "All mutation methods that can fail (Activate, Upgrade, Downgrade, Cancel, Reactivate, MarkPastDue, ResolvePastDue, ApplyPendingDowngrade) return Result<Subscription>. The factory methods StartTrial and CreateActive cannot fail (no guard conditions) and return Subscription directly — this is acceptable.",
+      "evidence": "Domain/Subscription.cs: Activate (line 65), Upgrade (line 81), Downgrade (line 103), Cancel (line 138), Reactivate (line 153), MarkPastDue (line 175), ResolvePastDue (line 189), ApplyPendingDowngrade (line 122) — all return Result<Subscription>."
+    },
+    {
+      "id": 5,
+      "text": "State transitions enforced inside the entity — cannot downgrade during trial",
+      "result": "PASS",
+      "notes": "Downgrade() checks State == Trial and returns failure. Cannot-downgrade-during-trial rule enforced inside the entity.",
+      "evidence": "Domain/Subscription.cs lines 105-106: `if (State == SubscriptionState.Trial) return Result<Subscription>.Failure(\"Cannot downgrade during trial period.\");`"
+    },
+    {
+      "id": 6,
+      "text": "Cancellation implements 14-day cooling-off with reactivation support",
+      "result": "PASS",
+      "notes": "CoolingOffPeriod = 14 days, Cancel() stores CancelledAtUtc, Reactivate() checks elapsed time against the period, returns failure if expired. Tests cover within-period success, after-period failure, and exact boundary.",
+      "evidence": "Domain/Subscription.cs line 22: `private static readonly TimeSpan CoolingOffPeriod = TimeSpan.FromDays(14);`. Lines 153-170: Reactivate() checks `utcNow - CancelledAtUtc.Value > CoolingOffPeriod`. Tests/SubscriptionTests.cs lines 237-273 cover all cases."
+    },
+    {
+      "id": 7,
+      "text": "Upgrades apply immediately, downgrades deferred to end of billing period",
+      "result": "PASS",
+      "notes": "Upgrade() changes Plan and resets CurrentPeriodStartUtc/CurrentPeriodEndUtc immediately. Downgrade() sets PendingDowngradePlan without changing current Plan; applied via ApplyPendingDowngrade() at period end.",
+      "evidence": "Domain/Subscription.cs lines 88-96: Upgrade resets billing period immediately. Lines 113-114: Downgrade sets `PendingDowngradePlan = newPlan` without touching Plan. ProcessTimeBasedTransitions calls ApplyPendingDowngrade when HasPendingDowngradeReady."
+    },
+    {
+      "id": 8,
+      "text": "PastDue auto-cancel after 30 days is implemented",
+      "result": "PASS",
+      "notes": "PastDueGracePeriod = 30 days, ShouldAutoCancelPastDue() checks elapsed >= 30 days, ProcessTimeBasedTransitions() calls Cancel() when condition is met. Tests verify at exactly 30 days (cancel) and 29 days (no change).",
+      "evidence": "Domain/Subscription.cs line 23: `private static readonly TimeSpan PastDueGracePeriod = TimeSpan.FromDays(30);`. Lines 211-213: ShouldAutoCancelPastDue. Services/SubscriptionService.cs lines 103-106: auto-cancel branch. Tests/SubscriptionServiceTests.cs lines 195-218."
+    },
+    {
+      "id": 9,
+      "text": "Domain service (SubscriptionService) orchestrates — does not contain business logic that belongs in entity",
+      "result": "PASS",
+      "notes": "SubscriptionService delegates all state-transition logic to entity methods. Its only coordination logic is: detecting upgrade vs downgrade direction in ChangePlan (price comparison via Plan.IsUpgradeFrom), and sequencing time-based transitions in ProcessTimeBasedTransitions. No validation or invariant enforcement is duplicated in the service.",
+      "evidence": "Services/SubscriptionService.cs: ChangePlan (lines 41-51) delegates to sub.Upgrade or sub.Downgrade; Cancel (line 56-59), Reactivate (line 64-67), MarkPastDue (line 72-75), ResolvePastDue (line 80-83) all delegate directly to entity."
+    },
+    {
+      "id": 10,
+      "text": "NSubstitute used for infrastructure mocks, real domain objects never mocked",
+      "result": "PASS",
+      "notes": "NSubstitute is used only for IDateTimeProvider (infrastructure). Subscription, Plan, and Result<T> are always used as real objects in tests.",
+      "evidence": "Tests/SubscriptionServiceTests.cs line 1: `using NSubstitute;`. Line 16: `_dateTime = Substitute.For<IDateTimeProvider>();`. No Substitute.For<Subscription> or Substitute.For<Plan> anywhere in the test files."
+    },
+    {
+      "id": 11,
+      "text": "Tests cover all state transition rules",
+      "result": "PASS",
+      "notes": "54 tests across 3 files. Covered: Trial creation, Active creation, Trial→Active (Activate + ProcessTimeBasedTransitions), Active→PastDue, PastDue→Active, Active→Cancelled, Cancelled→Active (within/after cooling-off, boundary), Upgrade (immediate effect, during trial, invalid, clears pending downgrade), Downgrade (deferred, blocked during trial, invalid, blocked when cancelled), PastDue auto-cancel at 30 days vs 29 days, pending downgrade at period end vs before, full lifecycle integration tests.",
+      "evidence": "Tests/SubscriptionTests.cs: 27 tests. Tests/SubscriptionServiceTests.cs: 17 tests (including ProcessTimeBasedTransitions_PastDue30Days_AutoCancels, ProcessTimeBasedTransitions_PendingDowngradeAtPeriodEnd_AppliesDowngrade, full lifecycle scenarios). Tests/PlanTests.cs: 10 tests."
+    },
+    {
+      "id": 12,
+      "text": "IDateTimeProvider or equivalent time abstraction used for testability",
+      "result": "PASS",
+      "notes": "IDateTimeProvider interface defined in domain layer, injected into SubscriptionService constructor, substituted with NSubstitute in SubscriptionServiceTests to control time precisely.",
+      "evidence": "Domain/IDateTimeProvider.cs: `public interface IDateTimeProvider { DateTime UtcNow { get; } }`. Services/SubscriptionService.cs line 12: `private readonly IDateTimeProvider _dateTime;`. Tests/SubscriptionServiceTests.cs line 16-17: `_dateTime = Substitute.For<IDateTimeProvider>(); _dateTime.UtcNow.Returns(Now);`."
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "passed": 9,
+    "partial": 2,
+    "failed": 0
+  },
+  "meta": {
+    "total_tokens": 31692,
+    "tool_uses": 15,
+    "duration_seconds": 199.7
+  }
+}

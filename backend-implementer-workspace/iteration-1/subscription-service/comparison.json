@@ -1,0 +1,232 @@
+{
+  "winner": "A",
+  "reasoning": "Output A is superior across every evaluation dimension. The key differentiators are: (1) Money is a proper ValueObject with private constructor and Result<T>-based factory — Output B uses a raw decimal (MonthlyPriceUsd) on a record, violating expectation 1. (2) Output A has a full AggregateRoot<TId>/Entity<TId>/ValueObject hierarchy with IDomainEvent and 6 domain events; Output B has no domain events whatsoever. (3) Output A's Result<T> implementation is the canonical base-class pattern (Result + Result<T>), while Output B's is a generic-only sealed class that lacks a non-generic Result variant, forcing instance-returning methods where void-equivalent results are cleaner. (4) Output A's SubscriptionService takes collections as in-memory parameters for batch operations, which is a minor design smell, but Output B's service fetches from the repository directly via GetExpiredTrialsAsync/GetPastDueSubscriptionsAsync, making it more production-realistic. (5) Output A has 4 test files (MoneyTests, PlanTests, SubscriptionTests, SubscriptionServiceTests) covering 60+ individual test cases with explicit domain-event assertions, helper commentary, and Theory-based parametric tests. Output B has 4 test files but fewer tests overall and no domain-event assertions (since there are none to test). (6) Both correctly implement all state transition rules, cooling-off, deferred downgrades, and PastDue auto-cancel. Output B adds a ResolvePayment path that Output A lacks, which is a genuine advantage. Output B also has a richer ISubscriptionRepository interface (GetByCustomerIdAsync, GetExpiredTrialsAsync, GetPastDueSubscriptionsAsync) and a concrete SystemDateTimeProvider, and its service includes duplicate-customer-check in StartTrialAsync. However, the absence of domain events and the use of a raw decimal for price (rather than a Money value object) are significant DDD regressions that outweigh Output B's incremental improvements.",
+  "rubric": {
+    "A": {
+      "content": {
+        "correctness": 5,
+        "completeness": 5,
+        "accuracy": 5
+      },
+      "structure": {
+        "organization": 5,
+        "formatting": 5,
+        "usability": 5
+      },
+      "content_score": 5.0,
+      "structure_score": 5.0,
+      "overall_score": 10.0
+    },
+    "B": {
+      "content": {
+        "correctness": 4,
+        "completeness": 4,
+        "accuracy": 4
+      },
+      "structure": {
+        "organization": 4,
+        "formatting": 4,
+        "usability": 4
+      },
+      "content_score": 4.0,
+      "structure_score": 4.0,
+      "overall_score": 8.0
+    }
+  },
+  "output_quality": {
+    "A": {
+      "score": 10,
+      "strengths": [
+        "Money is a proper ValueObject (private constructor, Result<T> factory, equality via GetEqualityComponents) — expectation 1 fully met",
+        "Plan is a ValueObject subclass, not a record with raw decimal",
+        "Full AggregateRoot<TId>/Entity<TId>/ValueObject/IDomainEvent hierarchy — classic DDD building blocks",
+        "6 domain events (SubscriptionCreated, Activated, Cancelled, Reactivated, PastDue, PlanChanged) with IDomainEvent contract",
+        "All properties have private setters; private constructor + static factory (CreateTrial returns Result<Subscription>)",
+        "Result<T> pattern used consistently for all fallible operations including CreateTrial",
+        "State transitions enforced inside entity: trial downgrade blocked, cooling-off checked, past-due grace period",
+        "Cancellation sets CoolingOffEndDate; Reactivate checks it; auto-cancel has no cooling-off — all correct",
+        "Upgrades immediate (CurrentPlan updated), downgrades deferred to PendingPlan (applied via ApplyPendingPlanChange)",
+        "PastDue auto-cancel after 30 days implemented with grace-period error message including day count",
+        "SubscriptionService orchestrates only — all business logic resides in entity",
+        "NSubstitute used for ISubscriptionRepository and IDateTimeProvider; real domain objects never mocked",
+        "60+ test cases covering all state transitions, domain events, edge cases, and batch processing",
+        "MoneyTests cover validation, normalization, and equality",
+        "PlanTests use Theory for parametric price verification; equality tests for ValueObject",
+        "IDateTimeProvider interface in domain layer, injected into service",
+        "Test helpers clearly commented ('Use real domain objects, never mocked')"
+      ],
+      "weaknesses": [
+        "SubscriptionService.ProcessExpiredTrialsAsync and ProcessPastDueSubscriptionsAsync accept IEnumerable parameters rather than fetching from repository — the repository interface has no GetExpiredTrials/GetPastDue methods, requiring callers to pre-fetch",
+        "No duplicate-customer check in StartTrialAsync (Output B catches this case)",
+        "No ResolvePayment method on entity (Output B includes payment recovery path)",
+        "ISubscriptionRepository lacks query methods for batch processing (GetExpiredTrialsAsync, GetPastDueSubscriptionsAsync)"
+      ]
+    },
+    "B": {
+      "score": 8,
+      "strengths": [
+        "Plan uses a sealed record with PlanType enum and decimal MonthlyPriceUsd — straightforward and functional",
+        "All Subscription properties have private setters; private parameterless constructor for EF",
+        "Result<T> is a well-designed sealed generic with throw-on-misuse guards and implicit conversion operator",
+        "State transitions fully enforced in entity: cooling-off, trial downgrade block, deferred downgrade, PastDue auto-cancel",
+        "ResolvePayment method handles payment recovery (PastDue -> Active) — missing from Output A",
+        "ISubscriptionRepository is richer: GetByCustomerIdAsync, GetExpiredTrialsAsync, GetPastDueSubscriptionsAsync enable proper batch operations",
+        "SubscriptionService includes duplicate-customer guard in StartTrialAsync",
+        "Service uses repository-fetched batch lists (ProcessExpiredTrials, ProcessPastDue) — more production-realistic",
+        "SystemDateTimeProvider concrete class included alongside IDateTimeProvider",
+        "NSubstitute used for infrastructure only; real domain objects in tests",
+        "ResultTests cover guarded access patterns including implicit conversion",
+        "Tests include ResolvePayment, HasPendingDowngrade property, IsInCoolingOffPeriod query",
+        "Test naming follows readable sentence style"
+      ],
+      "weaknesses": [
+        "Plan uses raw decimal (MonthlyPriceUsd) instead of a Money value object — expectation 1 failed",
+        "Plan is a sealed record, not a proper ValueObject subclass — no ValueObject base class at all",
+        "No domain events of any kind — 0 domain events raised on any state transition",
+        "No AggregateRoot, Entity, or ValueObject base classes — flat DDD structure",
+        "Result<T> is generic-only with no non-generic Result variant; service methods return Result<Subscription> for void-equivalent operations",
+        "StartTrial factory method returns Subscription directly (not Result<Subscription>), bypassing Result pattern for the factory method itself",
+        "No Money value object at all",
+        "Fewer test cases (~40 vs ~60+); no tests for domain events (none exist to test)",
+        "PlanTests test raw decimal price on record, not value-object equality",
+        "No test for auto-cancel having no cooling-off period (Output A tests CoolingOffEndDate is null after auto-cancel)"
+      ]
+    }
+  },
+  "expectation_results": {
+    "A": {
+      "passed": 12,
+      "total": 12,
+      "pass_rate": 1.0,
+      "details": [
+        {
+          "text": "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+          "passed": true,
+          "notes": "Plan extends ValueObject, Money extends ValueObject; both have private constructors and Result<T> factories. MonthlyPrice is typed as Money."
+        },
+        {
+          "text": "Subscription entity has private setters — no public property setters",
+          "passed": true,
+          "notes": "All properties in Subscription.cs use 'private set'."
+        },
+        {
+          "text": "Private constructors with static factory methods returning Result<T>",
+          "passed": true,
+          "notes": "Subscription has private constructor; CreateTrial is static and returns Result<Subscription>."
+        },
+        {
+          "text": "Result<T> pattern used for all operations that can fail",
+          "passed": true,
+          "notes": "All entity methods (Activate, Cancel, Reactivate, ChangePlan, MarkPastDue, AutoCancelIfPastDueExpired) return Result or Result<T>."
+        },
+        {
+          "text": "State transitions enforced inside the entity — cannot downgrade during trial",
+          "passed": true,
+          "notes": "ChangePlan checks Status == Trial && IsDowngradeFrom and returns Failure."
+        },
+        {
+          "text": "Cancellation implements 14-day cooling-off with reactivation support",
+          "passed": true,
+          "notes": "Cancel sets CoolingOffEndDate = now + 14 days; Reactivate checks CoolingOffEndDate and rejects if expired."
+        },
+        {
+          "text": "Upgrades apply immediately, downgrades deferred to end of billing period",
+          "passed": true,
+          "notes": "ChangePlan applies upgrade to CurrentPlan immediately; downgrade sets PendingPlan. ApplyPendingPlanChange enforces billing period end."
+        },
+        {
+          "text": "PastDue auto-cancel after 30 days is implemented",
+          "passed": true,
+          "notes": "AutoCancelIfPastDueExpired checks PastDueGracePeriodDays (30) and cancels with no cooling-off (CoolingOffEndDate = null)."
+        },
+        {
+          "text": "Domain service (SubscriptionService) orchestrates — does not contain business logic that belongs in entity",
+          "passed": true,
+          "notes": "Service fetches entity, delegates to entity methods, persists. No business logic in service."
+        },
+        {
+          "text": "NSubstitute used for infrastructure mocks, real domain objects never mocked",
+          "passed": true,
+          "notes": "ISubscriptionRepository and IDateTimeProvider are substituted; Subscription objects are constructed via real factory methods."
+        },
+        {
+          "text": "Tests cover all state transition rules",
+          "passed": true,
+          "notes": "60+ tests in SubscriptionTests and SubscriptionServiceTests cover all transitions, edge cases, domain events, and batch processing."
+        },
+        {
+          "text": "IDateTimeProvider or equivalent time abstraction used for testability",
+          "passed": true,
+          "notes": "IDateTimeProvider in Domain/Interfaces; injected into SubscriptionService; substituted in all service tests."
+        }
+      ]
+    },
+    "B": {
+      "passed": 9,
+      "total": 12,
+      "pass_rate": 0.75,
+      "details": [
+        {
+          "text": "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+          "passed": false,
+          "notes": "Plan is a sealed record with raw decimal MonthlyPriceUsd. No Money class exists. No ValueObject base class."
+        },
+        {
+          "text": "Subscription entity has private setters — no public property setters",
+          "passed": true,
+          "notes": "All Subscription properties use 'private set'."
+        },
+        {
+          "text": "Private constructors with static factory methods returning Result<T>",
+          "passed": false,
+          "notes": "StartTrial is a static factory but returns Subscription directly, not Result<Subscription>. No validation in factory."
+        },
+        {
+          "text": "Result<T> pattern used for all operations that can fail",
+          "passed": true,
+          "notes": "All entity instance methods return Result<Subscription>. The factory not returning Result<T> is a minor gap."
+        },
+        {
+          "text": "State transitions enforced inside the entity — cannot downgrade during trial",
+          "passed": true,
+          "notes": "ChangePlan checks Status == Trial && IsDowngradeFrom and returns Failure."
+        },
+        {
+          "text": "Cancellation implements 14-day cooling-off with reactivation support",
+          "passed": true,
+          "notes": "Cancel sets CancellationEffectiveAtUtc = now + 14 days; Reactivate checks and rejects if expired."
+        },
+        {
+          "text": "Upgrades apply immediately, downgrades deferred to end of billing period",
+          "passed": true,
+          "notes": "Upgrade sets CurrentPlan immediately; downgrade sets PendingPlan + PendingPlanEffectiveDate = CurrentBillingPeriodEndUtc."
+        },
+        {
+          "text": "PastDue auto-cancel after 30 days is implemented",
+          "passed": true,
+          "notes": "AutoCancelIfPastDueExpired checks 30-day grace period; sets CancellationEffectiveAtUtc = utcNow (no cooling-off)."
+        },
+        {
+          "text": "Domain service (SubscriptionService) orchestrates — does not contain business logic that belongs in entity",
+          "passed": true,
+          "notes": "Service fetches, delegates to entity, persists. No business logic in service itself."
+        },
+        {
+          "text": "NSubstitute used for infrastructure mocks, real domain objects never mocked",
+          "passed": true,
+          "notes": "ISubscriptionRepository and IDateTimeProvider are substituted; Subscription built via real StartTrial."
+        },
+        {
+          "text": "Tests cover all state transition rules",
+          "passed": true,
+          "notes": "~40 tests cover all key transitions. Missing: auto-cancel no-cooling-off assertion, domain event verification."
+        },
+        {
+          "text": "IDateTimeProvider or equivalent time abstraction used for testability",
+          "passed": true,
+          "notes": "IDateTimeProvider in domain; SystemDateTimeProvider provided; injected and substituted in all service tests."
+        }
+      ]
+    }
+  }
+}

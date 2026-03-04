@@ -1,0 +1,125 @@
+{
+  "expectations": [
+    {
+      "text": "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+      "passed": true,
+      "evidence": "Money.cs: `public sealed record Money` and Quantity.cs: `public sealed record Quantity`. C# records provide structural (value) equality by default. Both have private constructors and expose only getter-only properties. Two Money instances with the same Amount+Currency are equal, as tested in MoneyTests.cs `Equality_SameAmountAndCurrency_AreEqual` and QuantityTests.cs `Equality_SameValue_AreEqual`."
+    },
+    {
+      "text": "Domain entities have private setters — no public property setters on Order or OrderLineItem",
+      "passed": true,
+      "evidence": "Order.cs: `Id { get; }`, `Status { get; private set; }`, `Currency { get; }`, `LineItems` is a computed readonly property. OrderLineItem.cs: `Id { get; }`, `ProductId { get; }`, `Quantity { get; }`, `UnitPrice { get; }` — all getter-only. No public setters on either entity."
+    },
+    {
+      "text": "Entities use private constructors with static factory methods returning Result<T>",
+      "passed": true,
+      "evidence": "Order.cs: `private Order(Guid id, Currency currency)` + `public static Result<Order> Create(...)`. OrderLineItem.cs: `private OrderLineItem(Guid id, Guid productId, Quantity quantity, Money unitPrice)` + `public static Result<OrderLineItem> Create(...)`. Both value objects (Money, Quantity) follow the same pattern."
+    },
+    {
+      "text": "Result<T> pattern is used for operations that can fail — no throwing exceptions for business rule violations",
+      "passed": true,
+      "evidence": "Result.cs defines `Result<T>` with `Success`/`Failure` factory methods. All validation paths in Money.Create, Quantity.Create, OrderLineItem.Create, Order.Create, Order.AddLineItem, Order.Confirm return `Result<T>.Failure(...)` instead of throwing. No `throw` statements found in any domain file."
+    },
+    {
+      "text": "Order aggregate enforces the $10,000 maximum total invariant",
+      "passed": true,
+      "evidence": "Order.cs line 67: `if (newTotalResult.Value!.Amount > MaxOrderValue) return Result<OrderLineItem>.Failure(...)` where `MaxOrderValue = 10_000m`. Checked in `AddLineItemInternal` before adding the item, so the order remains unchanged on failure. Tested in OrderTests.cs: `Create_ExceedingMaxValue_ReturnsFailure`, `Create_ExactlyAtMaxValue_ReturnsSuccess`, `AddLineItem_ExceedsMaxValue_ReturnsFailure`, `AddLineItem_BringsToExactlyMaxValue_ReturnsSuccess`."
+    },
+    {
+      "text": "Order aggregate prevents adding items after confirmation",
+      "passed": true,
+      "evidence": "Order.cs lines 36-38: `if (Status == OrderStatus.Confirmed) return Result<OrderLineItem>.Failure(\"Cannot add items to a confirmed order.\");`. Tested in OrderTests.cs: `AddLineItem_ToConfirmedOrder_ReturnsFailure` confirms failure with error message containing 'confirmed'."
+    },
+    {
+      "text": "Order requires at least one line item (enforced at creation or confirmation)",
+      "passed": true,
+      "evidence": "Order.Create requires an initial line item as parameters (productId, quantity, unitPrice) and immediately calls AddLineItemInternal — it is structurally impossible to create an Order with zero items. Additionally, Order.Confirm (line 80) has a redundant guard: `if (_lineItems.Count == 0) return Result<Order>.Failure(\"Cannot confirm an order with no line items.\")`. The creation-time enforcement is the primary mechanism."
+    },
+    {
+      "text": "xUnit tests exist covering all 5 business rules",
+      "passed": true,
+      "evidence": "44 tests total across MoneyTests (13), QuantityTests (7), OrderLineItemTests (4), OrderTests (20). All 5 business rules have dedicated test methods: max $10K covered by `Create_ExceedingMaxValue_ReturnsFailure` + `AddLineItem_ExceedsMaxValue_ReturnsFailure`; no items after confirmation by `AddLineItem_ToConfirmedOrder_ReturnsFailure`; at least one line item by structural enforcement verified via `Create_WithValidInputs_ReturnsSuccess` showing single item; confirmation behavior by `Confirm_DraftOrderWithItems_ReturnsSuccess` + `Confirm_AlreadyConfirmed_ReturnsFailure`. All tests use xUnit `[Fact]` attributes."
+    },
+    {
+      "text": "Tests are behavioral — they test business outcomes, not just getters/setters",
+      "passed": true,
+      "evidence": "Tests assert domain outcomes: failure/success on business rule violations (e.g., `Assert.True(result.IsFailure)` + `Assert.Contains(\"confirmed\", result.Error!)`), state transitions (`Assert.Equal(OrderStatus.Confirmed, order.Status)`), immutability after rejection (`Assert.Single(order.LineItems)` after failed add), and accumulated totals. Tests are named after behaviors (`AddLineItem_ToConfirmedOrder_ReturnsFailure`) not implementation details."
+    },
+    {
+      "text": "Domain events are raised for significant state changes (order created, confirmed)",
+      "passed": false,
+      "evidence": "No domain events exist anywhere in the codebase. Searched all .cs files in outputs/Domain/ — no `IDomainEvent`, `DomainEvent`, `DomainEvents`, `RaiseEvent`, or `AddDomainEvent` found. Order.Create and Order.Confirm do not raise or collect any events. The transcript also makes no mention of domain events in the design decisions section."
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 1,
+    "total": 10,
+    "pass_rate": 0.9
+  },
+  "execution_metrics": {
+    "tool_calls": null,
+    "total_tool_calls": 27,
+    "total_steps": null,
+    "errors_encountered": 1,
+    "output_chars": 22797,
+    "transcript_chars": 4315
+  },
+  "timing": {
+    "executor_duration_seconds": 213.2,
+    "grader_duration_seconds": null,
+    "total_duration_seconds": 213.2
+  },
+  "claims": [
+    {
+      "claim": "44 tests total, all passing",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript states '44 passed, 0 failed' and '0 warnings, 0 errors'. The four test files contain [Fact] methods: MoneyTests (13), QuantityTests (7), OrderLineItemTests (4), OrderTests (20) = 44 total. Build output artifacts present in obj/ directories confirm successful compilation."
+    },
+    {
+      "claim": "Money as sealed record gets value equality for free",
+      "type": "quality",
+      "verified": true,
+      "evidence": "C# sealed records do provide structural equality by default. MoneyTests `Equality_SameAmountAndCurrency_AreEqual` tests this directly."
+    },
+    {
+      "claim": "Order.Create requires initial line item, making empty order impossible",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Order.Create signature `(Currency currency, Guid productId, Quantity quantity, Money unitPrice)` requires a first item and calls AddLineItemInternal immediately. There is no parameterless or item-less overload."
+    },
+    {
+      "claim": "Max value check rejects item and leaves order unchanged",
+      "type": "quality",
+      "verified": true,
+      "evidence": "AddLineItemInternal calculates prospective total before calling `_lineItems.Add`. If check fails, returns early without mutation. OrderTests `AddLineItem_ExceedsMaxValue_ReturnsFailure` asserts `Assert.Single(order.LineItems)` after rejection, confirming immutability of the collection on failure."
+    },
+    {
+      "claim": "Initial build failed due to missing `using Xunit;`",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transcript section 6 'Build Issues' documents this. The fix (adding `using Xunit;` to test files) is reflected in all four test files which include `using Xunit;` at the top."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": ["Initial build failed due to missing `using Xunit;` imports — fixed by adding to all test files"]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "xUnit tests exist covering all 5 business rules",
+        "reason": "The assertion doesn't specify what the 5 business rules are, making it ambiguous to evaluate and easy to pass with weak coverage. The at-least-one-line-item rule has no negative test — there is no test showing that `Order.Create` without any item fails, because the API makes it structurally impossible. A discriminating assertion would require a test that specifically attempts to bypass the invariant (e.g., reflection or a test that the API surface does not allow empty construction)."
+      },
+      {
+        "reason": "No assertion checks that value equality works correctly end-to-end for Money when used in domain logic (e.g., that currency comparison in Order uses value equality not reference equality). The current equality tests are unit tests on the value objects themselves, but the domain's currency-matching guard uses `!=` which for records delegates to value equality — worth asserting explicitly."
+      },
+      {
+        "reason": "No assertion covers the currency consistency invariant (all line items must match order currency). This is a distinct business rule implemented in both Order.Create and Order.AddLineItem, tested in `Create_CurrencyMismatch_ReturnsFailure` and `AddLineItem_CurrencyMismatch_ReturnsFailure`, but not listed as an expectation. It's a meaningful domain rule that the eval omits."
+      }
+    ],
+    "overall": "9/10 pass. The sole failure is domain events — the implementation simply omits them with no mention in the transcript. The evals are generally well-targeted; the main gaps are the missing currency-consistency rule as an explicit expectation, and the domain-events assertion being a meaningful discriminator that correctly caught a real omission."
+  }
+}

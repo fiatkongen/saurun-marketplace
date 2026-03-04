@@ -1,0 +1,12 @@
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/bin/Debug/net9.0/SubscriptionManagement.Domain.deps.json
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/bin/Debug/net9.0/SubscriptionManagement.Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/bin/Debug/net9.0/SubscriptionManagement.Domain.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.AssemblyInfoInputs.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.AssemblyInfo.cs
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.csproj.CoreCompileInputs.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.sourcelink.json
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/refint/SubscriptionManagement.Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/SubscriptionManagement.Domain.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/subscription-service/with_skill/outputs/Domain/obj/Debug/net9.0/ref/SubscriptionManagement.Domain.dll

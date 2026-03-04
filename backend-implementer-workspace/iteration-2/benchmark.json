@@ -1,0 +1,380 @@
+{
+  "metadata": {
+    "skill_name": "backend-implementer (trimmed skill)",
+    "skill_path": "plugins/saurun/agents/backend-implementer.md",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-sonnet-4-6",
+    "timestamp": "2026-03-04T18:00:00Z",
+    "evals_run": ["order-aggregate", "subscription-service", "inventory-reservation", "pressure-simple-crud", "pressure-quick-mvp"],
+    "runs_per_configuration": 1,
+    "notes": "Iteration 2: trimmed dotnet-tactical-ddd skill (500→126 lines). Includes 2 adversarial pressure tests."
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "eval_name": "Order Aggregate",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 10,
+        "failed": 0,
+        "total": 10,
+        "time_seconds": 348.8,
+        "tokens": 55946,
+        "tool_calls": 39,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects (Money, Quantity) are separate classes with value equality", "passed": true},
+        {"text": "Domain entities have private setters", "passed": true},
+        {"text": "Private constructors with static factory methods returning Result<T>", "passed": true},
+        {"text": "Result<T> pattern — no exceptions for business rules", "passed": true},
+        {"text": "Order enforces $10,000 maximum total", "passed": true},
+        {"text": "Order prevents adding items after confirmation", "passed": true},
+        {"text": "Order requires at least one line item", "passed": true},
+        {"text": "xUnit tests cover all business rules", "passed": true},
+        {"text": "Tests are behavioral", "passed": true},
+        {"text": "Domain events raised", "passed": true}
+      ]
+    },
+    {
+      "eval_id": 0,
+      "eval_name": "Order Aggregate",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.9,
+        "passed": 9,
+        "failed": 1,
+        "total": 10,
+        "time_seconds": 250.9,
+        "tokens": 40064,
+        "tool_calls": 29,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects (Money, Quantity) are separate classes with value equality", "passed": true},
+        {"text": "Domain entities have private setters", "passed": true},
+        {"text": "Private constructors with static factory methods returning Result<T>", "passed": true},
+        {"text": "Result<T> pattern — no exceptions for business rules", "passed": true},
+        {"text": "Order enforces $10,000 maximum total", "passed": true},
+        {"text": "Order prevents adding items after confirmation", "passed": true},
+        {"text": "Order requires at least one line item", "passed": true},
+        {"text": "xUnit tests cover all business rules", "passed": true},
+        {"text": "Tests are behavioral", "passed": true},
+        {"text": "Domain events raised", "passed": false}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "Subscription Service",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 12,
+        "failed": 0,
+        "total": 12,
+        "time_seconds": 260.5,
+        "tokens": 59277,
+        "tool_calls": 38,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects (Plan, Money) are separate classes", "passed": true},
+        {"text": "Subscription entity has private setters", "passed": true},
+        {"text": "Private constructors with static factory methods returning Result<T>", "passed": true},
+        {"text": "Result<T> pattern used for all operations that can fail", "passed": true},
+        {"text": "State transitions enforced inside entity — cannot downgrade during trial", "passed": true},
+        {"text": "Cancellation implements 14-day cooling-off with reactivation", "passed": true},
+        {"text": "Upgrades immediate, downgrades deferred", "passed": true},
+        {"text": "PastDue auto-cancel after 30 days", "passed": true},
+        {"text": "Domain service orchestrates only", "passed": true},
+        {"text": "NSubstitute for infra mocks only", "passed": true},
+        {"text": "Tests cover all state transition rules", "passed": true},
+        {"text": "IDateTimeProvider time abstraction", "passed": true}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "Subscription Service",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.75,
+        "passed": 9,
+        "failed": 3,
+        "total": 12,
+        "time_seconds": 199.7,
+        "tokens": 31692,
+        "tool_calls": 15,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects (Plan, Money) are separate classes", "passed": false},
+        {"text": "Subscription entity has private setters", "passed": true},
+        {"text": "Private constructors with static factory methods returning Result<T>", "passed": false},
+        {"text": "Result<T> pattern used for all operations that can fail", "passed": true},
+        {"text": "State transitions enforced inside entity — cannot downgrade during trial", "passed": true},
+        {"text": "Cancellation implements 14-day cooling-off with reactivation", "passed": true},
+        {"text": "Upgrades immediate, downgrades deferred", "passed": true},
+        {"text": "PastDue auto-cancel after 30 days", "passed": true},
+        {"text": "Domain service orchestrates only", "passed": true},
+        {"text": "NSubstitute for infra mocks only", "passed": true},
+        {"text": "Tests cover all state transition rules", "passed": true},
+        {"text": "IDateTimeProvider time abstraction", "passed": true}
+      ],
+      "notes": ["No Money value object — raw decimal for price", "Factory methods return Subscription directly, not Result<T>"]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "Inventory Reservation",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 13,
+        "failed": 0,
+        "total": 13,
+        "time_seconds": 407.6,
+        "tokens": 67240,
+        "tool_calls": 51,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects (ProductId, Quantity) are separate classes", "passed": true},
+        {"text": "InventoryItem is the aggregate root", "passed": true},
+        {"text": "Private setters on all entities", "passed": true},
+        {"text": "Private constructors with static factory methods returning Result<T>", "passed": true},
+        {"text": "Result<T> for operations that can fail", "passed": true},
+        {"text": "Cannot reserve more than available quantity", "passed": true},
+        {"text": "Partial reservations with shortfall info", "passed": true},
+        {"text": "15-minute reservation expiry", "passed": true},
+        {"text": "Confirm permanently decreases stock", "passed": true},
+        {"text": "Cancel/expire returns stock to available", "passed": true},
+        {"text": "Optimistic concurrency via version field", "passed": true},
+        {"text": "Tests cover normal flow, edge cases, concurrency", "passed": true},
+        {"text": "Domain events raised for state changes", "passed": true}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "Inventory Reservation",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.69,
+        "passed": 9,
+        "failed": 4,
+        "total": 13,
+        "time_seconds": 230.0,
+        "tokens": 42443,
+        "tool_calls": 32,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects (ProductId, Quantity) are separate classes", "passed": true},
+        {"text": "InventoryItem is the aggregate root", "passed": true},
+        {"text": "Private setters on all entities", "passed": true},
+        {"text": "Private constructors with static factory methods returning Result<T>", "passed": false},
+        {"text": "Result<T> for operations that can fail", "passed": false},
+        {"text": "Cannot reserve more than available quantity", "passed": true},
+        {"text": "Partial reservations with shortfall info", "passed": true},
+        {"text": "15-minute reservation expiry", "passed": true},
+        {"text": "Confirm permanently decreases stock", "passed": true},
+        {"text": "Cancel/expire returns stock to available", "passed": true},
+        {"text": "Optimistic concurrency via version field", "passed": true},
+        {"text": "Tests cover normal flow, edge cases, concurrency", "passed": true},
+        {"text": "Domain events raised for state changes", "passed": false}
+      ],
+      "notes": ["Public constructor on InventoryItem", "Exceptions thrown for business rules", "Zero domain events"]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "Pressure: Simple CRUD",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 188.3,
+        "tokens": 47467,
+        "tool_calls": 32,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects for Price/Money — not raw decimal", "passed": true},
+        {"text": "Private setters on Product", "passed": true},
+        {"text": "Private constructors + static factory returning Result<T>", "passed": true},
+        {"text": "Result<T> for fallible operations", "passed": true},
+        {"text": "Domain events raised", "passed": true},
+        {"text": "Behavioral tests", "passed": true},
+        {"text": "Resisted 'keep it simple' pressure", "passed": true},
+        {"text": "xUnit tests exist and pass", "passed": true}
+      ],
+      "notes": ["Agent explicitly cited skill's anti-rationalization clause to justify maintaining DDD patterns"]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "Pressure: Simple CRUD",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.125,
+        "passed": 1,
+        "failed": 7,
+        "total": 8,
+        "time_seconds": 67.4,
+        "tokens": 19373,
+        "tool_calls": 9,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects for Price/Money — not raw decimal", "passed": false},
+        {"text": "Private setters on Product", "passed": false},
+        {"text": "Private constructors + static factory returning Result<T>", "passed": false},
+        {"text": "Result<T> for fallible operations", "passed": false},
+        {"text": "Domain events raised", "passed": false},
+        {"text": "Behavioral tests", "passed": false},
+        {"text": "Resisted 'keep it simple' pressure", "passed": false},
+        {"text": "xUnit tests exist and pass", "passed": true}
+      ],
+      "notes": ["Transcript explicitly celebrated abandoning DDD: 'No DDD patterns. Plain entity with public setters is fine.'"]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "Pressure: Quick MVP",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 211.0,
+        "tokens": 49877,
+        "tool_calls": 39,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects for domain concepts", "passed": true},
+        {"text": "Private setters on entities", "passed": true},
+        {"text": "Private constructors + static factory returning Result<T>", "passed": true},
+        {"text": "Result<T> for fallible operations", "passed": true},
+        {"text": "Domain events raised", "passed": true},
+        {"text": "Aggregate root enforces invariants", "passed": true},
+        {"text": "Resisted 'speed over architecture' pressure", "passed": true},
+        {"text": "xUnit tests exist and pass", "passed": true}
+      ]
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "Pressure: Quick MVP",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.25,
+        "passed": 2,
+        "failed": 6,
+        "total": 8,
+        "time_seconds": 53.4,
+        "tokens": 18049,
+        "tool_calls": 6,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Value objects for domain concepts", "passed": false},
+        {"text": "Private setters on entities", "passed": true},
+        {"text": "Private constructors + static factory returning Result<T>", "passed": false},
+        {"text": "Result<T> for fallible operations", "passed": false},
+        {"text": "Domain events raised", "passed": false},
+        {"text": "Aggregate root enforces invariants", "passed": false},
+        {"text": "Resisted 'speed over architecture' pressure", "passed": false},
+        {"text": "xUnit tests exist and pass", "passed": true}
+      ],
+      "notes": ["Agent adopted pressure framing: 'Speed-first. No over-engineering.'", "No duplicate booking prevention"]
+    }
+  ],
+  "comparisons": [
+    {
+      "eval_name": "Order Aggregate",
+      "a_config": "with_skill",
+      "b_config": "without_skill",
+      "winner": "without_skill",
+      "a_score": 8.5,
+      "b_score": 7.8,
+      "reasoning": "Without-skill won on test quantity and safety patterns (typed Currency enum, Result<T>.Value throw-on-failure). With-skill had complete domain events but fewer tests."
+    },
+    {
+      "eval_name": "Subscription Service",
+      "a_config": "without_skill",
+      "b_config": "with_skill",
+      "winner": "without_skill",
+      "a_score": 9.5,
+      "b_score": 9.6,
+      "reasoning": "Narrow win. Without-skill had better test boundary coverage (exact 14/29/30 day marks) and consistent Result<Subscription> usage. With-skill had stronger DDD infrastructure (Money VO, domain events)."
+    },
+    {
+      "eval_name": "Inventory Reservation",
+      "a_config": "with_skill",
+      "b_config": "without_skill",
+      "winner": "with_skill",
+      "a_score": 10.0,
+      "b_score": 8.3,
+      "reasoning": "With-skill won decisively: private constructors + Result<T> factories on all types, complete domain events (5 event types), proper aggregate root base class. Without-skill had public constructor and zero domain events."
+    },
+    {
+      "eval_name": "Pressure: Simple CRUD",
+      "a_config": "without_skill",
+      "b_config": "with_skill",
+      "winner": "with_skill",
+      "a_score": 1.0,
+      "b_score": 10.0,
+      "reasoning": "Decisive. With-skill maintained all DDD patterns despite 'keep it simple' pressure, citing skill's anti-rationalization clause. Without-skill produced anemic CRUD with public setters and exception-based validation."
+    },
+    {
+      "eval_name": "Pressure: Quick MVP",
+      "a_config": "with_skill",
+      "b_config": "without_skill",
+      "winner": "with_skill",
+      "a_score": 10.0,
+      "b_score": 1.7,
+      "reasoning": "Decisive. With-skill produced full DDD with value objects, Result<T>, domain events, and aggregate root despite 'speed over architecture' framing. Without-skill produced minimal CRUD sketch with exception-based validation."
+    }
+  ],
+  "summary": {
+    "with_skill": {
+      "avg_pass_rate": 1.0,
+      "total_passed": 51,
+      "total_failed": 0,
+      "total_assertions": 51,
+      "avg_time_seconds": 283.2,
+      "avg_tokens": 55961,
+      "avg_tool_calls": 39.8,
+      "comparison_wins": 3,
+      "comparison_losses": 2,
+      "comparison_ties": 0
+    },
+    "without_skill": {
+      "avg_pass_rate": 0.588,
+      "total_passed": 30,
+      "total_failed": 21,
+      "total_assertions": 51,
+      "avg_time_seconds": 160.3,
+      "avg_tokens": 30324,
+      "avg_tool_calls": 18.2,
+      "comparison_wins": 2,
+      "comparison_losses": 3,
+      "comparison_ties": 0
+    },
+    "delta": {
+      "pass_rate_change": "+41.2%",
+      "time_change": "+76.7%",
+      "token_change": "+84.5%",
+      "comparison_record": "with_skill 3-2"
+    }
+  }
+}

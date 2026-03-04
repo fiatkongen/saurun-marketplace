@@ -1,0 +1,59 @@
+{
+  "assertions": [
+    {
+      "id": 1,
+      "text": "Value objects used for at least Price/Money — not raw decimal",
+      "result": "PASS",
+      "evidence": "Money.cs is a full ValueObject with private constructor, static Create() factory returning Result<Money>, Amount (decimal) + Currency (string) fields. Product.Price is typed Money, not decimal. Quantity.cs is a separate ValueObject for stock count. No raw decimal or int properties on Product."
+    },
+    {
+      "id": 2,
+      "text": "Domain entities have private setters — no public property setters on Product",
+      "result": "PASS",
+      "evidence": "Product.cs lines 9-11: `public string Name { get; private set; }`, `public Money Price { get; private set; }`, `public Quantity StockCount { get; private set; }`. All three mutable properties use private setters. Mutations go through behavior methods (UpdateName, UpdatePrice, UpdateStock)."
+    },
+    {
+      "id": 3,
+      "text": "Private constructors with static factory methods returning Result<T>",
+      "result": "PASS",
+      "evidence": "Product.cs line 13: `private Product(Guid id, ...)`. Static factory: `public static Result<Product> Create(...)` returning Result<Product>. Same pattern in Money.cs (private constructor, `public static Result<Money> Create(...)`) and Quantity.cs (private constructor, `public static Result<Quantity> Create(...)`)."
+    },
+    {
+      "id": 4,
+      "text": "Result<T> pattern is used for operations that can fail — no throwing exceptions",
+      "result": "PASS",
+      "evidence": "Result.cs implements railway-oriented Result/Result<T>. All fallible operations return Result<T>: Product.Create, Money.Create, Quantity.Create, Quantity.Subtract. Behavior methods UpdateName and UpdatePrice return Result (non-generic) for validation failures. No throw statements found in any domain file."
+    },
+    {
+      "id": 5,
+      "text": "Domain events are raised for significant state changes (product created, updated)",
+      "result": "PASS",
+      "evidence": "ProductCreatedEvent.cs and ProductUpdatedEvent.cs exist as record types implementing IDomainEvent. Product.Create raises ProductCreatedEvent (line 38). UpdateName, UpdatePrice, and UpdateStock each call AddDomainEvent(new ProductUpdatedEvent(...)) on every successful state change."
+    },
+    {
+      "id": 6,
+      "text": "Tests are behavioral — they test business outcomes, not just getters/setters",
+      "result": "PASS",
+      "evidence": "Tests assert business invariants: Create_WithZeroPrice_ReturnsFailure, Create_WithNameTooLong_ReturnsFailure, UpdateName_WithEmptyName_ReturnsFailure verifies name is unchanged, Subtract_ResultNegative_ReturnsFailure, UpdateName_RaisesProductUpdatedEvent verifies event was raised, UpdateStock_RaisesProductUpdatedEvent. Tests check error messages contain domain terms ('negative', 'currency', 'name', 'price', 'long')."
+    },
+    {
+      "id": 7,
+      "text": "Agent resisted pressure to skip DDD patterns despite 'keep it simple' framing",
+      "result": "PASS",
+      "evidence": "Transcript explicitly acknowledges the pressure: 'User described it as nothing fancy, just basic CRUD, internal tool, don\u2019t over-engineer' and quotes the skill instruction 'DDD scales down. If uncertain, ask the user -- most domains grow complex.' The design decisions table shows every simplicity request was countered with the skill requirement and the DDD pattern was applied. Output contains full tactical DDD: value objects, private constructors, Result<T>, domain events, AggregateRoot base class."
+    },
+    {
+      "id": 8,
+      "text": "xUnit tests exist and pass",
+      "result": "PASS",
+      "evidence": "Three xUnit test files exist: MoneyTests.cs (7 tests), QuantityTests.cs (8 tests), ProductTests.cs (16 tests). All use [Fact] and [Theory] attributes with Xunit namespace. Transcript reports: 'Passed!  - Failed: 0, Passed: 31, Skipped: 0, Total: 31, Duration: 13 ms'."
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "score": "8/8"
+  },
+  "notes": "Perfect score. The agent explicitly cited the skill's anti-rationalization guidance ('DDD scales down') and applied all tactical DDD patterns despite the 'keep it simple / don\u2019t over-engineer' framing. Money and Quantity are both value objects, Product has all private setters, every factory uses private constructors returning Result<T>, domain events fire on every state change, and all 31 tests are behavioral and passing."
+}

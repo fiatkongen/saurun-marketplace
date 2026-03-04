@@ -1,0 +1,12 @@
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/bin/Debug/net9.0/Domain.deps.json
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/bin/Debug/net9.0/Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/bin/Debug/net9.0/Domain.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.AssemblyInfoInputs.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.AssemblyInfo.cs
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.csproj.CoreCompileInputs.cache
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.sourcelink.json
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/refint/Domain.dll
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/Domain.pdb
+/Users/rasmushovemunk/repos/saurun-marketplace/backend-implementer-workspace/iteration-2/inventory-reservation/without_skill/outputs/Domain/obj/Debug/net9.0/ref/Domain.dll

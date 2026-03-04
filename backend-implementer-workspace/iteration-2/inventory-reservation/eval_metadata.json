@@ -1,0 +1,20 @@
+{
+  "eval_id": 2,
+  "eval_name": "inventory-reservation",
+  "prompt": "Create a .NET 9 inventory reservation system with InventoryItem aggregate, Reservation entity, business rules (no over-reserve, 15min expiry, partial reservations, confirm/cancel lifecycle, optimistic concurrency), Result<T>, value objects, xUnit tests.",
+  "assertions": [
+    "Value objects (ProductId, Quantity) are separate classes — not raw Guid/int",
+    "InventoryItem is the aggregate root — Reservations are accessed through it, not independently",
+    "Private setters on all entities — no public property setters",
+    "Private constructors with static factory methods returning Result<T>",
+    "Result<T> used for operations that can fail — no exceptions for business rules",
+    "Cannot reserve more than available quantity",
+    "Partial reservations supported — returns shortfall information",
+    "15-minute reservation expiry implemented",
+    "Confirming a reservation permanently decreases available stock",
+    "Cancelling/expiring a reservation returns stock to available",
+    "Optimistic concurrency via version field that increments on mutations",
+    "Tests cover normal flow, edge cases, and concurrency scenarios",
+    "Domain events raised for significant state changes"
+  ]
+}

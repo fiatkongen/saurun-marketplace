@@ -1,0 +1,17 @@
+{
+  "eval_id": 0,
+  "eval_name": "order-aggregate",
+  "prompt": "Create a .NET 9 Order aggregate root with line items, value objects (Money, Quantity), Result<T>, and business rules (min 1 item, positive qty, non-negative price, $10K max, no adds after confirm). Include xUnit tests.",
+  "assertions": [
+    "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+    "Domain entities have private setters — no public property setters on Order or OrderLineItem",
+    "Entities use private constructors with static factory methods returning Result<T>",
+    "Result<T> pattern is used for operations that can fail — no throwing exceptions for business rule violations",
+    "Order aggregate enforces the $10,000 maximum total invariant",
+    "Order aggregate prevents adding items after confirmation",
+    "Order requires at least one line item (enforced at creation or confirmation)",
+    "xUnit tests exist covering all 5 business rules",
+    "Tests are behavioral — they test business outcomes, not just getters/setters",
+    "Domain events are raised for significant state changes (order created, confirmed)"
+  ]
+}

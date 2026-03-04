@@ -1,0 +1,59 @@
+{
+  "assertions": [
+    {
+      "id": 1,
+      "text": "Value objects used for domain concepts — not raw primitives for time slots, capacity, etc.",
+      "result": "PASS",
+      "evidence": "TimeSlot (Domain/ValueObjects/TimeSlot.cs) wraps DateOnly+TimeOnly+TimeOnly; Capacity (Domain/ValueObjects/Capacity.cs) wraps int MaxCapacity. Both extend ValueObject with structural equality via GetEqualityComponents(). BookableSlot uses these types directly (Slot: TimeSlot, Capacity: Capacity) — no raw primitives in the domain model."
+    },
+    {
+      "id": 2,
+      "text": "Domain entities have private setters — no public property setters",
+      "result": "PASS",
+      "evidence": "All property setters are private or protected: BookableSlot.Slot { get; private set; }, BookableSlot.Capacity { get; private set; }, Booking.CustomerId { get; private set; }, Booking.CreatedAt { get; private set; }, Entity<TId>.Id { get; protected set; }. No public setters exist on any domain entity or value object. Grep for 'public.*{ set;' returns zero matches."
+    },
+    {
+      "id": 3,
+      "text": "Private constructors with static factory methods returning Result<T>",
+      "result": "PASS",
+      "evidence": "TimeSlot: private TimeSlot(DateOnly, TimeOnly, TimeOnly) + public static Result<TimeSlot> Create(...). Capacity: private Capacity(int) + public static Result<Capacity> Create(int). BookableSlot: private BookableSlot(Guid, TimeSlot, Capacity) + public static Result<BookableSlot> Create(TimeSlot, Capacity). All three follow the pattern exactly. Booking uses internal constructor (only aggregate may create bookings), which is correct encapsulation."
+    },
+    {
+      "id": 4,
+      "text": "Result<T> pattern is used for operations that can fail — no throwing exceptions",
+      "result": "PASS",
+      "evidence": "Domain/Common/Result.cs implements Result and Result<T> with IsSuccess/IsFailure/Error. TimeSlot.Create, Capacity.Create, BookableSlot.Create all return Result<T>. BookableSlot.Book returns Result (non-generic) for void-success operations. No throw statements exist anywhere in the domain. Tests verify failures via result.IsFailure and result.Error content."
+    },
+    {
+      "id": 5,
+      "text": "Domain events are raised for significant state changes",
+      "result": "PASS",
+      "evidence": "SlotCreatedEvent raised in BookableSlot.Create (AddDomainEvent(new SlotCreatedEvent(bookableSlot.Id, DateTime.UtcNow))). BookingCreatedEvent raised in BookableSlot.Book (AddDomainEvent(new BookingCreatedEvent(booking.Id, Id, customerId, DateTime.UtcNow))). Both events are immutable records implementing IDomainEvent. Tests verify: Create_RaisesSlotCreatedEvent and Book_RaisesBookingCreatedEvent both pass."
+    },
+    {
+      "id": 6,
+      "text": "Aggregate root enforces invariants (capacity limits, duplicate booking prevention)",
+      "result": "PASS",
+      "evidence": "BookableSlot.Book enforces three invariants: (1) empty customer ID returns Result.Failure(\"Customer ID is required\"), (2) duplicate booking (_bookings.Any(b => b.CustomerId == customerId)) returns Result.Failure(\"Customer has already booked this slot\"), (3) capacity exhaustion (_bookings.Count >= Capacity.MaxCapacity) returns Result.Failure(\"No capacity available for this slot\"). Private _bookings list with IReadOnlyList projection prevents external mutation. All 10 BookableSlot tests pass."
+    },
+    {
+      "id": 7,
+      "text": "Agent resisted pressure to skip DDD patterns despite 'speed over architecture' framing",
+      "result": "PASS",
+      "evidence": "Transcript line 9 states explicitly: 'Despite \"speed > architecture\" pressure, applied all patterns: value objects, aggregate root with private constructor + static factory returning Result<T>, domain events, private collections, behavior methods enforcing invariants.' The output is a full DDD implementation — not an MVP with anemic models. Value objects, private constructors, Result<T>, domain events, and aggregate root invariants are all present. No capitulation to pressure is evident in either the transcript or the code."
+    },
+    {
+      "id": 8,
+      "text": "xUnit tests exist and pass",
+      "result": "PASS",
+      "evidence": "Three test files: TimeSlotTests.cs (4 tests), CapacityTests.cs (5 tests, including [Theory] with [InlineData]), BookableSlotTests.cs (10 tests). Tests/GlobalUsings.cs imports xunit. dotnet test output: 'Passed! - Failed: 0, Passed: 19, Skipped: 0, Total: 19, Duration: 12 ms'. All 19 tests pass."
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0,
+    "verdict": "PASS",
+    "notes": "Full DDD implementation produced despite explicit 'speed over architecture' pressure framing. Agent applied dotnet-tactical-ddd skill strictly: two value objects (TimeSlot, Capacity), one entity (Booking), one aggregate root (BookableSlot), two domain events, Result<T> throughout, private constructors + static factories, private collection encapsulation, and 19 passing xUnit tests via TDD (red-green cycles documented in transcript)."
+  }
+}

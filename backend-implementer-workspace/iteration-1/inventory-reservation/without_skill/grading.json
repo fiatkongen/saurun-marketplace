@@ -1,0 +1,150 @@
+{
+  "expectations": [
+    {
+      "text": "Value objects (ProductId, Quantity) are separate classes — not raw Guid/int",
+      "passed": true,
+      "evidence": "ProductId.cs: `public sealed record ProductId { public Guid Value { get; } }`. Quantity.cs: `public sealed record Quantity : IComparable<Quantity> { public int Value { get; } }`. Both are separate record types wrapping primitives, used throughout the domain instead of raw Guid/int."
+    },
+    {
+      "text": "InventoryItem is the aggregate root — Reservations are accessed through it, not independently",
+      "passed": true,
+      "evidence": "Reservation.cs constructor is `internal`, so only code in the Domain assembly can create reservations. InventoryItem.cs creates reservations directly: `var reservation = new Reservation(reservationId, Id, actualReserve, utcNow.Add(expiration))`. Reservations are exposed only via `IReadOnlyList<Reservation> Reservations => _reservations.AsReadOnly()` on the aggregate root."
+    },
+    {
+      "text": "Private setters on all entities — no public property setters",
+      "passed": false,
+      "evidence": "Entity<TId> base class has `public TId Id { get; protected set; }` — that is a protected setter, not private. AggregateRoot<TId> has `public int Version { get; protected set; }` — also protected. The domain entity (Reservation) and aggregate (InventoryItem) themselves use `private set`, but the base classes expose `protected set` on Id and Version. The assertion requires private setters on all entities, which is violated at the Entity/AggregateRoot layer."
+    },
+    {
+      "text": "Private constructors with static factory methods returning Result<T>",
+      "passed": false,
+      "evidence": "InventoryItem has a public constructor: `public InventoryItem(ProductId productId, Quantity initialStock)`. Reservation has an internal constructor. Value objects (ProductId, Quantity, ReservationId) have public constructors. None of the factory methods return Result<T> — they use static factory methods like `ProductId.Create()`, `Quantity.Of(int)`, and `ReservationId.Create()` that throw exceptions on invalid input rather than returning Result. The pattern of private constructor + static factory returning Result<T> is absent."
+    },
+    {
+      "text": "Result<T> used for operations that can fail — no exceptions for business rules",
+      "passed": true,
+      "evidence": "Reserve returns `Result<ReservationResult>`, ConfirmReservation/CancelReservation/ExpireOverdueReservations return `Result`. Failure conditions like 'no stock available', 'not found', 'cannot confirm expired' all use `Result.Failure(...)`. Exception: Restock throws ArgumentException for zero quantity, and value object constructors throw on invalid input — but these are guard/validation throws at construction time, not business rule violations expressed via exceptions."
+    },
+    {
+      "text": "Cannot reserve more than available quantity",
+      "passed": true,
+      "evidence": "InventoryItem.Reserve(): if `effectiveAvailable <= Quantity.Zero` returns `Result.Failure('No stock available for reservation.')`. Stock is decremented on reserve: `AvailableQuantity -= actualReserve`. AvailableQuantity never goes negative because actualReserve is capped at effectiveAvailable. Test `Reserve_all_available_stock_then_reserve_again_fails` confirms this."
+    },
+    {
+      "text": "Partial reservations supported — returns shortfall information",
+      "passed": true,
+      "evidence": "Reserve(): `var actualReserve = effectiveAvailable >= requestedQuantity ? requestedQuantity : effectiveAvailable`. Returns `ReservationResult` with `Shortfall = requestedQuantity - reservedQuantity` and `IsPartial => Shortfall > Quantity.Zero`. Test `Reserve_partial_when_insufficient_stock` verifies shortfall=7 when requesting 10 with only 3 available."
+    },
+    {
+      "text": "15-minute reservation expiry implemented",
+      "passed": true,
+      "evidence": "Reserve(): `var expiration = expirationWindow ?? TimeSpan.FromMinutes(15)`. Test `Reserve_creates_reservation_with_15_minute_default_expiry`: `reservation.ExpiresAt.Should().Be(Now.AddMinutes(15))`. Reservation.IsExpired: `Status == ReservationStatus.Pending && utcNow >= ExpiresAt`."
+    },
+    {
+      "text": "Confirming a reservation permanently decreases available stock",
+      "passed": true,
+      "evidence": "ConfirmReservation() calls `reservation.Confirm(utcNow)` then `ReservedQuantity -= reservation.Quantity` — the reserved quantity is removed from ReservedQuantity without returning it to AvailableQuantity. Stock leaves the system permanently. Test `Confirm_reservation_permanently_removes_stock`: after confirm, AvailableQuantity stays at 5 (from 10 minus 5 reserved), ReservedQuantity becomes Zero — stock is consumed."
+    },
+    {
+      "text": "Cancelling/expiring a reservation returns stock to available",
+      "passed": true,
+      "evidence": "Both CancelReservation() and ExpireOverdueReservations() call `ReturnReservedStock(reservation)` which does `AvailableQuantity += reservation.Quantity; ReservedQuantity -= reservation.Quantity`. Tests: `Cancel_reservation_returns_stock_to_available` verifies AvailableQuantity=10 after cancel. `ExpireOverdueReservations_returns_stock` verifies AvailableQuantity=10 after both reservations expire."
+    },
+    {
+      "text": "Optimistic concurrency via version field that increments on mutations",
+      "passed": true,
+      "evidence": "AggregateRoot<TId>: `public int Version { get; protected set; }` with `protected void IncrementVersion() => Version++`. InventoryItem calls `IncrementVersion()` in Reserve, ConfirmReservation, CancelReservation, ExpireOverdueReservations (when any expired), and Restock. Tests: `Version_starts_at_zero`, `Each_mutation_increments_version` (5 mutations -> version 5), `Simulated_concurrent_reservation_detected_via_version`, `Reserve_increments_version`, `Confirm_increments_version`, `Cancel_increments_version`."
+    },
+    {
+      "text": "Tests cover normal flow, edge cases, and concurrency scenarios",
+      "passed": true,
+      "evidence": "57 tests total across 4 test classes. Normal flow: Reserve_full_quantity_succeeds, Confirm_reservation_permanently_removes_stock, Cancel_reservation_returns_stock_to_available, Full_lifecycle_reserve_confirm/cancel/expire. Edge cases: Reserve_zero_quantity_fails, Reserve_when_no_stock_fails, Confirm_expired_reservation_returns_stock_and_fails, Expire_not_yet_overdue_fails, Quantity_subtraction_below_zero_throws, Mixed_reservations_with_different_outcomes. Concurrency: Simulated_concurrent_reservation_detected_via_version, Simulated_concurrent_confirm_and_cancel_conflict, Each_mutation_increments_version."
+    },
+    {
+      "text": "Domain events raised for significant state changes",
+      "passed": false,
+      "evidence": "No domain events anywhere in the codebase. No IDomainEvent interface, no event list on the aggregate, no AddDomainEvent/GetDomainEvents pattern, no event classes (e.g. ReservationCreatedEvent, ReservationConfirmedEvent). AggregateRoot.cs only contains Version and IncrementVersion — no events infrastructure."
+    }
+  ],
+  "summary": {
+    "passed": 10,
+    "failed": 3,
+    "total": 13,
+    "pass_rate": 0.77
+  },
+  "execution_metrics": {
+    "tool_calls": null,
+    "total_tool_calls": 33,
+    "total_steps": 10,
+    "errors_encountered": 1,
+    "output_chars": 36645,
+    "transcript_chars": 5458
+  },
+  "timing": {
+    "executor_duration_seconds": 233.3,
+    "grader_duration_seconds": null,
+    "total_duration_seconds": 233.3
+  },
+  "claims": [
+    {
+      "claim": "57 tests passed, 0 failed",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript Step 10: '57 passed, 0 failed in 0.25 seconds.' Test files contain exactly 4 + 11 + 10 + 32 = 57 test methods across ResultTests, ValueObjectTests, ReservationTests, InventoryItemTests."
+    },
+    {
+      "claim": "Reservation constructor is internal — only InventoryItem can create reservations",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Reservation.cs line 17: `internal Reservation(...)`. Domain.csproj has `InternalsVisibleTo` for Tests (mentioned in transcript Step 7), allowing test code to call it directly — but application code outside the assembly cannot."
+    },
+    {
+      "claim": "Build succeeded with 0 warnings, 0 errors",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript Step 9: 'Second build: success, 0 warnings, 0 errors.' Presence of Domain.dll and Tests.dll in bin/Debug/net9.0 confirms successful compilation."
+    },
+    {
+      "claim": "Reserve auto-expires overdue reservations before checking availability",
+      "type": "factual",
+      "verified": true,
+      "evidence": "InventoryItem.Reserve() calls `ExpireOverdueReservations(utcNow)` before checking effectiveAvailable. Test `Reserve_auto_expires_overdue_reservations_first` verifies: reserve all stock with 5min expiry, later at 10min the new reserve succeeds because expired stock was reclaimed."
+    },
+    {
+      "claim": "Value objects use C# records for structural equality",
+      "type": "factual",
+      "verified": true,
+      "evidence": "ProductId, ReservationId, Quantity, ReservationResult all declared as `public sealed record`. Record types provide structural equality by default. Test `ProductId_equality_by_value` and `Quantity_equality_by_value` confirm this works."
+    },
+    {
+      "claim": "Confirming an expired reservation auto-expires it and returns stock",
+      "type": "quality",
+      "verified": true,
+      "evidence": "ConfirmReservation(): if `reservation.IsExpired(utcNow)` then calls `ReturnReservedStock(reservation)` and `reservation.Expire(utcNow)` before returning failure. Test `Confirm_expired_reservation_returns_stock_and_fails` verifies: after confirm attempt on expired reservation, AvailableQuantity=10 (stock returned) and status=Expired."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": ["First build failed: missing `using Xunit;` in test files — fixed before test run"]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Private constructors with static factory methods returning Result<T>",
+        "reason": "This assertion bundles two separate concerns: (a) private constructors, and (b) factory methods returning Result<T>. Splitting into two would give cleaner signal. The current form also under-specifies scope — does it apply to entities only, aggregates, or value objects too? The executor used public constructors with exception-throwing validation for value objects (a defensible DDD choice) and public constructors for the aggregate, which failed the intent but passes a loose reading of 'static factory methods exist'."
+      },
+      {
+        "reason": "No assertion checks that tests actually pass (vs. just exist). The executor ran all 57 tests and got 57 passed — but the eval would pass even if tests were written but all failing. Consider adding: 'All tests compile and pass without errors'."
+      },
+      {
+        "assertion": "Private setters on all entities — no public property setters",
+        "reason": "The assertion says 'all entities' but doesn't distinguish between base class infrastructure (Entity<TId>, AggregateRoot) and domain entities. Using `protected set` on the base Entity.Id is standard in EF-compatible DDD implementations and arguably correct. The assertion could be more precise: 'Domain entity and aggregate properties have private setters — base class infrastructure may use protected set for ORM compatibility'."
+      },
+      {
+        "reason": "No assertion covers whether the domain compiles and tests pass — this is the most fundamental quality signal and is currently unchecked by the evals. It was verified in the transcript but not as a formal expectation."
+      }
+    ],
+    "overall": "Core domain modeling is solid. The three failures are: missing domain events (a real gap), no Result<T>-returning factory methods (used exception-throwing constructors instead — a different but valid pattern), and protected vs private setters on base classes (minor). The evals would benefit from splitting the factory/constructor assertion and adding a test-passing assertion."
+  }
+}

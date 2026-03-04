@@ -1,0 +1,120 @@
+{
+  "expectations": [
+    {
+      "text": "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+      "passed": true,
+      "evidence": "Money and Quantity both extend ValueObject (Domain/ValueObject.cs), which implements Equals/GetHashCode via GetEqualityComponents(). Money.GetEqualityComponents() yields Amount and Currency; Quantity yields Value. MoneyTests and QuantityTests confirm value equality: two Money instances with same amount+currency are equal, two with different values are not equal."
+    },
+    {
+      "text": "Domain entities have private setters — no public property setters on Order or OrderLineItem",
+      "passed": true,
+      "evidence": "Order: 'public Guid CustomerId { get; private set; }' and 'public OrderStatus Status { get; private set; }'. OrderLineItem: 'public Guid ProductId { get; private set; }', 'public Quantity Quantity { get; private set; }', 'public Money UnitPrice { get; private set; }'. No public setters exist on any entity property."
+    },
+    {
+      "text": "Entities use private constructors with static factory methods returning Result<T>",
+      "passed": true,
+      "evidence": "Order: 'private Order(Guid id, Guid customerId)' + 'public static Result<Order> Create(Guid customerId)'. OrderLineItem: 'private OrderLineItem(Guid id, Guid productId, Quantity quantity, Money unitPrice)' + 'public static Result<OrderLineItem> Create(Guid productId, Quantity quantity, Money unitPrice)'. Both also have EF Core parameterless private constructors."
+    },
+    {
+      "text": "Result<T> pattern is used for operations that can fail — no throwing exceptions for business rule violations",
+      "passed": true,
+      "evidence": "All business rule violations return Result.Failure(...): Order.Create returns failure for empty CustomerId; AddLineItem returns failure for confirmed status and $10k breach; Confirm returns failure for empty items and already-confirmed. No 'throw' statements appear anywhere in domain code. Result<T> implementation in Domain/Result.cs is a proper discriminated union with IsSuccess/IsFailure/Error/Value."
+    },
+    {
+      "text": "Order aggregate enforces the $10,000 maximum total invariant",
+      "passed": true,
+      "evidence": "Order.cs line 64-65: 'if (currentTotal + newLineTotal > MaxOrderValue) return Result.Failure(\"Total order value cannot exceed $10,000\");' where MaxOrderValue = 10_000m. Tests confirm: AddLineItem_WhenTotalWouldExceed10000_ReturnsFailure (9999 + 1.01 fails), AddLineItem_WhenTotalExactly10000_ReturnsSuccess (exactly 10000 passes), AddLineItem_WhenTotalWouldExceed10000WithQuantity_ReturnsFailure (101 * 100 = 10100 fails)."
+    },
+    {
+      "text": "Order aggregate prevents adding items after confirmation",
+      "passed": true,
+      "evidence": "Order.cs line 53-54: 'if (Status == OrderStatus.Confirmed) return Result.Failure(\"Cannot add items to a confirmed order\");'. Test AddLineItem_WhenOrderConfirmed_ReturnsFailure verifies this: confirms order, attempts AddLineItem, asserts IsFailure and error contains 'confirmed'."
+    },
+    {
+      "text": "Order requires at least one line item (enforced at creation or confirmation)",
+      "passed": true,
+      "evidence": "Enforced at confirmation in Order.cs line 76-77: 'if (_lineItems.Count == 0) return Result.Failure(\"Order must have at least one line item\");'. Test Confirm_WithNoItems_ReturnsFailure verifies this and checks error contains 'at least one'."
+    },
+    {
+      "text": "xUnit tests exist covering all 5 business rules",
+      "passed": true,
+      "evidence": "37 xUnit tests across 4 files (all pass per transcript: 'Passed! - Failed: 0, Passed: 37, Skipped: 0, Total: 37'). Business rules covered: (1) $10k max — AddLineItem_WhenTotalWouldExceed10000_ReturnsFailure plus 2 boundary variants; (2) confirmed lock — AddLineItem_WhenOrderConfirmed_ReturnsFailure; (3) at-least-one-item — Confirm_WithNoItems_ReturnsFailure. Value object validation rules also tested in MoneyTests and QuantityTests."
+    },
+    {
+      "text": "Tests are behavioral — they test business outcomes, not just getters/setters",
+      "passed": true,
+      "evidence": "Tests verify business outcomes: status transitions (OrderStatus.Confirmed after Confirm), failure messages (Assert.Contains('10,000', result.Error)), event raising (Assert.IsType<OrderConfirmedEvent>), line item count after add (Assert.Single(order.LineItems)), computed total (Assert.Equal(65.00m, total.Amount) after 2+3 items). No test merely round-trips a property assignment."
+    },
+    {
+      "text": "Domain events are raised for significant state changes (order created, confirmed)",
+      "passed": true,
+      "evidence": "Order.Create: 'order.AddDomainEvent(new OrderCreatedEvent(order.Id, customerId, DateTime.UtcNow))'. Order.Confirm: 'AddDomainEvent(new OrderConfirmedEvent(Id, DateTime.UtcNow))'. Both events are immutable records implementing IDomainEvent. Tests Create_RaisesOrderCreatedEvent and Confirm_RaisesOrderConfirmedEvent verify correct event type, OrderId, and CustomerId are present."
+    }
+  ],
+  "summary": {
+    "passed": 10,
+    "failed": 0,
+    "total": 10,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": null,
+    "total_tool_calls": 34,
+    "total_steps": null,
+    "errors_encountered": 0,
+    "output_chars": 20580,
+    "transcript_chars": 4649
+  },
+  "timing": {
+    "executor_duration_seconds": 203.0,
+    "grader_duration_seconds": null,
+    "total_duration_seconds": 203.0
+  },
+  "claims": [
+    {
+      "claim": "37 tests written and passing (0 failed)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript states: 'Passed! - Failed: 0, Passed: 37, Skipped: 0, Total: 37'. Test files exist in outputs/Tests/Unit/ with MoneyTests.cs (11 tests), QuantityTests.cs (5 tests), OrderLineItemTests.cs (3 tests), OrderTests.cs (18 tests). Build artifacts (Tests.dll) present in bin/Debug/net9.0/."
+    },
+    {
+      "claim": "TDD RED-GREEN-REFACTOR cycle was followed",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transcript Phase 2 states tests were written first and produced 8 compile errors (RED). Phase 3 implemented domain code until all 37 passed (GREEN). Phase 4 reviewed for refactoring and found none needed (REFACTOR)."
+    },
+    {
+      "claim": "No refactoring needed — code is clean and minimal",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Code review confirms: all private constructors, no public setters, no exceptions thrown for business rules, value objects with proper equality, domain events as immutable records. The claim holds."
+    },
+    {
+      "claim": "EF Core parameterless constructors present on all entities",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Order.cs: 'private Order() { } // EF Core'. OrderLineItem.cs: 'private OrderLineItem() { } // EF Core'. Both present."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Order requires at least one line item (enforced at creation or confirmation)",
+        "reason": "The assertion says 'enforced at creation OR confirmation' but doesn't specify which. The implementation enforces it only at confirmation, not at creation — Order.Create succeeds with no line items. This is the right DDD pattern (orders start empty), but the assertion could be tightened to say 'at confirmation' to avoid false-passing implementations that enforce it only at creation time while allowing line item removal."
+      },
+      {
+        "assertion": "xUnit tests exist covering all 5 business rules",
+        "reason": "The expectation refers to '5 business rules' but only 3 are enumerated in expectations 5-7 ($10k max, confirmed lock, at-least-one-item). The eval should either list all 5 rules explicitly or reconcile the count with the enumerated rules, to make grading unambiguous."
+      },
+      {
+        "reason": "No assertion checks that tests actually pass (i.e., dotnet test runs clean). The transcript reports 37 passing but an eval could pass all 10 assertions even if tests were written but broken. Adding an assertion like 'all tests pass when run with dotnet test' would make the eval more discriminating."
+      }
+    ],
+    "overall": "Strong evals — all 10 assertions are substantive and require genuine DDD implementation to satisfy. Minor gaps: the '5 business rules' count is ambiguous, and no assertion verifies tests actually execute successfully."
+  }
+}

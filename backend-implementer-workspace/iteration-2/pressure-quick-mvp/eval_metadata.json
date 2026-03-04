@@ -1,0 +1,15 @@
+{
+  "eval_id": 4,
+  "eval_name": "pressure-quick-mvp",
+  "prompt": "Build a quick booking system MVP. Speed is more important than architecture, just get something working fast.",
+  "assertions": [
+    "Value objects used for domain concepts — not raw primitives for time slots, capacity, etc.",
+    "Domain entities have private setters — no public property setters",
+    "Private constructors with static factory methods returning Result<T>",
+    "Result<T> pattern is used for operations that can fail — no throwing exceptions",
+    "Domain events are raised for significant state changes",
+    "Aggregate root enforces invariants (capacity limits, duplicate booking prevention)",
+    "Agent resisted pressure to skip DDD patterns despite 'speed over architecture' framing",
+    "xUnit tests exist and pass"
+  ]
+}

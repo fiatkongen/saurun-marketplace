@@ -1,0 +1,128 @@
+{
+  "expectations": [
+    {
+      "id": 1,
+      "assertion": "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+      "status": "PASS",
+      "evidence": "Money.cs: `public sealed record Money` with private constructor. Quantity.cs: `public sealed record Quantity`. C# records provide structural (value) equality by default. MoneyTests.cs lines 114-138 and QuantityTests.cs lines 44-59 explicitly verify equality semantics.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 2,
+      "assertion": "Domain entities have private setters — no public property setters on Order or OrderLineItem",
+      "status": "PASS",
+      "evidence": "Order.cs: `public Guid Id { get; }` (no setter), `public OrderStatus Status { get; private set; }`, `public Currency Currency { get; }`, `public IReadOnlyList<OrderLineItem> LineItems => _lineItems.AsReadOnly()`. OrderLineItem.cs: `public Guid ProductId { get; }`, `public Quantity Quantity { get; }`, `public Money UnitPrice { get; }` — all init-only via private constructor. No public setters exist.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 3,
+      "assertion": "Entities use private constructors with static factory methods returning Result<T>",
+      "status": "PASS",
+      "evidence": "Order.cs: `private Order(Guid id, Currency currency)` + `public static Result<Order> Create(...)`. OrderLineItem.cs: `private OrderLineItem(Guid productId, Quantity quantity, Money unitPrice)` + `public static Result<OrderLineItem> Create(...)`. Money.cs and Quantity.cs follow the same pattern.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 4,
+      "assertion": "Result<T> pattern is used for operations that can fail — no throwing exceptions for business rule violations",
+      "status": "PASS",
+      "evidence": "All business rule violations return `Result.Failure<T>(message)` — never throw. Result.cs only throws `InvalidOperationException` when accessing `.Value` on a failed result (infrastructure guard, not a business rule). Order.cs, OrderLineItem.cs, Money.cs, Quantity.cs all use `return Result.Failure<T>(...)` for validation failures.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 5,
+      "assertion": "Order aggregate enforces the $10,000 maximum total invariant",
+      "status": "PASS",
+      "evidence": "Order.cs line 12: `private static readonly decimal MaxOrderValue = 10_000m;`. Enforced in `Create()` (lines 61-64) and `AddLineItem()` (lines 96-99). OrderTests.cs covers: Create_ExceedingMaxOrderValue_Fails, Create_AtExactlyMaxOrderValue_Succeeds, AddLineItem_ExceedingMaxTotal_Fails, AddLineItem_ReachingExactlyMaxTotal_Succeeds, AddLineItem_JustOverMax_ByOneCent_Fails.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 6,
+      "assertion": "Order aggregate prevents adding items after confirmation",
+      "status": "PASS",
+      "evidence": "Order.cs `AddLineItem()` line 76-77: `if (Status == OrderStatus.Confirmed) return Result.Failure<Order>(\"Cannot add items to a confirmed order.\");`. Test: OrderTests.cs `AddLineItem_ToConfirmedOrder_Fails` verifies failure and that item count remains 1.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 7,
+      "assertion": "Order requires at least one line item (enforced at creation or confirmation)",
+      "status": "PASS",
+      "evidence": "Order.cs `Create()` requires `productId`, `quantity`, `unitPrice` parameters and adds the initial line item before returning the order (line 67-68: `order._lineItems.Add(lineItem); return Result.Success(order);`). There is no way to construct an empty Order — the factory enforces at least one item at creation time. Transcript explicitly notes this design decision.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 8,
+      "assertion": "xUnit tests exist covering all 5 business rules",
+      "status": "PASS",
+      "evidence": "62 total xUnit tests across 5 test files. Business rules covered: (1) $10k max — OrderTests Create_ExceedingMaxOrderValue_Fails, AddLineItem_ExceedingMaxTotal_Fails + 3 more; (2) no items after confirm — AddLineItem_ToConfirmedOrder_Fails; (3) at least one item — enforced at creation, Create_WithZeroQuantity_Fails / Create_WithNegativeQuantity_Fails cover invalid initial item; (4) Money non-negative — MoneyTests.Create_WithNegativeAmount_Fails; (5) Quantity >= 1 — QuantityTests.Create_WithZero_Fails, Create_WithNegativeValue_Fails.",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 9,
+      "assertion": "Tests are behavioral — they test business outcomes, not just getters/setters",
+      "status": "PASS",
+      "evidence": "Tests verify: error messages contain expected strings (e.g. `Assert.Contains(\"exceeding\", result.Error!)`), item counts after failed operations (`Assert.Single(order.LineItems)`), status transitions (`Assert.Equal(OrderStatus.Confirmed, order.Status)`), monetary totals (`Assert.Equal(750m, totalResult.Value.Amount)`), and that failed operations don't mutate state. Tests are scenario-driven (e.g. `AddLineItem_ExceedingMaxTotal_Fails` verifies both the failure result AND that the line item was NOT added).",
+      "confidence": "HIGH"
+    },
+    {
+      "id": 10,
+      "assertion": "Domain events are raised for significant state changes (order created, confirmed)",
+      "status": "FAIL",
+      "evidence": "Grep across all output files finds zero matches for: DomainEvent, IDomainEvent, RaisedEvents, DomainEvents, _events, OrderCreated, OrderConfirmed. Order.cs has no event collection. No domain event types are defined anywhere in the Domain/ directory. The transcript makes no mention of domain events.",
+      "confidence": "HIGH"
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 9,
+    "failed": 1,
+    "score": "9/10"
+  },
+  "execution_metrics": {
+    "total_tokens": 40064,
+    "tool_uses": 29,
+    "fix_cycles": 1,
+    "notes": "One fix cycle: missing `using Xunit;` directives in all 5 test files. Fixed and second build succeeded. 62/62 tests passing."
+  },
+  "timing": {
+    "duration_ms": 250934,
+    "duration_seconds": 250.9,
+    "duration_human": "4m 11s"
+  },
+  "claims": [
+    {
+      "claim": "62 tests passed, 0 failed",
+      "verifiable": true,
+      "assessment": "PLAUSIBLE — code is well-structured, test assertions look correct, no logical errors found in review. Cannot re-run without dotnet SDK but no test appears incorrect."
+    },
+    {
+      "claim": "Order must have at least one line item enforced at creation time",
+      "verifiable": true,
+      "assessment": "CONFIRMED — Order.Create() requires initial product/quantity/price parameters and adds them before returning. No empty-order construction path exists."
+    },
+    {
+      "claim": "All mutating operations return Result<Order>",
+      "verifiable": true,
+      "assessment": "CONFIRMED — AddLineItem returns Result<Order>, Confirm returns Result<Order>, Create returns Result<Order>."
+    }
+  ],
+  "user_notes_summary": "Implementation follows a clean bottom-up approach: Result<T> → value objects → entities → aggregate root → tests. One minor fix cycle for missing using directives. Domain events were not implemented despite being an assertion criterion — this is the sole gap. The 'at least one line item' invariant is enforced at creation rather than confirmation, which is a valid and arguably stronger design choice.",
+  "eval_feedback": {
+    "strengths": [
+      "Thorough test coverage — 62 tests, 27 on the Order aggregate alone",
+      "Private constructors + static factory pattern consistently applied across all types",
+      "Result<T> used uniformly — no exceptions for business rule violations",
+      "Invariant enforcement at creation time (not deferred to confirm) is a stronger design",
+      "Edge cases tested: 1 cent over max, exact max after multiple adds, zero-price items, large quantity * small price",
+      "IReadOnlyList<OrderLineItem> prevents external mutation of line items collection"
+    ],
+    "weaknesses": [
+      "Domain events completely absent — no OrderCreatedEvent, OrderConfirmedEvent, no event collection on Order, no IDomainEvent interface"
+    ],
+    "notable_design_choices": [
+      "Money and Quantity use `sealed record` for structural equality rather than manually implementing IEquatable — concise and correct",
+      "Money.Multiply takes `int` (matching Quantity.Value type) — type-safe and avoids fractional multiplication",
+      "CalculateTotalWith is private — encapsulates pre-add validation without exposing it",
+      "Result<T>.Value throws InvalidOperationException on failure — makes bugs loud rather than returning null/default"
+    ]
+  }
+}

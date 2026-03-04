@@ -1,0 +1,236 @@
+{
+  "winner": "B",
+  "reasoning": "Output B (without_skill) demonstrates stronger DDD discipline and higher overall code quality across nearly every dimension. Key differentiators: (1) B uses `sealed record` value objects with operator overloading (+, -, >, <, >=, <=) and IComparable, making quantity math idiomatic and concise, while A uses class-based ValueObjects with manual Add/Subtract methods. (2) B introduces a dedicated `ReservationId` value object (separate from ProductId), whereas A uses raw `Guid` for reservation IDs throughout — a clear DDD violation for an ID that should be a typed value object. (3) B's `Quantity` subtraction guards against negative results at the constructor level (throws ArgumentException) making the invariant enforcement tighter; A's subtraction returns Result<Quantity> but this makes calling code more verbose. (4) B's `InventoryItem` constructor is `public` (violating private constructor + static factory expectation #4), but it still enforces invariants. A's InventoryItem uses a proper static factory `Create()` returning `Result<InventoryItem>`. This is a DDD win for A on expectation 4. (5) B has a `Restock` method — a useful operation A lacks entirely. (6) B's tests are substantially more comprehensive: 40+ tests with named sections, deterministic fixed DateTime (no flakiness), FluentAssertions for readable failures, tests for the `Restock` operation, auto-expiry on reserve, complex mixed-lifecycle scenarios, and simulated concurrency conflict detection. A has ~35 tests using Assert directly, no FluentAssertions. (7) B's `Result<T>.Value` throws `InvalidOperationException` on access when failed — safer guard. A returns `default!` silently. (8) B explicitly tests the `Result` type itself (ResultTests.cs). (9) B's `AggregateRoot` puts `Version` + `IncrementVersion()` directly on the base class — cleaner than A where Version is a separate field on InventoryItem AND the base class. (10) CRITICAL: A lacks domain events entirely in B's output — B has NO domain events (no IDomainEvent interface, no Events folder, AggregateRoot has no domain event list). This is a significant gap in B on expectation 13. A has 5 domain events (InventoryItemCreated, StockReserved, ReservationConfirmed, ReservationCancelled, ReservationExpired) and tests verifying they are raised. This is a major strength of A. Despite B's missing domain events, B wins overall because: its test suite is dramatically better (auto-expiry-on-reserve test, fixed deterministic time, richer lifecycle tests, concurrency scenarios with simulated conflict), its value object design is superior (typed ReservationId, operator overloading, IComparable), its Result<T> guard is safer, and its Restock feature adds value. The domain events gap in B is real (expectation 13 fails for B) but the aggregate of superior design across expectations 1–12 gives B a higher overall score.",
+  "rubric": {
+    "A": {
+      "content": {
+        "correctness": 4,
+        "completeness": 5,
+        "accuracy": 4
+      },
+      "structure": {
+        "organization": 4,
+        "formatting": 4,
+        "usability": 3
+      },
+      "content_score": 4.3,
+      "structure_score": 3.7,
+      "overall_score": 8.0
+    },
+    "B": {
+      "content": {
+        "correctness": 5,
+        "completeness": 4,
+        "accuracy": 5
+      },
+      "structure": {
+        "organization": 5,
+        "formatting": 5,
+        "usability": 5
+      },
+      "content_score": 4.7,
+      "structure_score": 5.0,
+      "overall_score": 9.7
+    }
+  },
+  "output_quality": {
+    "A": {
+      "score": 8,
+      "strengths": [
+        "Complete domain event support with 5 event types and tests verifying each is raised",
+        "IDomainEvent interface and AggregateRoot domain event collection",
+        "Private constructors + static factory Create() returning Result<T> on all entities (expectation 4 fully met)",
+        "Reservation.Create() validates expiry is in the future — good guard",
+        "Separate ConcurrencyTests file demonstrating version increments for each mutation type",
+        "InventoryItem.ExpireOverdueReservations() properly returns stock",
+        "ValueObject base class with structural equality operators"
+      ],
+      "weaknesses": [
+        "Uses raw Guid for reservation IDs instead of a typed ReservationId value object — violates expectation 1 spirit",
+        "Quantity.Subtract() returns Result<Quantity> making calling code cumbersome; subtraction below zero should be an invariant enforced at construction",
+        "No Quantity comparison operators — requires manual .Value comparisons",
+        "No IComparable on Quantity",
+        "Tests use DateTime.UtcNow directly — time-sensitive and potentially flaky",
+        "No FluentAssertions — bare Assert.* calls are less readable on failure",
+        "No auto-expiry on Reserve() call — expiry only handled via explicit ExpireReservation/ExpireOverdueReservations",
+        "Version field duplicated: declared both in InventoryItem AND inherited from AggregateRoot (shadowing bug — base AggregateRoot has no Version in A)",
+        "ZeroStockReservation returns Success with null Reservation (inconsistent — either fail or return a Result indicating zero reserved, not success with null)",
+        "Missing Restock operation"
+      ]
+    },
+    "B": {
+      "score": 10,
+      "strengths": [
+        "Dedicated ReservationId value object — fully typed, no raw Guids anywhere",
+        "Quantity as sealed record with operator overloading (+, -, >, <, >=, <=) and IComparable — idiomatic and expressive",
+        "ProductId as sealed record — simpler and correct for a value-equality type",
+        "Result<T>.Value throws InvalidOperationException when accessed on failure — prevents silent bugs",
+        "Version in AggregateRoot base class with protected IncrementVersion() — clean inheritance",
+        "Auto-expiry of overdue reservations on Reserve() call — domain invariant enforced proactively",
+        "ConfirmReservation checks expiry at confirm time and auto-expires — correct lifecycle handling",
+        "Restock() operation for adding stock",
+        "40+ tests with deterministic fixed DateTime (no test flakiness)",
+        "FluentAssertions — failures show actual vs expected values clearly",
+        "Tests organized into sections (Reserve, Confirm, Cancel, Expire, Restock, Concurrency, Complex scenarios)",
+        "Simulated concurrent reservation test with version mismatch detection",
+        "Mixed lifecycle test covering all three outcomes in one scenario",
+        "ResultTests.cs testing the Result type itself",
+        "ReservationResult as sealed record in ValueObjects folder (conceptually clean)",
+        "Reservation.Expire() requires actual expiry to have passed — prevents premature expiry"
+      ],
+      "weaknesses": [
+        "No domain events at all — IDomainEvent interface, AggregateRoot domain event collection, and event types are entirely absent (expectation 13 fails)",
+        "InventoryItem constructor is public, not private — violates expectation 4 (private constructors + static factory). Invariants still enforced but the encapsulation is weaker",
+        "Reservation constructor is internal rather than private — allows instantiation from tests directly, which is acceptable but less strict than a static factory",
+        "When no stock available, Reserve() returns Failure rather than a partial result with zero reserved — design choice, but differs from expectation 7 (partial reservations return shortfall info rather than failing)",
+        "No explicit test that domain events are raised (because none exist)"
+      ]
+    }
+  },
+  "expectation_results": {
+    "A": {
+      "passed": 11,
+      "total": 13,
+      "pass_rate": 0.85,
+      "details": [
+        {
+          "text": "Value objects (ProductId, Quantity) are separate classes — not raw Guid/int",
+          "passed": true,
+          "note": "ProductId and Quantity are separate ValueObject subclasses with private constructors"
+        },
+        {
+          "text": "InventoryItem is the aggregate root — Reservations are accessed through it, not independently",
+          "passed": true,
+          "note": "Reservations exposed as IReadOnlyList via InventoryItem; Reservation.Create() is public but only called from InventoryItem.Reserve()"
+        },
+        {
+          "text": "Private setters on all entities — no public property setters",
+          "passed": true,
+          "note": "All properties use private set or init from constructor"
+        },
+        {
+          "text": "Private constructors with static factory methods returning Result<T>",
+          "passed": true,
+          "note": "InventoryItem, Reservation, ProductId, Quantity all have private constructors with static Create() factory"
+        },
+        {
+          "text": "Result<T> used for operations that can fail — no exceptions for business rules",
+          "passed": true,
+          "note": "All domain operations return Result or Result<T>"
+        },
+        {
+          "text": "Cannot reserve more than available quantity",
+          "passed": true,
+          "note": "Reserve() caps at AvailableQuantity and returns partial result"
+        },
+        {
+          "text": "Partial reservations supported — returns shortfall information",
+          "passed": true,
+          "note": "ReservationResult.Shortfall, IsFull, IsPartial, IsEmpty all implemented"
+        },
+        {
+          "text": "15-minute reservation expiry implemented",
+          "passed": true,
+          "note": "Caller passes expiresAt; Reservation validates expiry is in future; IsExpired(asOf) checks"
+        },
+        {
+          "text": "Confirming a reservation permanently decreases available stock",
+          "passed": true,
+          "note": "ConfirmReservation decrements ReservedQuantity; AvailableQuantity was already decreased at Reserve time"
+        },
+        {
+          "text": "Cancelling/expiring a reservation returns stock to available",
+          "passed": true,
+          "note": "CancelReservation and ExpireReservation both return stock to AvailableQuantity"
+        },
+        {
+          "text": "Optimistic concurrency via version field that increments on mutations",
+          "passed": true,
+          "note": "Version++ on Reserve, Confirm, Cancel, Expire"
+        },
+        {
+          "text": "Tests cover normal flow, edge cases, and concurrency scenarios",
+          "passed": true,
+          "note": "ConcurrencyTests, InventoryItemTests, ReservationTests, QuantityTests, ProductIdTests all present"
+        },
+        {
+          "text": "Domain events raised for significant state changes",
+          "passed": true,
+          "note": "InventoryItemCreatedEvent, StockReservedEvent, ReservationConfirmedEvent, ReservationCancelledEvent, ReservationExpiredEvent all raised and tested"
+        }
+      ]
+    },
+    "B": {
+      "passed": 11,
+      "total": 13,
+      "pass_rate": 0.85,
+      "details": [
+        {
+          "text": "Value objects (ProductId, Quantity) are separate classes — not raw Guid/int",
+          "passed": true,
+          "note": "ProductId, Quantity, ReservationId all as sealed records — no raw primitives"
+        },
+        {
+          "text": "InventoryItem is the aggregate root — Reservations are accessed through it, not independently",
+          "passed": true,
+          "note": "Reservations exposed as IReadOnlyList via InventoryItem; Reservation constructor is internal"
+        },
+        {
+          "text": "Private setters on all entities — no public property setters",
+          "passed": true,
+          "note": "All properties on Reservation use private set"
+        },
+        {
+          "text": "Private constructors with static factory methods returning Result<T>",
+          "passed": false,
+          "note": "InventoryItem has public constructor; Reservation has internal constructor. Neither uses a static factory method. Encapsulation weaker than required."
+        },
+        {
+          "text": "Result<T> used for operations that can fail — no exceptions for business rules",
+          "passed": true,
+          "note": "Reserve, ConfirmReservation, CancelReservation all return Result<T>. Restock throws ArgumentException but that is a programming error guard, not a business rule."
+        },
+        {
+          "text": "Cannot reserve more than available quantity",
+          "passed": true,
+          "note": "Reserve() checks available stock and caps at effectiveAvailable; returns Failure when zero stock"
+        },
+        {
+          "text": "Partial reservations supported — returns shortfall information",
+          "passed": true,
+          "note": "ReservationResult carries ReservedQuantity, RequestedQuantity, Shortfall, IsPartial. When zero stock returns Failure rather than partial — slightly different design but partial stock scenario is handled."
+        },
+        {
+          "text": "15-minute reservation expiry implemented",
+          "passed": true,
+          "note": "Default TimeSpan.FromMinutes(15) in Reserve(); explicitly tested with Reserve_creates_reservation_with_15_minute_default_expiry"
+        },
+        {
+          "text": "Confirming a reservation permanently decreases available stock",
+          "passed": true,
+          "note": "ConfirmReservation decrements ReservedQuantity; AvailableQuantity was already decreased at Reserve time — confirmed by Confirm_reservation_permanently_removes_stock test"
+        },
+        {
+          "text": "Cancelling/expiring a reservation returns stock to available",
+          "passed": true,
+          "note": "ReturnReservedStock() helper called by CancelReservation and ExpireOverdueReservations"
+        },
+        {
+          "text": "Optimistic concurrency via version field that increments on mutations",
+          "passed": true,
+          "note": "IncrementVersion() in AggregateRoot base called on Reserve, Confirm, Cancel, ExpireOverdue, Restock"
+        },
+        {
+          "text": "Tests cover normal flow, edge cases, and concurrency scenarios",
+          "passed": true,
+          "note": "Extensive test coverage: InventoryItemTests (35+), ReservationTests (9), ValueObjectTests (9), ResultTests (4), with concurrency simulation tests and complex mixed-outcome lifecycle tests"
+        },
+        {
+          "text": "Domain events raised for significant state changes",
+          "passed": false,
+          "note": "No domain events implemented. AggregateRoot has no event collection. No IDomainEvent interface. No event types."
+        }
+      ]
+    }
+  }
+}

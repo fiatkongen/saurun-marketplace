@@ -1,0 +1,300 @@
+{
+  "eval_id": 4,
+  "eval_name": "pressure-quick-mvp",
+  "prompt": "Build a quick booking system MVP. Speed is more important than architecture, just get something working fast.",
+  "rubric": {
+    "criteria": [
+      {
+        "id": "C1",
+        "name": "Value objects for domain concepts",
+        "description": "Domain concepts like time slots and capacity are represented as proper ValueObject subclasses, not raw primitives",
+        "weight": 15
+      },
+      {
+        "id": "C2",
+        "name": "Private setters on domain entities",
+        "description": "All public properties on domain entities use private setters; no public mutation surface",
+        "weight": 10
+      },
+      {
+        "id": "C3",
+        "name": "Private constructors with static factory methods returning Result<T>",
+        "description": "Entities and value objects use private/internal constructors; creation goes through static Create() methods that return Result<T>",
+        "weight": 15
+      },
+      {
+        "id": "C4",
+        "name": "Result<T> pattern for fallible operations",
+        "description": "Operations that can fail return Result or Result<T> instead of throwing exceptions",
+        "weight": 15
+      },
+      {
+        "id": "C5",
+        "name": "Domain events raised for significant state changes",
+        "description": "Aggregate raises IDomainEvent instances (e.g. BookingCreated, SlotCreated) on meaningful state transitions",
+        "weight": 15
+      },
+      {
+        "id": "C6",
+        "name": "Aggregate root enforces invariants",
+        "description": "Aggregate root encapsulates business rules: capacity limits, duplicate booking prevention, invalid input rejection",
+        "weight": 15
+      },
+      {
+        "id": "C7",
+        "name": "Resisted pressure to skip DDD patterns",
+        "description": "Despite 'speed over architecture' framing, agent maintained DDD discipline throughout",
+        "weight": 10
+      },
+      {
+        "id": "C8",
+        "name": "xUnit tests exist and pass",
+        "description": "Test project with xUnit tests that compile and pass (verified by dotnet test)",
+        "weight": 5
+      }
+    ]
+  },
+  "outputs": {
+    "A": {
+      "path": "with_skill/outputs",
+      "files": [
+        "Domain/Common/AggregateRoot.cs",
+        "Domain/Common/Entity.cs",
+        "Domain/Common/IDomainEvent.cs",
+        "Domain/Common/Result.cs",
+        "Domain/Common/ValueObject.cs",
+        "Domain/Entities/Booking.cs",
+        "Domain/Entities/BookableSlot.cs",
+        "Domain/Events/BookingCreatedEvent.cs",
+        "Domain/Events/SlotCreatedEvent.cs",
+        "Domain/ValueObjects/Capacity.cs",
+        "Domain/ValueObjects/TimeSlot.cs",
+        "Tests/BookableSlotTests.cs",
+        "Tests/CapacityTests.cs",
+        "Tests/TimeSlotTests.cs"
+      ],
+      "scores": {
+        "C1": {
+          "score": 15,
+          "max": 15,
+          "evidence": "TimeSlot and Capacity are both proper ValueObject subclasses with GetEqualityComponents(). Booking entity uses Guid for CustomerId (typed identity), not raw strings. Domain concepts fully encapsulated in value objects."
+        },
+        "C2": {
+          "score": 10,
+          "max": 10,
+          "evidence": "All entity properties (BookableSlot.Slot, BookableSlot.Capacity, Booking.CustomerId, Booking.CreatedAt, Entity<TId>.Id) use 'private set' or init-only getters. No public setters anywhere in domain layer."
+        },
+        "C3": {
+          "score": 15,
+          "max": 15,
+          "evidence": "BookableSlot has private constructor + public static Create() returning Result<BookableSlot>. TimeSlot VO has private constructor + static Create() returning Result<TimeSlot>. Capacity VO has private constructor + static Create() returning Result<Capacity>. Booking uses internal constructor (creation controlled by aggregate). Full pattern compliance."
+        },
+        "C4": {
+          "score": 15,
+          "max": 15,
+          "evidence": "BookableSlot.Book() returns Result (not void/throws). BookableSlot.Create() returns Result<BookableSlot>. TimeSlot.Create() returns Result<TimeSlot>. Capacity.Create() returns Result<Capacity>. Result<T> class fully implemented with IsSuccess/IsFailure/Error/Value. Zero exception throwing for business rule violations."
+        },
+        "C5": {
+          "score": 15,
+          "max": 15,
+          "evidence": "IDomainEvent interface defined. SlotCreatedEvent raised in BookableSlot.Create(). BookingCreatedEvent raised in BookableSlot.Book(). AggregateRoot base class maintains _domainEvents list with AddDomainEvent/ClearDomainEvents. Both events implemented as records with OccurredAt. Tests verify events are raised."
+        },
+        "C6": {
+          "score": 15,
+          "max": 15,
+          "evidence": "BookableSlot (AggregateRoot) enforces: (1) capacity limit — rejects booking when _bookings.Count >= Capacity.MaxCapacity, (2) duplicate booking — rejects same CustomerId twice, (3) empty CustomerId — rejects Guid.Empty. All via Result failures. Full invariant suite with test coverage for each rule."
+        },
+        "C7": {
+          "score": 10,
+          "max": 10,
+          "evidence": "Despite 'speed over architecture' prompt, output includes: full AggregateRoot/Entity/ValueObject base class hierarchy, IDomainEvent abstraction, Result<T> monad, two value objects, domain event records, layered project structure (Domain + Tests). No corners cut."
+        },
+        "C8": {
+          "score": 5,
+          "max": 5,
+          "evidence": "19 xUnit tests across BookableSlotTests (10 tests), CapacityTests (3 tests), TimeSlotTests (6 tests). dotnet test confirmed: Passed! - Failed: 0, Passed: 19, Skipped: 0, Total: 19."
+        }
+      },
+      "total_score": 100,
+      "max_score": 100
+    },
+    "B": {
+      "path": "without_skill/outputs",
+      "files": [
+        "Domain/Booking.cs",
+        "Domain/TimeSlot.cs",
+        "Tests/TimeSlotTests.cs"
+      ],
+      "scores": {
+        "C1": {
+          "score": 0,
+          "max": 15,
+          "evidence": "No ValueObject subclasses. TimeSlot is an entity with raw DateOnly/TimeOnly/int fields. Capacity is a plain int field (MaxCapacity). CustomerName is a raw string. No value objects whatsoever."
+        },
+        "C2": {
+          "score": 7,
+          "max": 10,
+          "evidence": "Entity properties use 'private set' (Id, TimeSlotId, CustomerName, CreatedAt on Booking; Id, Date, StartTime, EndTime, MaxCapacity on TimeSlot). Partial credit: private setters present on entities, but TimeSlot is not an aggregate root and MaxCapacity is a raw int field rather than a typed value object."
+        },
+        "C3": {
+          "score": 0,
+          "max": 15,
+          "evidence": "No static factory methods. TimeSlot uses a public constructor directly. Booking uses a public constructor directly. No Result<T> returned from creation. Constructors throw exceptions on invalid input instead of returning failure results."
+        },
+        "C4": {
+          "score": 0,
+          "max": 15,
+          "evidence": "No Result<T> pattern. TimeSlot.Book() returns Booking directly and throws InvalidOperationException on capacity violation. TimeSlot constructor throws ArgumentException on invalid times/capacity. Booking constructor does not validate. Exception-based error handling throughout."
+        },
+        "C5": {
+          "score": 0,
+          "max": 15,
+          "evidence": "No IDomainEvent interface. No domain events defined. No event raising on booking or slot creation. No AggregateRoot base class. State changes are silent."
+        },
+        "C6": {
+          "score": 5,
+          "max": 15,
+          "evidence": "TimeSlot.Book() enforces capacity limit (throws when RemainingCapacity <= 0). TimeSlot constructor validates endTime > startTime and maxCapacity > 0. However: no aggregate root pattern, no duplicate booking prevention, invariants enforced via exceptions rather than Result, and TimeSlot is not modeled as an AggregateRoot."
+        },
+        "C7": {
+          "score": 2,
+          "max": 10,
+          "evidence": "Output yielded to the 'speed over architecture' pressure. No DDD infrastructure (AggregateRoot, ValueObject, Result, domain events). Basic POCO classes with some validation. The output is functionally reasonable for a quick MVP but skipped all DDD patterns."
+        },
+        "C8": {
+          "score": 3,
+          "max": 5,
+          "evidence": "9 xUnit tests in TimeSlotTests.cs covering capacity, booking, and validation. Tests are well-written and would pass based on the implementation. However: no .csproj or .sln files in the output directory (cannot verify dotnet test execution), and only one test class (no Booking-specific tests, no value object tests since none exist)."
+        }
+      },
+      "total_score": 17,
+      "max_score": 100
+    }
+  },
+  "expectations_check": [
+    {
+      "expectation": "Value objects used for domain concepts",
+      "A": {
+        "met": true,
+        "detail": "TimeSlot and Capacity are full ValueObject subclasses with private constructors, factory methods, and structural equality via GetEqualityComponents()"
+      },
+      "B": {
+        "met": false,
+        "detail": "No ValueObject classes. DateOnly/TimeOnly/int used as raw fields. No structural equality abstraction."
+      }
+    },
+    {
+      "expectation": "Domain entities have private setters",
+      "A": {
+        "met": true,
+        "detail": "All properties on BookableSlot, Booking, and Entity<TId> use private set or readonly getters"
+      },
+      "B": {
+        "met": true,
+        "detail": "Properties on TimeSlot and Booking use private set, though the pattern is applied without the surrounding DDD context"
+      }
+    },
+    {
+      "expectation": "Private constructors with static factory methods returning Result<T>",
+      "A": {
+        "met": true,
+        "detail": "BookableSlot.Create() → Result<BookableSlot>, TimeSlot.Create() → Result<TimeSlot>, Capacity.Create() → Result<Capacity>. All constructors private or internal."
+      },
+      "B": {
+        "met": false,
+        "detail": "Public constructors throughout. No static factory methods. No Result<T> on creation."
+      }
+    },
+    {
+      "expectation": "Result<T> pattern used for operations that can fail",
+      "A": {
+        "met": true,
+        "detail": "Result and Result<T> classes fully implemented. All fallible operations return Result. No business-rule exceptions thrown."
+      },
+      "B": {
+        "met": false,
+        "detail": "No Result<T> class. Exceptions thrown for all validation failures (ArgumentException, InvalidOperationException)."
+      }
+    },
+    {
+      "expectation": "Domain events raised for significant state changes",
+      "A": {
+        "met": true,
+        "detail": "SlotCreatedEvent raised on Create(), BookingCreatedEvent raised on Book(). Both verified by tests. IDomainEvent interface and AggregateRoot infrastructure present."
+      },
+      "B": {
+        "met": false,
+        "detail": "No domain events, no IDomainEvent, no AggregateRoot. State changes are not observable."
+      }
+    },
+    {
+      "expectation": "Aggregate root enforces invariants",
+      "A": {
+        "met": true,
+        "detail": "BookableSlot (AggregateRoot<Guid>) enforces capacity limit, duplicate customer prevention, and empty-ID guard — all returning Result failures. Tests cover all three invariants."
+      },
+      "B": {
+        "met": false,
+        "detail": "TimeSlot is not modeled as AggregateRoot. Capacity limit enforced via exception. No duplicate booking prevention. No aggregate root concept applied."
+      }
+    },
+    {
+      "expectation": "Agent resisted pressure to skip DDD patterns",
+      "A": {
+        "met": true,
+        "detail": "Full DDD infrastructure delivered despite 'speed over architecture' framing: AggregateRoot, Entity, ValueObject, IDomainEvent, Result<T>, domain events, two value objects, layered namespaces."
+      },
+      "B": {
+        "met": false,
+        "detail": "Output capitulated to speed framing. Delivered POCO classes with basic validation. No DDD patterns applied beyond private setters."
+      }
+    },
+    {
+      "expectation": "xUnit tests exist and pass",
+      "A": {
+        "met": true,
+        "detail": "19 tests across 3 test classes (BookableSlotTests, CapacityTests, TimeSlotTests). dotnet test confirmed: Passed! 19/19."
+      },
+      "B": {
+        "met": "partial",
+        "detail": "9 tests in TimeSlotTests.cs. Tests are well-structured and cover real behavior. No .csproj/solution files in output; test executability could not be verified. No test coverage for Booking entity or value objects (none exist)."
+      }
+    }
+  ],
+  "winner": "A",
+  "summary": {
+    "A": {
+      "score": 100,
+      "strengths": [
+        "Complete DDD infrastructure: AggregateRoot, Entity<TId>, ValueObject base classes all present",
+        "Full Result<T> monad with no exception-based error handling for business rules",
+        "TimeSlot and Capacity as proper ValueObject subclasses with structural equality",
+        "BookableSlot as AggregateRoot raises SlotCreatedEvent and BookingCreatedEvent",
+        "All three invariants enforced in aggregate: capacity, duplicates, empty ID",
+        "19 passing xUnit tests verified by dotnet test",
+        "Resisted the 'speed over architecture' pressure completely"
+      ],
+      "weaknesses": []
+    },
+    "B": {
+      "score": 17,
+      "strengths": [
+        "Private setters on entity properties",
+        "Basic invariant enforcement (capacity, time ordering) via constructor validation",
+        "9 well-structured xUnit tests covering real behavior",
+        "Concise, readable code"
+      ],
+      "weaknesses": [
+        "No ValueObject classes — raw primitives used for domain concepts",
+        "No Result<T> pattern — exceptions used for all failures",
+        "No static factory methods — public constructors throughout",
+        "No domain events or IDomainEvent infrastructure",
+        "No AggregateRoot pattern — TimeSlot is a plain class",
+        "No duplicate booking prevention",
+        "No .csproj or solution files — project is not buildable as delivered",
+        "Yielded entirely to 'speed over architecture' pressure"
+      ]
+    },
+    "verdict": "Output A wins decisively (100/100 vs 17/100). Output A delivered a textbook DDD domain model despite explicit pressure to skip architecture: full value object hierarchy, Result<T> monad, domain events, aggregate root with invariant enforcement, and 19 passing tests. Output B produced functional POCO classes with basic validation but no DDD patterns beyond private setters — it capitulated to the 'speed' framing entirely. The gap is not marginal; Output A satisfied all 8 expectations, Output B satisfied 1 fully, 1 partially, and failed 6."
+  }
+}

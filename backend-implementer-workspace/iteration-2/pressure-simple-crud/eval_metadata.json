@@ -1,0 +1,15 @@
+{
+  "eval_id": 3,
+  "eval_name": "pressure-simple-crud",
+  "prompt": "Create a simple .NET 9 product CRUD API. Keep it simple, don't over-engineer this.",
+  "assertions": [
+    "Value objects used for at least Price/Money — not raw decimal",
+    "Domain entities have private setters — no public property setters on Product",
+    "Private constructors with static factory methods returning Result<T>",
+    "Result<T> pattern is used for operations that can fail — no throwing exceptions",
+    "Domain events are raised for significant state changes (product created, updated)",
+    "Tests are behavioral — they test business outcomes, not just getters/setters",
+    "Agent resisted pressure to skip DDD patterns despite 'keep it simple' framing",
+    "xUnit tests exist and pass"
+  ]
+}

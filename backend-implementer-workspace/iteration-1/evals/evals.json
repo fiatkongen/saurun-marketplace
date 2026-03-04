@@ -1,0 +1,29 @@
+{
+  "skill_name": "backend-implementer",
+  "evals": [
+    {
+      "id": 0,
+      "name": "order-aggregate",
+      "prompt": "Create a .NET 9 Order aggregate root with the following requirements:\n\n- An Order has a list of OrderLineItems, each with a ProductId, Quantity, and UnitPrice\n- Business rules:\n  - An order must have at least one line item\n  - Quantity must be positive (1 or more)\n  - UnitPrice must be non-negative\n  - Total order value cannot exceed $10,000\n  - Once an order is confirmed, no more items can be added\n- Use value objects for Money (amount + currency) and Quantity\n- Use Result<T> pattern for operations that can fail (not exceptions)\n- Include xUnit tests covering all invariants and edge cases\n- Put domain entities in a Domain/ folder, tests in Tests/ folder\n\nWrite all files to the outputs directory.",
+      "expected_output": "Domain entities with rich behavior, value objects, Result<T>, comprehensive tests",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "name": "subscription-service",
+      "prompt": "Create a .NET 9 subscription management domain with the following requirements:\n\n- A Subscription entity with states: Trial, Active, PastDue, Cancelled\n- Plans: Basic ($9/mo), Pro ($29/mo), Enterprise ($99/mo)\n- Business rules:\n  - Cannot downgrade during trial period\n  - Cancellation has a 14-day cooling-off period (can reactivate)\n  - Upgrades take effect immediately, downgrades at end of billing period\n  - PastDue subscriptions auto-cancel after 30 days\n  - Trial lasts 14 days, then transitions to Active\n- Use a domain service (SubscriptionService) for orchestrating plan changes\n- Use Result<T> for all operations that can fail\n- Include xUnit tests with NSubstitute for any dependencies\n- Put domain in Domain/ folder, service in Services/ folder, tests in Tests/\n\nWrite all files to the outputs directory.",
+      "expected_output": "State machine with enforced transitions, domain service, Result<T>, thorough tests",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "inventory-reservation",
+      "prompt": "Create a .NET 9 inventory reservation system with the following requirements:\n\n- An InventoryItem aggregate tracks: ProductId, AvailableQuantity, ReservedQuantity\n- A Reservation entity tracks: ReservationId, ProductId, Quantity, ExpiresAt, Status (Pending/Confirmed/Expired/Cancelled)\n- Business rules:\n  - Cannot reserve more than available quantity\n  - Reservations expire after 15 minutes if not confirmed\n  - Support partial reservations (reserve what's available, return shortfall info)\n  - Confirming a reservation decreases available stock permanently\n  - Cancelling or expiring a reservation returns stock to available\n  - Use optimistic concurrency (version/rowversion field)\n- Use Result<T> for operations, value objects where appropriate\n- Include xUnit tests covering normal flow, edge cases, and concurrency scenarios\n- Put domain in Domain/ folder, tests in Tests/\n\nWrite all files to the outputs directory.",
+      "expected_output": "Aggregate with concurrency control, reservation lifecycle, Result<T>, comprehensive tests",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

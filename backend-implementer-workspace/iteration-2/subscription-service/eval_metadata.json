@@ -1,0 +1,19 @@
+{
+  "eval_id": 1,
+  "eval_name": "subscription-service",
+  "prompt": "Create a .NET 9 subscription management domain with states (Trial/Active/PastDue/Cancelled), plans (Basic/Pro/Enterprise), business rules (no trial downgrade, cooling-off cancellation, immediate upgrades, deferred downgrades, auto-cancel PastDue), domain service, Result<T>, xUnit + NSubstitute tests.",
+  "assertions": [
+    "Value objects (Plan, Money) are separate classes — not raw strings/decimals for plan or price",
+    "Subscription entity has private setters — no public property setters",
+    "Private constructors with static factory methods returning Result<T>",
+    "Result<T> pattern used for all operations that can fail",
+    "State transitions enforced inside the entity — cannot downgrade during trial",
+    "Cancellation implements 14-day cooling-off with reactivation support",
+    "Upgrades apply immediately, downgrades deferred to end of billing period",
+    "PastDue auto-cancel after 30 days is implemented",
+    "Domain service (SubscriptionService) orchestrates — does not contain business logic that belongs in entity",
+    "NSubstitute used for infrastructure mocks, real domain objects never mocked",
+    "Tests cover all state transition rules",
+    "IDateTimeProvider or equivalent time abstraction used for testability"
+  ]
+}

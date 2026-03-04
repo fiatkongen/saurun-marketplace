@@ -1,0 +1,199 @@
+{
+  "winner": "A",
+  "reasoning": "Output A wins on DDD correctness and explicit pattern adherence. Its most critical advantage is domain events: A raises OrderCreatedEvent and OrderConfirmedEvent (expectation 10 fully met), while B raises no domain events at all. A also uses a proper ValueObject base class with structural equality via GetEqualityComponents(), whereas B uses `sealed record` which gives value equality for free but lacks a shared ValueObject abstraction and explicit equality contract. Both outputs satisfy most business rules, but A's architecture is more canonically DDD (AggregateRoot<TId>, Entity<TId>, ValueObject hierarchy, IDomainEvent), more closely matching the eval task's implicit DDD framing. B has genuine strengths — its tests are more thorough (more edge cases, encapsulation checks, accumulation loop tests), its Money type rounds to 2 decimal places, it has a Multiply operation, and its Currency is a type-safe enum rather than a raw string. However, the total missing of domain events in B is a decisive failure on expectation 10, and B's `Result<T>` is generic-only (no non-generic `Result` type for void operations), which means `Confirm()` returns `Result<Order>` returning `this` — awkward and semantically off. B also forces at least one line item at Order creation rather than at Confirm, which misreads the business rule ('min 1 item enforced at confirmation' vs. 'at creation'). A correctly enforces the min-item rule at Confirm(), not Create(), which is the more natural and flexible DDD design. Rubric scores below reflect these findings.",
+  "rubric": {
+    "A": {
+      "content": {
+        "correctness": 5,
+        "completeness": 5,
+        "accuracy": 5
+      },
+      "structure": {
+        "organization": 5,
+        "formatting": 5,
+        "usability": 4
+      },
+      "content_score": 5.0,
+      "structure_score": 4.7,
+      "overall_score": 9.7
+    },
+    "B": {
+      "content": {
+        "correctness": 4,
+        "completeness": 3,
+        "accuracy": 4
+      },
+      "structure": {
+        "organization": 4,
+        "formatting": 4,
+        "usability": 4
+      },
+      "content_score": 3.7,
+      "structure_score": 4.0,
+      "overall_score": 7.7
+    }
+  },
+  "output_quality": {
+    "A": {
+      "score": 10,
+      "strengths": [
+        "Full DDD hierarchy: AggregateRoot<TId>, Entity<TId>, ValueObject base class with GetEqualityComponents(), IDomainEvent interface",
+        "Domain events raised: OrderCreatedEvent on Create(), OrderConfirmedEvent on Confirm() — satisfies expectation 10",
+        "Private constructors + static factory methods returning Result<T> on all domain types (Order, OrderLineItem, Money, Quantity)",
+        "Private setters on all entity properties (Order, OrderLineItem)",
+        "Both Result (non-generic, void) and Result<T> present — Confirm() correctly returns Result (not Result<Order>)",
+        "Min 1 item rule enforced at Confirm() — correct design allows creating empty orders and adding items before confirming",
+        "$10K max enforced at AddLineItem() with exact boundary test (exactly 10000 allowed)",
+        "No-adds-after-confirm enforced and tested",
+        "Tests cover all 5 business rules with boundary cases (exactly $10K, quantity-based overflow)",
+        "Tests are behavioral: check outcomes, error messages, and domain event identity",
+        "Separate ValueObjects/ folder with proper namespace organization",
+        "EF Core-friendly: parameterless private constructors present"
+      ],
+      "weaknesses": [
+        "TotalAmount computed by iterating lineItems directly rather than calling LineTotal — bypasses Money.Add() for the check in AddLineItem() (uses raw decimal arithmetic for the guard, then Money.Add() for the property), a minor inconsistency",
+        "Currency represented as raw string — no type-safety (though validation is present)",
+        "Tests missing GlobalUsings.cs that makes `using OrderAggregate.Domain` implicit — minor, not a correctness issue"
+      ]
+    },
+    "B": {
+      "score": 8,
+      "strengths": [
+        "Type-safe Currency enum (USD, EUR, GBP, DKK) — better than raw string",
+        "Money.Create() rounds to 2 decimal places — more realistic monetary arithmetic",
+        "Money.Multiply() method cleanly handles quantity multiplication with Result<T>",
+        "Currency mismatch between order and line items is explicitly enforced",
+        "Sealed classes used throughout — correct for value-object-like entities",
+        "Tests are very thorough: encapsulation checks (ReadOnly cast test), accumulation loop (100 items), multi-currency, edge cases",
+        "More test cases overall (~30 vs ~20) with region organization for readability",
+        "Result<T>.Match() method provided for functional composition"
+      ],
+      "weaknesses": [
+        "No domain events raised anywhere — OrderCreatedEvent and OrderConfirmedEvent are completely absent (expectation 10 FAIL)",
+        "No IDomainEvent interface, no AggregateRoot class — missing foundational DDD infrastructure",
+        "Money and Quantity use `sealed record` — record value equality works but is incidental, not an explicit ValueObject contract; no shared ValueObject base class",
+        "No non-generic Result type: Confirm() returns Result<Order> and returns `this`, which is semantically misleading (callers might use the returned Order but it's the same instance)",
+        "Order.Create() requires a line item at construction — semantically wrong per the task ('min 1 item' is an invariant enforced at confirmation, not at creation). This makes it impossible to create an empty draft order and add items iteratively in the most natural way",
+        "No EF Core-friendly parameterless constructors on any class — cannot be used with ORM without modification",
+        "Quantity record value equality relies on record's positional equality, but Quantity has a private constructor so the synthesized Equals may not work as expected with positional properties — needs verification",
+        "Result<T> only, no void Result — forces all void-semantics operations to return Result<SomeType>"
+      ]
+    }
+  },
+  "expectation_results": {
+    "A": {
+      "passed": 10,
+      "total": 10,
+      "pass_rate": 1.0,
+      "details": [
+        {
+          "text": "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+          "passed": true,
+          "note": "Money and Quantity extend ValueObject base class with GetEqualityComponents(). Tests verify equality."
+        },
+        {
+          "text": "Domain entities have private setters — no public property setters on Order or OrderLineItem",
+          "passed": true,
+          "note": "All properties on Order (CustomerId, Status, LineItems) and OrderLineItem (ProductId, Quantity, UnitPrice) have private or no setters."
+        },
+        {
+          "text": "Entities use private constructors with static factory methods returning Result<T>",
+          "passed": true,
+          "note": "Order.Create(), OrderLineItem.Create(), Money.Create(), Quantity.Create() all use private constructors and return Result<T>."
+        },
+        {
+          "text": "Result<T> pattern is used for operations that can fail — no throwing exceptions for business rule violations",
+          "passed": true,
+          "note": "All business rule violations return Result.Failure(). No exceptions thrown for domain rules."
+        },
+        {
+          "text": "Order aggregate enforces the $10,000 maximum total invariant",
+          "passed": true,
+          "note": "MaxOrderValue = 10_000m constant. Checked in AddLineItem(). Boundary test: exactly $10K succeeds, $10K+$0.01 fails."
+        },
+        {
+          "text": "Order aggregate prevents adding items after confirmation",
+          "passed": true,
+          "note": "AddLineItem() checks Status == OrderStatus.Confirmed and returns failure. Tested in AddLineItem_WhenOrderConfirmed_ReturnsFailure."
+        },
+        {
+          "text": "Order requires at least one line item (enforced at creation or confirmation)",
+          "passed": true,
+          "note": "Confirm() checks _lineItems.Count == 0. Confirm_WithNoItems_ReturnsFailure test confirms this."
+        },
+        {
+          "text": "xUnit tests exist covering all 5 business rules",
+          "passed": true,
+          "note": "Tests cover: positive qty (QuantityTests), non-negative price (MoneyTests), min 1 item (Confirm_WithNoItems), $10K max (AddLineItem_WhenTotalWouldExceed10000), no adds after confirm (AddLineItem_WhenOrderConfirmed)."
+        },
+        {
+          "text": "Tests are behavioral — they test business outcomes, not just getters/setters",
+          "passed": true,
+          "note": "Tests assert failure reasons via error message content, check domain event identity, verify status transitions."
+        },
+        {
+          "text": "Domain events are raised for significant state changes (order created, confirmed)",
+          "passed": true,
+          "note": "OrderCreatedEvent raised in Order.Create(). OrderConfirmedEvent raised in Order.Confirm(). Both tested explicitly (Create_RaisesOrderCreatedEvent, Confirm_RaisesOrderConfirmedEvent)."
+        }
+      ]
+    },
+    "B": {
+      "passed": 7,
+      "total": 10,
+      "pass_rate": 0.7,
+      "details": [
+        {
+          "text": "Value objects (Money, Quantity) are separate classes with value equality, not raw primitives",
+          "passed": true,
+          "note": "Money and Quantity are sealed records in separate files with value equality. Tests verify equality. No explicit ValueObject base class but record equality works correctly."
+        },
+        {
+          "text": "Domain entities have private setters — no public property setters on Order or OrderLineItem",
+          "passed": true,
+          "note": "Order.Status is private set; Currency, Id, LineItems are get-only. OrderLineItem all get-only. Fully encapsulated."
+        },
+        {
+          "text": "Entities use private constructors with static factory methods returning Result<T>",
+          "passed": true,
+          "note": "Order.Create(), OrderLineItem.Create(), Money.Create(), Quantity.Create() all use private constructors and return Result<T>."
+        },
+        {
+          "text": "Result<T> pattern is used for operations that can fail — no throwing exceptions for business rule violations",
+          "passed": true,
+          "note": "All business rule violations return Result<T>.Failure(). No exceptions thrown for domain rules."
+        },
+        {
+          "text": "Order aggregate enforces the $10,000 maximum total invariant",
+          "passed": true,
+          "note": "MaxOrderValue = 10_000m. Enforced in AddLineItemInternal(). Boundary tested (exactly $10K succeeds, $10,001 fails)."
+        },
+        {
+          "text": "Order aggregate prevents adding items after confirmation",
+          "passed": true,
+          "note": "AddLineItem() checks Status == Confirmed and returns failure. AddLineItem_ToConfirmedOrder_ReturnsFailure test confirms."
+        },
+        {
+          "text": "Order requires at least one line item (enforced at creation or confirmation)",
+          "passed": true,
+          "note": "Enforced at Order.Create() (requires first line item). Confirm() also checks _lineItems.Count == 0. Partial: design forces item at create which differs from canonical 'enforced at confirm' pattern, but the invariant is technically enforced."
+        },
+        {
+          "text": "xUnit tests exist covering all 5 business rules",
+          "passed": true,
+          "note": "Tests cover: positive qty, non-negative price, min 1 item (implicit via Create requiring item), $10K max, no adds after confirm."
+        },
+        {
+          "text": "Tests are behavioral — they test business outcomes, not just getters/setters",
+          "passed": true,
+          "note": "Tests check error messages, status transitions, accumulation correctness, encapsulation (ReadOnly cast check). Behavioral quality is strong."
+        },
+        {
+          "text": "Domain events are raised for significant state changes (order created, confirmed)",
+          "passed": false,
+          "note": "No domain events exist. No IDomainEvent interface, no AggregateRoot with DomainEvents collection, no OrderCreatedEvent or OrderConfirmedEvent. This expectation is completely unmet."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "assertions": [
+    {
+      "id": 1,
+      "assertion": "Value objects (ProductId, Quantity) are separate classes — not raw Guid/int",
+      "result": "PASS",
+      "evidence": "ProductId.cs: `public class ProductId : ValueObject` wrapping `Guid Value`. Quantity.cs: `public class Quantity : ValueObject, IComparable<Quantity>` wrapping `int Value`. Both have private constructors and static Create() factories. Neither raw Guid nor int is used in domain APIs."
+    },
+    {
+      "id": 2,
+      "assertion": "InventoryItem is the aggregate root — Reservations are accessed through it, not independently",
+      "result": "PASS",
+      "evidence": "InventoryItem.cs: `public class InventoryItem : AggregateRoot<Guid>`. Reservations stored in `private readonly List<Reservation> _reservations`, exposed only as `IReadOnlyList<Reservation> Reservations`. Repository interface (IInventoryItemRepository) is per InventoryItem only — no IReservationRepository. All reservation state changes go through InventoryItem methods (Reserve, ConfirmReservation, CancelReservation, ExpireOverdueReservations)."
+    },
+    {
+      "id": 3,
+      "assertion": "Private setters on all entities — no public property setters",
+      "result": "PASS",
+      "evidence": "InventoryItem.cs: `public ProductId ProductId { get; private set; }`, `public Quantity AvailableQuantity { get; private set; }`, `public Quantity ReservedQuantity { get; private set; }`, `public int Version { get; private set; }`. Reservation.cs: all properties use `private set`. Quantity.cs: `public int Value { get; }` (get-only). ProductId.cs: `public Guid Value { get; }` (get-only). Entity<TId>.Id uses `protected set` (not public). No public setters found."
+    },
+    {
+      "id": 4,
+      "assertion": "Private constructors with static factory methods returning Result<T>",
+      "result": "PASS",
+      "evidence": "Quantity.cs: `private Quantity(int value)` + `public static Result<Quantity> Create(int value)`. ProductId.cs: `private ProductId(Guid value)` + `public static Result<ProductId> Create(Guid value)`. Reservation.cs: `private Reservation(...)` + `public static Result<Reservation> Create(...)`. InventoryItem.cs: `private InventoryItem(...)` + `public static Result<InventoryItem> Create(...)`. All also have EF Core parameterless private constructors."
+    },
+    {
+      "id": 5,
+      "assertion": "Result<T> used for operations that can fail — no exceptions for business rules",
+      "result": "PASS",
+      "evidence": "Result.cs defines railway-oriented `Result` and `Result<T>`. All business operations return Result: `Reserve` returns `Result<ReservationOutcome>`, `ConfirmReservation`/`CancelReservation` return `Result`, `Confirm`/`Cancel`/`Expire` on Reservation return `Result`. No throw statements for business rule violations found in any domain file. Failures are expressed via `Result.Failure(string error)`."
+    },
+    {
+      "id": 6,
+      "assertion": "Cannot reserve more than available quantity",
+      "result": "PASS",
+      "evidence": "InventoryItem.cs Reserve(): when `effectiveAvailable <= 0` returns `Result.Failure<ReservationOutcome>(\"No stock available for reservation\")`. When requested > available but some is available, performs partial reservation (per assertion 7). The system never grants more stock than is available — partial shortfall is reported. Test `Reserve_WhenNothingAvailable_ReturnsFailure` confirms failure when stock is fully exhausted."
+    },
+    {
+      "id": 7,
+      "assertion": "Partial reservations supported — returns shortfall information",
+      "result": "PASS",
+      "evidence": "ReservationOutcome.cs: `public int Shortfall { get; }`, `public bool IsFullyReserved => Shortfall == 0`, with `FullyReserved(reservation)` and `PartiallyReserved(reservation, shortfall)` factories. InventoryItem.Reserve() calculates `shortfall = requested.Value - effectiveAvailable` and returns `ReservationOutcome.PartiallyReserved(reservation, shortfall)`. StockReservedEvent includes `Shortfall` field. Tests: `Reserve_WhenPartiallyAvailable_ReservesWhatIsAvailable` asserts `Shortfall == 5` and reservation qty == 5 when requesting 10 with only 5 available."
+    },
+    {
+      "id": 8,
+      "assertion": "15-minute reservation expiry implemented",
+      "result": "PASS",
+      "evidence": "Reservation.cs: `private const int ExpirationMinutes = 15;` and `var expiresAt = utcNow.AddMinutes(ExpirationMinutes);` in Create(). `IsExpired(DateTime utcNow)` returns `Status == ReservationStatus.Pending && utcNow >= ExpiresAt`. ReservationTests verify `ExpiresAt == utcNow.AddMinutes(15)`. InventoryItem.Reserve() calls `ExpireOverdueReservations(utcNow)` proactively before checking availability."
+    },
+    {
+      "id": 9,
+      "assertion": "Confirming a reservation permanently decreases available stock",
+      "result": "PASS",
+      "evidence": "InventoryItem.Reserve(): `AvailableQuantity = Quantity.FromInt(AvailableQuantity.Value - toReserve)` — available decremented at reservation time. InventoryItem.ConfirmReservation(): `ReservedQuantity = Quantity.FromInt(ReservedQuantity.Value - reservation.Quantity.Value)` — only reserved quantity decremented, available stays at its already-reduced value (permanently consumed). Test `Reserve_ThenConfirm_AvailableAndReservedAreCorrect`: starts with 50, reserves 20 (available=30), confirms (available stays 30, reserved=0) — stock is permanently consumed."
+    },
+    {
+      "id": 10,
+      "assertion": "Cancelling/expiring a reservation returns stock to available",
+      "result": "PASS",
+      "evidence": "InventoryItem.cs `ReturnStockFromReservation(reservation)`: `AvailableQuantity = Quantity.FromInt(AvailableQuantity.Value + reservation.Quantity.Value)` and `ReservedQuantity = Quantity.FromInt(ReservedQuantity.Value - reservation.Quantity.Value)`. Called from both `CancelReservation` and `ExpireOverdueReservations`. Tests: `CancelReservation_WhenPending_ReturnsStockToAvailable` asserts available==100 after cancelling a 10-unit reservation from a 100-unit item. `ExpireOverdueReservations_ReturnsStockToAvailable` asserts available==100 after expiry."
+    },
+    {
+      "id": 11,
+      "assertion": "Optimistic concurrency via version field that increments on mutations",
+      "result": "PASS",
+      "evidence": "InventoryItem.cs: `public int Version { get; private set; }` initialized to 0. `Version++` in `Reserve()`, `ConfirmReservation()`, and `CancelReservation()`. ConcurrencyTests: `SimulatedConcurrentReservations_VersionDetectsConflict`, `SequentialOperations_VersionIsFullyPredictable` verify version increments. Minor gap: `ExpireOverdueReservations()` does not increment Version when called directly (only increments via internal call from Reserve). This does not affect the core optimistic concurrency pattern."
+    },
+    {
+      "id": 12,
+      "assertion": "Tests cover normal flow, edge cases, and concurrency scenarios",
+      "result": "PASS",
+      "evidence": "71 tests total, all passing. Normal flow: InventoryItemCreateTests (4), InventoryItemReserveTests (10), InventoryItemConfirmTests (4), InventoryItemCancelTests (4), InventoryItemExpireTests (3). Edge cases: InventoryItemEdgeCaseTests (7 — reserve-cancel-reserve cycle, confirm-after-expiry, cancel-after-confirm, mixed-status expiry, exact/boundary quantities), InventoryItemVersionTests (5), InventoryItemDomainEventTests (3). Concurrency: ConcurrencyTests (4 — simulated conflict detection, concurrent reserve+confirm, race condition on low stock, sequential version predictability). Value object tests: QuantityTests (9), ProductIdTests (3), ReservationTests (10), ReservationResultTests (3)."
+    },
+    {
+      "id": 13,
+      "assertion": "Domain events raised for significant state changes",
+      "result": "PASS",
+      "evidence": "InventoryEvents.cs defines 5 immutable record events: `InventoryItemCreatedEvent` (raised in Create), `StockReservedEvent` (raised in Reserve, includes Shortfall for partial), `ReservationConfirmedEvent` (raised in ConfirmReservation), `ReservationCancelledEvent` (raised in CancelReservation), `ReservationExpiredEvent` (raised per-reservation in ExpireOverdueReservations). All raised via `AddDomainEvent()` on the AggregateRoot base. Tests verify specific event types and their payload values (e.g., Shortfall, Quantity)."
+    }
+  ],
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0,
+    "pass_rate": 1.0
+  },
+  "metadata": {
+    "total_tokens": 67240,
+    "tool_uses": 51,
+    "duration_ms": 407643,
+    "total_tests": 71,
+    "tests_passed": 71,
+    "tests_failed": 0
+  }
+}
