@@ -1,0 +1,8 @@
+{
+  "name": "neo",
+  "description": "Implementation foreman plugin — orchestrates parallel Claude Code agents in git worktrees, merges results, reports status",
+  "version": "1.0.0",
+  "author": {
+    "name": "Rasmus Hove Munk"
+  }
+}
