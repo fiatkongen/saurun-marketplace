@@ -345,6 +345,7 @@ Remove files that the Vite template creates but we don't need:
 rm -f "{path}/frontend/src/App.css"
 rm -f "{path}/frontend/public/vite.svg"
 rm -f "{path}/frontend/src/assets/react.svg"
+rmdir --ignore-fail-on-non-empty "{path}/frontend/src/assets" 2>/dev/null
 ```
 
 ## Step 9: Write Dockerfile

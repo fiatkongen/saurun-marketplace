@@ -1,44 +1,78 @@
-# Plan: Neo Scaffold Skill
+# Plan: Scaffold Smoke Test
 
 ## Context
 
-The existing `scaffold` skill creates a basic local project (.NET 9, no frontend build, no Docker, no deploy). The design at `_docs/neo-scaffold-skill-design.md` specifies a full pipeline: empty dir → live deployed URL in one call. The SKILL.md draft (491 lines) has already been written to `plugins/saurun/skills/scaffold/SKILL.md` but needs review/fixes, and the `references/` dir is empty.
+The scaffold skill (`plugins/saurun/skills/scaffold/SKILL.md`) creates a full .NET 10 + React 19 project in 14 steps (0-13). Steps 0-10 are local, steps 11-13 involve GitHub/Railway. We need an external smoke test to verify the skill actually creates all expected files and builds succeed — not an LLM eval, just "run it and check outputs."
 
-## Tasks
+## Files to Create
 
-### T1: Copy default design template to references/
-- Copy `_docs/default-design-template.md` → `plugins/saurun/skills/scaffold/references/default-design-template.md`
-- Verbatim copy — SKILL.md step 3 reads from this bundled reference
-- **Verify:** `diff` shows no difference
+| File | Purpose |
+|------|---------|
+| `plugins/saurun/skills/scaffold/tests/verify.sh` | Standalone assertion script — checks file existence, content, builds |
+| `plugins/saurun/skills/scaffold/tests/smoke-test.sh` | End-to-end orchestrator — temp dir, `claude -p`, then `verify.sh` |
 
-### T2: Fix SKILL.md issues
-Minor fixes to the already-written draft:
+## T1: `verify.sh <path>` — Deterministic Assertions
 
-1. **Step 8c (tsconfig merge)** — Clarify that `baseUrl` and `paths` must be MERGED into the existing `compilerOptions`, not replace the whole file. Vite's template already has `compilerOptions` with other settings.
+Pure bash script. Takes a project path, runs 30 checks, exits non-zero on any failure.
 
-2. **Step 8g cleanup** — Also remove `src/assets/` dir if empty after deleting `react.svg`.
+**Checks (grouped):**
 
-3. **Verify `Skill(use-railway)` stays in allowed-tools** — Confirmed by user.
+File existence (14):
+- `backend/Api/Api.csproj`, `backend/Api/Program.cs`
+- `frontend/package.json`, `frontend/vite.config.ts`, `frontend/tsconfig.app.json`
+- `frontend/src/index.css`, `frontend/src/App.tsx`
+- `Dockerfile`, `.dockerignore`, `.gitignore`
+- `CLAUDE.md`, `_docs/spec.md`, `_docs/design.md`, `_docs/deploy.md`
 
-4. **Verify gate count** — 12 local + 2 build + 4 remote = 18. Matches the design doc's decision table. The summary in the design doc that says "20" is wrong, but we use 18. Confirm SKILL.md report says "18/18".
+Content (9):
+- `Api.csproj` contains `net10.0`
+- `Program.cs` contains `/health`
+- `package.json` contains `react` + `tailwindcss`
+- `vite.config.ts` contains `proxy`
+- `tsconfig.app.json` contains `@/`
+- `index.css` contains `tailwindcss`
+- `design.md` contains `--background` (CSS custom properties)
+- `Dockerfile` contains multi-stage (`FROM.*AS`)
 
-### T3: Final review pass
-- Confirm all 14 steps (0-13) present and numbered correctly
-- Confirm file paths consistent throughout
-- Confirm error handling table covers all failure modes
-- Read through once for clarity
+Boilerplate removal (2):
+- `src/App.css` does NOT exist
+- `public/vite.svg` does NOT exist
 
-## Files to Create/Modify
+Git (2):
+- `.git/` directory exists
+- At least 1 commit
 
-| File | Action |
-|------|--------|
-| `plugins/saurun/skills/scaffold/references/default-design-template.md` | **Create** — copy from `_docs/default-design-template.md` |
-| `plugins/saurun/skills/scaffold/SKILL.md` | **Edit** — minor fixes from T2 |
+shadcn (1, warn-only):
+- `frontend/components.json` exists
+
+Build (2):
+- `cd backend/Api && dotnet build --verbosity quiet`
+- `cd frontend && npm run build`
+
+**Output format:** `PASS:` / `FAIL:` / `WARN:` per check, summary line, exit 1 on any FAIL.
+
+## T2: `smoke-test.sh` — End-to-End Orchestrator
+
+1. Create temp dir + dummy spec file
+2. Pre-flight: check `dotnet --version` (10.x) and `node --version` (22+). Exit 2 if missing.
+3. Invoke `claude -p` with prompt telling it to run scaffold for the temp dir + spec, skipping steps 11-13 (GitHub/Railway) and their pre-flight checks (3-5).
+   - Flags: `--permission-mode dontAsk --allowedTools "Bash Write Read Glob Grep Skill"`
+   - `Skill(use-railway)` excluded from allowedTools → Railway calls blocked
+4. Run `verify.sh` on the result
+5. Cleanup via `trap 'rm -rf "$TMPDIR"' EXIT`
+
+**Exit codes:** 0 = pass, 1 = fail, 2 = skip (missing prereqs)
 
 ## Verification
 
-1. `diff _docs/default-design-template.md plugins/saurun/skills/scaffold/references/default-design-template.md` → no diff
-2. `grep -c "Step" plugins/saurun/skills/scaffold/SKILL.md` → 14 steps (0-13)
-3. `grep "18/18" plugins/saurun/skills/scaffold/SKILL.md` → present in report template
-4. `grep "use-railway" plugins/saurun/skills/scaffold/SKILL.md` → referenced in step 12 + allowed-tools
-5. `wc -l plugins/saurun/skills/scaffold/SKILL.md` → ~490 lines
+```bash
+# Syntax check both scripts
+bash -n plugins/saurun/skills/scaffold/tests/verify.sh
+bash -n plugins/saurun/skills/scaffold/tests/smoke-test.sh
+
+# Run verify.sh on any existing scaffolded project (manual sanity check)
+./plugins/saurun/skills/scaffold/tests/verify.sh ~/repos/some-existing-project
+
+# Full end-to-end (creates temp project, takes ~3-5 min)
+./plugins/saurun/skills/scaffold/tests/smoke-test.sh
+```
