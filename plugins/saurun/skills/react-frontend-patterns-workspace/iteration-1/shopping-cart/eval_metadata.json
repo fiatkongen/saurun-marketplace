@@ -1,0 +1,15 @@
+{
+  "eval_id": 1,
+  "eval_name": "shopping-cart",
+  "prompt": "I need a shopping cart feature for my React e-commerce app. Show a product grid that fetches from `/api/products` with category filtering, an add-to-cart button on each product, and a cart sidebar showing items with quantity controls and a total. TypeScript, include stores and hooks.",
+  "assertions": [
+    {"id": "no-bare-store", "text": "No bare useStore() — all store access uses selectors like useStore((s) => s.field)", "type": "programmatic"},
+    {"id": "server-data-in-tq", "text": "Product data fetched via useQuery, not useState+useEffect+fetch", "type": "programmatic"},
+    {"id": "mutation-invalidation", "text": "Mutations use useMutation with onSuccess invalidation (if applicable)", "type": "programmatic"},
+    {"id": "query-key-structure", "text": "Query keys follow [domain, action, params] pattern", "type": "qualitative"},
+    {"id": "derived-total", "text": "Cart total computed in a selector, not stored as a separate state field", "type": "programmatic"},
+    {"id": "store-reset", "text": "Cart store includes a reset() method", "type": "programmatic"},
+    {"id": "state-colocation", "text": "Products in TanStack Query cache, cart state in Zustand — not both in the same store", "type": "qualitative"},
+    {"id": "data-testid", "text": "Interactive elements (buttons, quantity controls) have data-testid attributes", "type": "programmatic"}
+  ]
+}

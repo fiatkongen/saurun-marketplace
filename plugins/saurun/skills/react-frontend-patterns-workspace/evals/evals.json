@@ -1,0 +1,26 @@
+{
+  "skill_name": "react-frontend-patterns",
+  "evals": [
+    {
+      "id": 0,
+      "name": "task-manager",
+      "prompt": "Build a task management page for a React app. It should fetch tasks from a REST API (`/api/tasks`), let users create new tasks, mark them complete, and filter by status (all/active/completed). Use TypeScript. Include the Zustand store, API hooks, and the page component.",
+      "expected_output": "React components with proper state colocation: TanStack Query for server data, Zustand for UI state (filters), selectors not bare stores, mutation invalidation",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "shopping-cart",
+      "prompt": "I need a shopping cart feature for my React e-commerce app. Show a product grid that fetches from `/api/products` with category filtering, an add-to-cart button on each product, and a cart sidebar showing items with quantity controls and a total. TypeScript, include stores and hooks.",
+      "expected_output": "Cart state in Zustand with selectors, product data via TanStack Query, derived total computed in selector, proper error boundaries",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "dashboard-notifications",
+      "prompt": "Create a dashboard page that shows user statistics fetched from `/api/stats`, has a tabbed layout (overview/analytics/settings) where the active tab is in the URL, and a notification system where toasts can be triggered from anywhere in the app. React + TypeScript.",
+      "expected_output": "Stats via TanStack Query, notifications in Zustand, tab state from URL/router params, not all state dumped into one store",
+      "files": []
+    }
+  ]
+}

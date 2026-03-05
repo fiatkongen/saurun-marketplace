@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "No bare useStore() — all store access uses selectors", "passed": true, "evidence": "All access via exported selector hooks: useNotifications(), useNotificationCount(), useNotificationActions(). useShallow for multi-field actions. No bare useNotificationStore()."},
+    {"text": "Stats data fetched via useQuery, not useState+useEffect+fetch", "passed": true, "evidence": "useStats() hook uses useQuery with statsKeys. 2 useQuery occurrences."},
+    {"text": "Active tab state from URL/router params, not useState/Zustand", "passed": true, "evidence": "useDashboardTab() reads/writes ?tab= via useSearchParams. Default tab omits param for clean URL."},
+    {"text": "Notification state in Zustand store (global UI state)", "passed": true, "evidence": "useNotificationStore manages toasts. devtools middleware. Separate from server data."},
+    {"text": "Notification store includes reset() method", "passed": true, "evidence": "initialState extracted, reset() action restores it."},
+    {"text": "Three-way state colocation: stats in TQ, tabs in URL, notifications in Zustand", "passed": true, "evidence": "Stats via useQuery (server data). Tabs via useSearchParams (URL state). Notifications via Zustand (global UI). Perfect colocation per the skill's decision tree."},
+    {"text": "Query keys follow [domain, action, params] pattern", "passed": true, "evidence": "statsKeys = { all: ['stats'], detail: () => [...statsKeys.all, 'detail'] }"},
+    {"text": "Interactive elements have data-testid attributes", "passed": true, "evidence": "28 data-testid occurrences on tabs, buttons, checkboxes, toast dismissals, stat cards."}
+  ]
+}

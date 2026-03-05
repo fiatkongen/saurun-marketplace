@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "No bare useStore() — all store access uses selectors", "passed": false, "evidence": "toast-store.ts exports useToastStore with no selector hooks. Components access store directly. No useNotifications() or useNotificationActions() helpers."},
+    {"text": "Stats data fetched via useQuery, not useState+useEffect+fetch", "passed": false, "evidence": "use-stats.ts uses useState + useEffect + fetch pattern. 3 useState calls for stats, isLoading, error."},
+    {"text": "Active tab state from URL/router params, not useState/Zustand", "passed": true, "evidence": "use-dashboard-tab.ts uses useSearchParams to read/write ?tab= param. Good: this pattern emerged even without the skill."},
+    {"text": "Notification state in Zustand store (global UI state)", "passed": true, "evidence": "toast-store.ts uses Zustand with convenience toast.success/error/warning/info functions via getState()."},
+    {"text": "Notification store includes reset() method", "passed": false, "evidence": "toast-store.ts has addToast and removeToast but no reset() method. No initialState extraction."},
+    {"text": "Three-way state colocation: stats in TQ, tabs in URL, notifications in Zustand", "passed": false, "evidence": "Tabs in URL (good) and notifications in Zustand (good), but stats via useState+useEffect (should be TQ). 2/3 correct."},
+    {"text": "Query keys follow [domain, action, params] pattern", "passed": false, "evidence": "No TanStack Query used, therefore no query keys."},
+    {"text": "Interactive elements have data-testid attributes", "passed": false, "evidence": "0 data-testid attributes found in any component."}
+  ]
+}

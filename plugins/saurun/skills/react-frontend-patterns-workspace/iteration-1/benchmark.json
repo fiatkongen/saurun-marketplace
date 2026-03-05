@@ -1,0 +1,155 @@
+{
+  "metadata": {
+    "skill_name": "react-frontend-patterns",
+    "skill_path": "plugins/saurun/skills/react-frontend-patterns",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-opus-4-6",
+    "timestamp": "2026-03-05T06:25:00Z",
+    "evals_run": ["task-manager", "shopping-cart", "dashboard-notifications"],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_name": "task-manager",
+      "configurations": {
+        "with_skill": {
+          "pass_rate": 1.0,
+          "passed": 8,
+          "total": 8,
+          "time_seconds": 89.0,
+          "tokens": 31456,
+          "expectations": [
+            {"text": "No bare useStore()", "passed": true, "evidence": "All components use exported selector hooks"},
+            {"text": "Server data in TanStack Query", "passed": true, "evidence": "useTasks() uses useQuery, 5 occurrences"},
+            {"text": "Mutation invalidation", "passed": true, "evidence": "useCreateTask/useToggleTask use useMutation+invalidateQueries"},
+            {"text": "Query key structure [domain,action,params]", "passed": true, "evidence": "taskKeys factory with proper structure"},
+            {"text": "Derived state computed, not stored", "passed": true, "evidence": "Filtered tasks via useMemo, no stored counts"},
+            {"text": "Store has reset()", "passed": true, "evidence": "initialState extracted, reset() action"},
+            {"text": "Proper state colocation", "passed": true, "evidence": "Tasks in TQ, filter in Zustand"},
+            {"text": "data-testid on interactive elements", "passed": true, "evidence": "12 occurrences"}
+          ]
+        },
+        "without_skill": {
+          "pass_rate": 0.125,
+          "passed": 1,
+          "total": 8,
+          "time_seconds": 49.8,
+          "tokens": 19329,
+          "expectations": [
+            {"text": "No bare useStore()", "passed": false, "evidence": "useTaskStore() bare destructuring in use-tasks-api.ts"},
+            {"text": "Server data in TanStack Query", "passed": false, "evidence": "useState+useEffect+fetch pattern"},
+            {"text": "Mutation invalidation", "passed": false, "evidence": "Manual fetch+setState, no useMutation"},
+            {"text": "Query key structure [domain,action,params]", "passed": false, "evidence": "No TanStack Query at all"},
+            {"text": "Derived state computed, not stored", "passed": true, "evidence": "useFilteredTasks computes filtered tasks"},
+            {"text": "Store has reset()", "passed": false, "evidence": "No reset method"},
+            {"text": "Proper state colocation", "passed": false, "evidence": "Server data (tasks) stored in Zustand"},
+            {"text": "data-testid on interactive elements", "passed": false, "evidence": "0 occurrences"}
+          ]
+        }
+      }
+    },
+    {
+      "eval_name": "shopping-cart",
+      "configurations": {
+        "with_skill": {
+          "pass_rate": 0.875,
+          "passed": 7,
+          "total": 8,
+          "time_seconds": 145.5,
+          "tokens": 37048,
+          "expectations": [
+            {"text": "No bare useStore()", "passed": true, "evidence": "All access via selector hooks"},
+            {"text": "Server data in TanStack Query", "passed": true, "evidence": "useProducts() uses useQuery"},
+            {"text": "Mutation invalidation", "passed": false, "evidence": "N/A: cart is client-only, no server mutations"},
+            {"text": "Query key structure [domain,action,params]", "passed": true, "evidence": "productKeys factory"},
+            {"text": "Derived total in selector, not stored", "passed": true, "evidence": "useCartTotal/useCartCount compute in selectors"},
+            {"text": "Store has reset()", "passed": true, "evidence": "initialState + reset() + devtools"},
+            {"text": "Products in TQ, cart in Zustand", "passed": true, "evidence": "Clear domain separation"},
+            {"text": "data-testid on interactive elements", "passed": true, "evidence": "21 occurrences"}
+          ]
+        },
+        "without_skill": {
+          "pass_rate": 0.125,
+          "passed": 1,
+          "total": 8,
+          "time_seconds": 104.7,
+          "tokens": 23197,
+          "expectations": [
+            {"text": "No bare useStore()", "passed": false, "evidence": "No selector hooks exported"},
+            {"text": "Server data in TanStack Query", "passed": false, "evidence": "useState+useEffect+fetch in use-products.ts"},
+            {"text": "Mutation invalidation", "passed": false, "evidence": "No TanStack Query at all"},
+            {"text": "Query key structure [domain,action,params]", "passed": false, "evidence": "No TQ query keys"},
+            {"text": "Derived total in selector, not stored", "passed": true, "evidence": "useMemo computes totals in use-cart.ts"},
+            {"text": "Store has reset()", "passed": false, "evidence": "clearCart() but no reset()"},
+            {"text": "Products in TQ, cart in Zustand", "passed": false, "evidence": "Products via useState, not TQ"},
+            {"text": "data-testid on interactive elements", "passed": false, "evidence": "0 occurrences"}
+          ]
+        }
+      }
+    },
+    {
+      "eval_name": "dashboard-notifications",
+      "configurations": {
+        "with_skill": {
+          "pass_rate": 1.0,
+          "passed": 8,
+          "total": 8,
+          "time_seconds": 188.6,
+          "tokens": 39933,
+          "expectations": [
+            {"text": "No bare useStore()", "passed": true, "evidence": "Selector hooks + useShallow for actions"},
+            {"text": "Stats in TanStack Query", "passed": true, "evidence": "useStats() uses useQuery"},
+            {"text": "Tab state from URL params", "passed": true, "evidence": "useDashboardTab() uses useSearchParams"},
+            {"text": "Notifications in Zustand", "passed": true, "evidence": "useNotificationStore with devtools"},
+            {"text": "Store has reset()", "passed": true, "evidence": "initialState + reset()"},
+            {"text": "Three-way state colocation", "passed": true, "evidence": "Stats=TQ, tabs=URL, notifications=Zustand"},
+            {"text": "Query key structure", "passed": true, "evidence": "statsKeys factory"},
+            {"text": "data-testid on interactive elements", "passed": true, "evidence": "28 occurrences"}
+          ]
+        },
+        "without_skill": {
+          "pass_rate": 0.25,
+          "passed": 2,
+          "total": 8,
+          "time_seconds": 75.8,
+          "tokens": 21895,
+          "expectations": [
+            {"text": "No bare useStore()", "passed": false, "evidence": "No selector hooks on toast store"},
+            {"text": "Stats in TanStack Query", "passed": false, "evidence": "useState+useEffect+fetch"},
+            {"text": "Tab state from URL params", "passed": true, "evidence": "useSearchParams correctly used"},
+            {"text": "Notifications in Zustand", "passed": true, "evidence": "toast-store.ts uses Zustand"},
+            {"text": "Store has reset()", "passed": false, "evidence": "No reset method"},
+            {"text": "Three-way state colocation", "passed": false, "evidence": "2/3 correct, stats not in TQ"},
+            {"text": "Query key structure", "passed": false, "evidence": "No TQ"},
+            {"text": "data-testid on interactive elements", "passed": false, "evidence": "0 occurrences"}
+          ]
+        }
+      }
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "mean_pass_rate": 0.958,
+      "mean_time_seconds": 141.0,
+      "mean_tokens": 36146
+    },
+    "without_skill": {
+      "mean_pass_rate": 0.167,
+      "mean_time_seconds": 76.8,
+      "mean_tokens": 21474
+    },
+    "delta": {
+      "pass_rate": "+0.791 (+79.1pp)",
+      "time_seconds": "+64.2s (+83.6%)",
+      "tokens": "+14672 (+68.3%)"
+    }
+  },
+  "analyst_observations": [
+    "Massive quality improvement: 95.8% vs 16.7% pass rate — +79pp delta.",
+    "Biggest wins: TanStack Query adoption (0/3 baseline vs 3/3), data-testid (0/3 vs 3/3), store reset (0/3 vs 3/3).",
+    "Near-tie assertion: derived state — both versions compute totals/counts rather than storing. This is common React knowledge.",
+    "Partial baseline credit: dashboard correctly put tabs in URL + notifications in Zustand (2/3 state colocation). The skill's decision tree diagram drives the remaining win (server data -> TQ).",
+    "Cost: +84% time, +68% tokens. Justified: baseline code lacks caching, error boundaries, test infrastructure, a11y IDs.",
+    "Non-discriminating: 'no bare useStore()' detection is fragile with multi-line destructuring. Manual review found the baseline DOES use bare stores."
+  ]
+}

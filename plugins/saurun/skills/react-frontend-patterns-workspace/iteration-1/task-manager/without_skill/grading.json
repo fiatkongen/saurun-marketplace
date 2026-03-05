@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "No bare useStore() — all store access uses selectors", "passed": false, "evidence": "use-tasks-api.ts line 19: 'const { setTasks, addTask, toggleTask, setLoading, setError } = useTaskStore()' — bare destructuring of entire store. Programmatic grep missed this due to multi-line destructuring."},
+    {"text": "Server data fetched via useQuery, not useState+useEffect+fetch", "passed": false, "evidence": "use-tasks-api.ts uses useEffect + fetch + manual setState pattern. No TanStack Query dependency at all."},
+    {"text": "Mutations use useMutation with onSuccess invalidation", "passed": false, "evidence": "No useMutation found. Creates/toggles tasks via manual fetch() calls with direct Zustand store mutations."},
+    {"text": "Query keys follow [domain, action, params] pattern", "passed": false, "evidence": "No TanStack Query used, therefore no query keys at all."},
+    {"text": "Derived state computed in selectors, not stored", "passed": true, "evidence": "useFilteredTasks() function computes filtered tasks from store selectors, not stored as separate state."},
+    {"text": "Zustand store includes reset() method", "passed": false, "evidence": "task-store.ts has no reset() method and no initialState extraction. No test teardown support."},
+    {"text": "Proper state colocation: server data in TQ, UI state in Zustand/URL", "passed": false, "evidence": "Tasks (server data) stored directly in Zustand alongside filter (UI state). Everything in one store. Should be: tasks in TQ cache, filter in Zustand."},
+    {"text": "Interactive elements have data-testid attributes", "passed": false, "evidence": "0 data-testid attributes found in any component."}
+  ]
+}

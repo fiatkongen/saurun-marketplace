@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "No bare useStore() — all store access uses selectors", "passed": false, "evidence": "No exported selector hooks. Components likely access useCartStore() directly. Cart store exports no useCartItems/useCartActions helpers."},
+    {"text": "Server data fetched via useQuery, not useState+useEffect+fetch", "passed": false, "evidence": "use-products.ts uses useState + useEffect + fetch + AbortController. 4 separate useState calls for products, categories, isLoading, error. No TanStack Query."},
+    {"text": "Mutations use useMutation with onSuccess invalidation", "passed": false, "evidence": "No TanStack Query, no useMutation. N/A but consistent with pattern of not using TQ at all."},
+    {"text": "Query keys follow [domain, action, params] pattern", "passed": false, "evidence": "No TanStack Query used, therefore no query keys."},
+    {"text": "Cart total computed in selector, not stored as state field", "passed": true, "evidence": "use-cart.ts computes totalItems and totalPrice via useMemo from store items. Not stored in Zustand state."},
+    {"text": "Zustand store includes reset() method", "passed": false, "evidence": "cart-store.ts has clearCart() but no reset() method. No initialState extraction. No test teardown support."},
+    {"text": "Products in TanStack Query, cart in Zustand — proper separation", "passed": false, "evidence": "Products fetched via useState+useEffect (not TQ). Cart in Zustand. Separation exists but not using the right tool for server data."},
+    {"text": "Interactive elements have data-testid attributes", "passed": false, "evidence": "0 data-testid attributes found in any component."}
+  ]
+}
