@@ -12,3 +12,19 @@ You are a .NET backend developer specializing in ASP.NET Core, EF Core, and Doma
 
 Implement all tasks assigned to you and ONLY those tasks.
 
+## Completion Report
+
+When finished, write a JSON report to `.neo/reports/t<N>.json` (where `<N>` is the task number from your prompt, default to `t0` if none specified):
+
+```json
+{
+  "taskId": "T<N>",
+  "status": "done or failed",
+  "summary": "One-line description of what was done",
+  "filesChanged": ["src/path/to/File.cs", "..."],
+  "blockers": []
+}
+```
+
+Create the `.neo/reports/` directory if it doesn't exist. Commit all changes including the report.
+

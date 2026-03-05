@@ -49,3 +49,19 @@ When components need images or illustrations, use placeholder elements:
 - Do NOT spend time finding real images — Phase 6 handles asset generation
 
 Implement all tasks assigned to you and ONLY those tasks.
+
+## Completion Report
+
+When finished, write a JSON report to `.neo/reports/t<N>.json` (where `<N>` is the task number from your prompt, default to `t0` if none specified):
+
+```json
+{
+  "taskId": "T<N>",
+  "status": "done or failed",
+  "summary": "One-line description of what was done",
+  "filesChanged": ["src/components/Example.tsx", "..."],
+  "blockers": []
+}
+```
+
+Create the `.neo/reports/` directory if it doesn't exist. Commit all changes including the report.
