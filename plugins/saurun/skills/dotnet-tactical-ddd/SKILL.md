@@ -5,29 +5,26 @@ description: Use when building .NET backend APIs with business logic, domain rul
 
 # .NET Tactical DDD — Enforcement Protocol
 
-This skill defines **mandatory constraints** on all .NET backend code you write. These are not suggestions. Code that violates these rules is broken and must be fixed before committing. These rules apply regardless of what the implementation plan specifies.
+Mandatory constraints for all .NET backend code. Violations must be fixed before committing. These rules override implementation plan structure when they conflict.
 
 ## Step 0: Install Base Classes (FIRST)
 
-Before writing ANY entity code, copy [base-classes.cs](base-classes.cs) into `Domain/Common/`. This file provides `Result<T>`, `ValueObject`, `AggregateRoot<TId>`, `Entity<TId>`, and `IDomainEvent`.
-
-**Every entity you write MUST inherit from these.** If the target project already has base classes, use those instead.
+Before writing ANY entity, copy [base-classes.cs](base-classes.cs) into `Domain/Common/`. Every entity MUST inherit from these. If the project already has base classes, use those.
 
 ## Mandatory Rules
 
-### 1. Every Entity Inherits Base Classes
+### 1. Base Class Inheritance
 
 ```csharp
-// REQUIRED — no exceptions
-public class Order : AggregateRoot<Guid> { ... }
-public class OrderLine : Entity<int> { ... }
+public class Order : AggregateRoot<Guid> { ... }   // aggregate root
+public class OrderLine : Entity<int> { ... }        // child entity
 ```
 
 Bare `public class Order { ... }` is a violation.
 
-### 2. Private Constructors + Factory Returning Result<T>
+### 2. Private Constructors + Result<T> Factories
 
-Every entity has a private constructor. The only public creation path is a static `Create()` method returning `Result<T>`. If creation genuinely cannot fail, return the type directly — but this is rare.
+Private constructor only. Public creation via static `Create()` returning `Result<T>`. Object initializers in factories are banned — use the constructor.
 
 ```csharp
 private Order() { } // EF Core
@@ -44,82 +41,54 @@ public static Result<Order> Create(Guid customerId) {
 }
 ```
 
-`new Order()` from outside the class is a violation. `public Order(...)` is a violation.
+### 3. Zero Public/Init Setters in Domain
 
-**Object initializers in factories are banned.** `return new Order { Title = title }` bypasses the constructor chain and invariant protection. Always use the private constructor: `return new Order(id, title)`.
-
-### 3. Zero Public Setters in Domain
-
-All properties: `{ get; private set; }`. State changes happen through behavior methods that enforce invariants and raise events.
-
-```csharp
-public OrderStatus Status { get; private set; }
-
-public Result Ship() {
-    if (Status != OrderStatus.Ready) return Result.Failure("Order not ready");
-    Status = OrderStatus.Shipped;
-    AddDomainEvent(new OrderShippedEvent(Id, DateTime.UtcNow));
-    return Result.Success();
-}
-```
-
-`{ get; set; }` on a domain entity is a violation. `{ get; init; }` is also a violation — init setters allow external assignment at construction. Direct property assignment from outside the entity is a violation.
+All properties: `{ get; private set; }`. `{ get; set; }` and `{ get; init; }` are violations. State changes only through behavior methods.
 
 ### 4. Domain Events on Every State Change
 
-Every method that mutates state MUST raise a domain event via `AddDomainEvent()`. Events are immutable records, past tense. This includes `Create()` — entity creation is a state change.
+Every method that mutates state raises a domain event via `AddDomainEvent()`. Includes `Create()`. Events are immutable records, past tense.
 
 ```csharp
 public record OrderCreatedEvent(Guid OrderId, Guid CustomerId, DateTime OccurredAt) : IDomainEvent;
 public record OrderShippedEvent(Guid OrderId, DateTime OccurredAt) : IDomainEvent;
-public record OrderLineAddedEvent(Guid OrderId, Guid ProductId, int Quantity, DateTime OccurredAt) : IDomainEvent;
 ```
 
-A state-changing method without `AddDomainEvent()` is a violation. A `Create()` method without an event is a violation.
+A mutation without `AddDomainEvent()` is a violation.
 
-### 5. All Mutation Methods Return Result — Never Void
+### 5. All Mutations Return Result — Never Void
 
-Every public method that changes state MUST return `Result` or `Result<T>`. Never `void`. Never throw exceptions for business rule violations.
+Every public state-changing method returns `Result` or `Result<T>`. Never `void`. Never throw exceptions for business rules. Application services also return `Result<T>`, not `Task<T?>`.
 
 ```csharp
-// GOOD — returns Result, caller can handle failure
 public Result UpdateStatus(OrderStatus newStatus) {
     if (Status == OrderStatus.Completed) return Result.Failure("Cannot modify completed order");
     Status = newStatus;
     AddDomainEvent(new OrderStatusChangedEvent(Id, newStatus, DateTime.UtcNow));
     return Result.Success();
 }
-
-// BAD — void, no error path, no event
-public void UpdateStatus(OrderStatus newStatus) {
-    Status = newStatus;
-}
 ```
 
-`public void` on a state-changing domain method is a violation. `throw new Exception("business rule")` is a violation.
+### 6. Value Objects — At Least One Per Aggregate
 
-**Application services also use Result<T>**, not nullable returns:
-```csharp
-// GOOD
-public async Task<Result<BuildDto>> UpdateBuildAsync(int id, UpdateRequest request) { ... }
+Every aggregate root MUST have at least one value object. An aggregate with zero VOs is a violation.
 
-// BAD — nullable hides the failure reason
-public async Task<BuildDto?> UpdateBuildAsync(int id, UpdateRequest request) { ... }
-```
+**Mandatory VO triggers** (convert to `ValueObject` if these exist as raw primitives):
+- Money/currency → `Money`
+- Email → `Email`
+- URLs/repo paths → `RepoUrl`
+- Names with constraints → `AgentName` (length, allowed chars)
+- Typed IDs across aggregates → `BuildId`, `CustomerId`
 
-### 6. Value Objects for Domain Concepts
+When unsure if a primitive deserves a VO → make it a VO. Raw `decimal` for money is always a violation.
 
-Strings/decimals/ints that represent domain concepts MUST be value objects inheriting `ValueObject`. Every aggregate root: identify at least two candidates. Common examples: Money, Email, Url, Quantity, typed IDs (CustomerId, OrderId).
+### 7. DTOs at API Boundaries
 
-**Rule of thumb:** If two different `string` properties mean different things (Name vs Email), at least one should be a value object. Raw `decimal` for money is always a violation.
-
-### 7. DTOs at API Boundaries — Always
-
-Controllers receive request DTOs, return response DTOs. Never expose domain entities. Map via extension methods: `ToDto()`, `ToDomain()`, `UpdateFromRequest()`.
+Controllers receive request DTOs, return response DTOs. Never expose entities. Map via extension methods: `ToDto()`, `ToDomain()`, `UpdateFromRequest()`.
 
 ### 8. Repository Per Aggregate
 
-One interface per aggregate root in `Domain/Interfaces/` or `Application/Interfaces/`. Controllers and services depend on the interface, never on `DbContext` directly.
+One interface per aggregate root. Controllers and services depend on the interface, never `DbContext`.
 
 ```csharp
 public interface IOrderRepository {
@@ -129,11 +98,11 @@ public interface IOrderRepository {
 }
 ```
 
-`DbContext` injected into a controller or application service is a violation. Controllers must depend on application services or repository interfaces — never on infrastructure directly.
+`DbContext` in a controller or application service is a violation.
 
-### 9. EF Core Configuration (Required for Private Setters to Work)
+### 9. EF Core Configuration
 
-Private setters and private collections WILL FAIL at runtime without explicit EF Core configuration. This is not optional.
+Private setters FAIL at runtime without this. One `IEntityTypeConfiguration<T>` per entity.
 
 ```csharp
 public class OrderConfiguration : IEntityTypeConfiguration<Order>
@@ -141,79 +110,63 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.HasKey(o => o.Id);
-
-        // Private collection — MUST configure backing field access
         builder.HasMany(o => o.Lines).WithOne().HasForeignKey("OrderId");
-        builder.Navigation(o => o.Lines)
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-        // Value object as owned type
+        builder.Navigation(o => o.Lines).UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.OwnsOne(o => o.TotalPrice, p => {
             p.Property(m => m.Amount).HasColumnName("TotalAmount");
             p.Property(m => m.Currency).HasColumnName("TotalCurrency");
         });
-
-        // Enum stored as string
         builder.Property(o => o.Status).HasConversion<string>();
     }
 }
 ```
 
-**Rules:**
-- One `IEntityTypeConfiguration<T>` per entity — no exceptions
 - `UsePropertyAccessMode(PropertyAccessMode.Field)` for every private collection
 - `OwnsOne()` for every value object property
 - Enums: `.HasConversion<string>()`
-- Apply via `modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly)`
-- All entities need parameterless `protected` constructor for EF (already in base-classes.cs)
-
-Missing an EF config for a private collection = runtime crash. This is a violation.
+- Apply via `modelBuilder.ApplyConfigurationsFromAssembly(...)`
 
 ### 10. Layer Rule
 
-`Domain/` has zero dependencies on Infrastructure, EF Core, or any external package. `Api/Controllers/` must not import Infrastructure — they depend on Application services only.
+Domain/ has zero Infrastructure dependencies. Controllers depend on Application services only.
 
-```
-Api/Controllers/ → Application/Services/ → Domain/ (via repository interfaces)
-                                         → Infrastructure/ (implementations registered via DI)
-```
-
-`using Microsoft.EntityFrameworkCore` in Domain/ is a violation. `using Infrastructure.Persistence` in Api/Controllers/ is a violation.
+`using Microsoft.EntityFrameworkCore` in Domain/ is a violation. `using Infrastructure` in Controllers/ is a violation.
 
 ## Pre-Commit Verification
 
-**Run these checks before committing. If ANY fails, fix it.**
+**Run before committing. If ANY fails, fix it.**
 
 ```bash
-# 1. All entities must inherit base classes
-grep -rL "AggregateRoot\|Entity<" Domain/Entities/ && echo "FAIL: entities not inheriting base classes"
+# 1. Entities inherit base classes
+grep -rL "AggregateRoot\|Entity<" Domain/Entities/ && echo "FAIL: bare entities"
 
-# 2. No public setters in Domain entities
-grep -rn "{ get; set; }\|{ get; init; }" Domain/Entities/ && echo "FAIL: public/init setters in domain"
+# 2. No public/init setters
+grep -rn "{ get; set; }\|{ get; init; }" Domain/Entities/ && echo "FAIL: public setters"
 
-# 3. Domain events exist (at least one record implementing IDomainEvent)
-grep -rn "IDomainEvent" Domain/ | grep -q "record" || echo "FAIL: no domain event records found"
+# 3. Domain events exist
+grep -rn "IDomainEvent" Domain/ | grep -q "record" || echo "FAIL: no domain events"
 
-# 4. No DbContext in controllers or application services
-grep -rn "DbContext" **/Controllers/ **/Services/ 2>/dev/null && echo "FAIL: DbContext leaked outside Infrastructure"
+# 4. No DbContext outside Infrastructure
+grep -rn "DbContext" **/Controllers/ **/Services/ 2>/dev/null && echo "FAIL: DbContext leak"
 
-# 5. Result<T> used in entity factory methods
-grep -rn "Result<" Domain/Entities/ | grep -q "." || echo "FAIL: no Result<T> return types in entities"
+# 5. Result<T> in factories
+grep -rn "Result<" Domain/Entities/ | grep -q "." || echo "FAIL: no Result<T>"
 
-# 6. No void mutation methods in domain entities
-grep -rn "public void" Domain/Entities/ && echo "FAIL: void mutation methods — must return Result"
+# 6. No void mutations
+grep -rn "public void" Domain/Entities/ && echo "FAIL: void mutations"
 
-# 7. No object initializers in factory methods
-grep -A5 "static.*Create" Domain/Entities/ | grep -q "new.*{" && echo "FAIL: object initializer in factory — use constructor"
+# 7. No object initializers in factories
+grep -A5 "static.*Create" Domain/Entities/ | grep -q "new.*{" && echo "FAIL: object initializer"
 
-# 8. Base classes installed
-ls Domain/Common/*.cs 2>/dev/null | grep -q "." || echo "FAIL: base classes missing in Domain/Common/"
+# 8. Value objects exist
+ls Domain/ValueObjects/*.cs 2>/dev/null | grep -q "." || echo "FAIL: no value objects"
 
-# 9. EF Core configurations exist
-ls Infrastructure/Persistence/Configurations/*Configuration.cs 2>/dev/null | grep -q "." || echo "FAIL: no EF Core entity configurations"
+# 9. Base classes installed
+ls Domain/Common/*.cs 2>/dev/null | grep -q "." || echo "FAIL: no base classes"
 
-# 10. Layer isolation — no Infrastructure imports in Controllers
-grep -rn "using.*Infrastructure" **/Controllers/ 2>/dev/null && echo "FAIL: Controllers importing Infrastructure"
+# 10. EF Core configs exist
+ls Infrastructure/Persistence/Configurations/*Configuration.cs 2>/dev/null | grep -q "." || echo "FAIL: no EF configs"
+
+# 11. Layer isolation
+grep -rn "using.*Infrastructure" **/Controllers/ 2>/dev/null && echo "FAIL: layer violation"
 ```
-
-All checks must pass. No exceptions. No "I'll fix it later."
