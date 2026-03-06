@@ -69,9 +69,48 @@ Test behavior, not structure. Ask: "If this test didn't exist, what bug could sh
 
 ## CustomWebApplicationFactory (copy once)
 
+**Check what the project uses, then pick the matching pattern.**
+
+### SQLite projects (greenfield default)
+
+Swap file-based → in-memory SQLite. Same SQL dialect, zero mismatch, no Docker needed. In-memory SQLite dies when the connection closes, so the connection MUST be kept alive.
+
 ```csharp
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        _connection.Open();
+        builder.ConfigureServices(services =>
+        {
+            var descriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+            if (descriptor != null) services.Remove(descriptor);
+
+            services.AddDbContext<AppDbContext>(o => o.UseSqlite(_connection));
+
+            var sp = services.BuildServiceProvider();
+            using var scope = sp.CreateScope();
+            scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
+        });
+    }
+
+    protected override void Dispose(bool disposing) { _connection.Dispose(); base.Dispose(disposing); }
+}
+```
+
+### PostgreSQL projects (Testcontainers)
+
+Test against real PostgreSQL in Docker. Zero SQL dialect mismatch. Requires `Testcontainers.PostgreSql` NuGet.
+
+```csharp
+public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
+{
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
+        .WithImage("postgres:16-alpine").Build();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -80,21 +119,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
             if (descriptor != null) services.Remove(descriptor);
 
-            var connection = new SqliteConnection("DataSource=:memory:");
-            connection.Open(); // Keep alive for test lifetime
-
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlite(connection));
+            services.AddDbContext<AppDbContext>(o => o.UseNpgsql(_postgres.GetConnectionString()));
 
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.EnsureCreated();
+            scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
         });
     }
-}
 
-// Usage: all integration tests share it
+    public async Task InitializeAsync() => await _postgres.StartAsync();
+    public async Task DisposeAsync() => await _postgres.DisposeAsync();
+}
+```
+
+### Usage (same for both)
+
+```csharp
 public class OrderTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly HttpClient _client;
@@ -102,7 +142,7 @@ public class OrderTests : IClassFixture<CustomWebApplicationFactory>
 }
 ```
 
-Use SQLite in-memory with kept-alive connection. EF InMemory provider is a violation (doesn't enforce constraints/FK/SQL behavior).
+**EF InMemory provider is a violation** (doesn't enforce constraints, FK, or SQL behavior). Always use real database engine matching production.
 
 ## Test Project Structure
 
