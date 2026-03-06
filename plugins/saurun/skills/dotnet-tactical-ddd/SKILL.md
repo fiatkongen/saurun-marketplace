@@ -126,7 +126,20 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 - Enums: `.HasConversion<string>()`
 - Apply via `modelBuilder.ApplyConfigurationsFromAssembly(...)`
 
-### 10. Layer Rule
+### 10. Database Setup: Migrate, Never EnsureCreated
+
+Use `Database.Migrate()` in `Program.cs` — never `EnsureCreated()`. `EnsureCreated` skips migration history, so the schema can never evolve and mixing the two corrupts EF state.
+
+```csharp
+// Program.cs — after building the app
+using var scope = app.Services.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+db.Database.Migrate();
+```
+
+`EnsureCreated` or `EnsureCreatedAsync` anywhere in the codebase is a violation.
+
+### 11. Layer Rule
 
 Domain/ has zero Infrastructure dependencies. Controllers depend on Application services only.
 
@@ -167,6 +180,9 @@ ls Domain/Common/*.cs 2>/dev/null | grep -q "." || echo "FAIL: no base classes"
 # 10. EF Core configs exist
 ls Infrastructure/Persistence/Configurations/*Configuration.cs 2>/dev/null | grep -q "." || echo "FAIL: no EF configs"
 
-# 11. Layer isolation
+# 11. No EnsureCreated
+grep -rn "EnsureCreated" **/*.cs 2>/dev/null && echo "FAIL: use Database.Migrate() not EnsureCreated"
+
+# 12. Layer isolation
 grep -rn "using.*Infrastructure" **/Controllers/ 2>/dev/null && echo "FAIL: layer violation"
 ```
