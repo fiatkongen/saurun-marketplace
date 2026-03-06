@@ -125,10 +125,18 @@ See `_docs/design.md` for UI design system.
 ## Deploy
 See `_docs/deploy.md` for Railway rules and Dockerfile.
 
+## Architecture
+Clean Architecture with 4 backend projects:
+- **Api** — Controllers, Program.cs, middleware
+- **Application** — Use cases, DTOs, service interfaces
+- **Domain** — Entities, value objects, domain events, enums
+- **Infrastructure** — EF Core, repositories, external services
+
 ## Commands
 ```bash
-# Backend
-cd backend/Api && dotnet build && dotnet run
+# Backend (from backend/)
+dotnet build
+cd Api && dotnet run
 
 # Frontend
 cd frontend && npm install && npm run dev
@@ -202,10 +210,42 @@ dist/
 _docs/
 ```
 
-## Step 7: Backend scaffold
+## Step 7: Backend scaffold (Clean Architecture — 4 projects)
+
+Create solution + 4 projects:
 
 ```bash
-cd "{path}/backend" && dotnet new web -n Api
+cd "{path}/backend"
+dotnet new sln -n {ProjectName}
+dotnet new web -n Api
+dotnet new classlib -n Application
+dotnet new classlib -n Domain
+dotnet new classlib -n Infrastructure
+
+# Add all to solution
+dotnet sln add Api/Api.csproj
+dotnet sln add Application/Application.csproj
+dotnet sln add Domain/Domain.csproj
+dotnet sln add Infrastructure/Infrastructure.csproj
+
+# Set up project references (dependency direction: Api → Application → Domain, Infrastructure → Domain)
+cd Api && dotnet add reference ../Application/Application.csproj ../Infrastructure/Infrastructure.csproj && cd ..
+cd Application && dotnet add reference ../Domain/Domain.csproj && cd ..
+cd Infrastructure && dotnet add reference ../Domain/Domain.csproj ../Application/Application.csproj && cd ..
+```
+
+Replace `{ProjectName}` with PascalCase version of `{project_name}` (e.g., `my-app` → `MyApp`).
+
+Delete boilerplate `Class1.cs` from classlibs:
+```bash
+rm -f Application/Class1.cs Domain/Class1.cs Infrastructure/Class1.cs
+```
+
+Create standard domain folders:
+```bash
+mkdir -p Domain/Entities Domain/ValueObjects Domain/Events Domain/Enums
+mkdir -p Application/Interfaces Application/DTOs Application/Services
+mkdir -p Infrastructure/Data Infrastructure/Repositories
 ```
 
 Then **overwrite** `{path}/backend/Api/Program.cs` with:
@@ -213,6 +253,7 @@ Then **overwrite** `{path}/backend/Api/Program.cs` with:
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -224,6 +265,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 app.UseCors();
 app.UseStaticFiles();
+app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
@@ -234,6 +276,8 @@ app.Run();
 ```
 
 This gives us:
+- Clean Architecture with 4 separate assemblies (Api, Application, Domain, Infrastructure)
+- Controller support (not minimal APIs)
 - `/health` endpoint for deploy verification
 - Static file serving for production (frontend in wwwroot)
 - SPA fallback for client-side routing
@@ -364,9 +408,14 @@ RUN npm run build
 # Stage 2: Build backend
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
 WORKDIR /src
-COPY backend/Api/ .
-COPY --from=frontend /app/dist ./wwwroot
-RUN dotnet publish -c Release -o /app
+COPY backend/Domain/Domain.csproj Domain/
+COPY backend/Application/Application.csproj Application/
+COPY backend/Infrastructure/Infrastructure.csproj Infrastructure/
+COPY backend/Api/Api.csproj Api/
+RUN dotnet restore Api/Api.csproj
+COPY backend/ .
+COPY --from=frontend /app/dist Api/wwwroot/
+RUN dotnet publish Api/Api.csproj -c Release -o /app
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
@@ -426,7 +475,11 @@ Run all applicable checks. Report pass/fail for each.
 
 ```bash
 cd "{path}"
-test -f backend/Api/Api.csproj && grep -q "net10.0" backend/Api/Api.csproj && echo "PASS: backend csproj targets net10.0" || echo "FAIL: backend csproj"
+test -f backend/Api/Api.csproj && grep -q "net10.0" backend/Api/Api.csproj && echo "PASS: Api.csproj targets net10.0" || echo "FAIL: Api.csproj"
+test -f backend/Domain/Domain.csproj && echo "PASS: Domain project" || echo "FAIL: Domain project missing"
+test -f backend/Application/Application.csproj && echo "PASS: Application project" || echo "FAIL: Application project missing"
+test -f backend/Infrastructure/Infrastructure.csproj && echo "PASS: Infrastructure project" || echo "FAIL: Infrastructure project missing"
+dotnet sln backend/*.sln list 2>/dev/null | grep -q "Api" && echo "PASS: solution file" || echo "FAIL: solution file"
 grep -q "/health" backend/Api/Program.cs && echo "PASS: /health endpoint" || echo "FAIL: /health endpoint"
 test -f frontend/package.json && grep -q "react" frontend/package.json && grep -q "tailwindcss" frontend/package.json && echo "PASS: frontend package.json" || echo "FAIL: frontend package.json"
 test -f frontend/components.json && echo "PASS: shadcn initialized" || echo "WARN: shadcn not initialized"
@@ -443,7 +496,7 @@ git log --oneline -1 >/dev/null 2>&1 && echo "PASS: initial commit" || echo "FAI
 ### Build verification (2 checks)
 
 ```bash
-cd "{path}/backend/Api" && dotnet build --verbosity quiet && echo "PASS: backend builds" || echo "FAIL: backend build"
+cd "{path}/backend" && dotnet build --verbosity quiet && echo "PASS: backend builds (all 4 projects)" || echo "FAIL: backend build"
 cd "{path}/frontend" && npm run build >/dev/null 2>&1 && echo "PASS: frontend builds" || echo "FAIL: frontend build"
 ```
 
