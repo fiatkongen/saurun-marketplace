@@ -115,6 +115,11 @@ export function Button({ className, variant, size, ...props }: ButtonProps) {
 }
 ```
 
+**shadcn/ui is mandatory.** If the project uses shadcn/ui (check for `components.json`):
+- Use existing shadcn components — NEVER hand-roll a button, card, input, badge, dialog, select, or any component shadcn provides.
+- Need a component shadcn has? `npx shadcn@latest add <component>` — don't write it yourself.
+- If shadcn is NOT initialized yet: run `npx shadcn@latest init --yes --defaults` first, then add needed components.
+
 **Wrap shadcn, don't modify source.** Modifying shadcn source files is a violation.
 
 **Error boundaries:** Every app needs page-level + feature-level error boundaries. No error boundaries = violation.
