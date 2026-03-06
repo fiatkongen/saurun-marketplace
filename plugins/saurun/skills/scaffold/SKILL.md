@@ -126,17 +126,17 @@ See `_docs/design.md` for UI design system.
 See `_docs/deploy.md` for Railway rules and Dockerfile.
 
 ## Architecture
-Clean Architecture with 4 backend projects:
-- **Api** — Controllers, Program.cs, middleware
-- **Application** — Use cases, DTOs, service interfaces
-- **Domain** — Entities, value objects, domain events, enums
-- **Infrastructure** — EF Core, repositories, external services
+Clean Architecture with 4 backend projects (PascalCase prefix):
+- **{Prefix}.Api** — Controllers, Program.cs, middleware
+- **{Prefix}.Application** — Use cases, DTOs, service interfaces
+- **{Prefix}.Domain** — Entities, value objects, domain events, enums
+- **{Prefix}.Infrastructure** — EF Core, repositories, external services
 
 ## Commands
 ```bash
 # Backend (from backend/)
 dotnet build
-cd Api && dotnet run
+cd {Prefix}.Api && dotnet run
 
 # Frontend
 cd frontend && npm install && npm run dev
@@ -216,39 +216,43 @@ Create solution + 4 projects:
 
 ```bash
 cd "{path}/backend"
-dotnet new sln -n {ProjectName}
-dotnet new web -n Api
-dotnet new classlib -n Application
-dotnet new classlib -n Domain
-dotnet new classlib -n Infrastructure
+
+# Derive PascalCase prefix from project name (e.g., my-app → MyApp)
+# {Prefix} used below = PascalCase of {project_name}
+
+dotnet new sln -n {Prefix}
+dotnet new web -n {Prefix}.Api
+dotnet new classlib -n {Prefix}.Application
+dotnet new classlib -n {Prefix}.Domain
+dotnet new classlib -n {Prefix}.Infrastructure
 
 # Add all to solution
-dotnet sln add Api/Api.csproj
-dotnet sln add Application/Application.csproj
-dotnet sln add Domain/Domain.csproj
-dotnet sln add Infrastructure/Infrastructure.csproj
+dotnet sln add {Prefix}.Api/{Prefix}.Api.csproj
+dotnet sln add {Prefix}.Application/{Prefix}.Application.csproj
+dotnet sln add {Prefix}.Domain/{Prefix}.Domain.csproj
+dotnet sln add {Prefix}.Infrastructure/{Prefix}.Infrastructure.csproj
 
-# Set up project references (dependency direction: Api → Application → Domain, Infrastructure → Domain)
-cd Api && dotnet add reference ../Application/Application.csproj ../Infrastructure/Infrastructure.csproj && cd ..
-cd Application && dotnet add reference ../Domain/Domain.csproj && cd ..
-cd Infrastructure && dotnet add reference ../Domain/Domain.csproj ../Application/Application.csproj && cd ..
+# Set up project references
+cd {Prefix}.Api && dotnet add reference ../{Prefix}.Application/{Prefix}.Application.csproj ../{Prefix}.Infrastructure/{Prefix}.Infrastructure.csproj && cd ..
+cd {Prefix}.Application && dotnet add reference ../{Prefix}.Domain/{Prefix}.Domain.csproj && cd ..
+cd {Prefix}.Infrastructure && dotnet add reference ../{Prefix}.Domain/{Prefix}.Domain.csproj ../{Prefix}.Application/{Prefix}.Application.csproj && cd ..
 ```
 
-Replace `{ProjectName}` with PascalCase version of `{project_name}` (e.g., `my-app` → `MyApp`).
+Replace `{Prefix}` with PascalCase version of `{project_name}` (e.g., `my-app` → `MyApp`, `mission-control` → `MissionControl`).
 
 Delete boilerplate `Class1.cs` from classlibs:
 ```bash
-rm -f Application/Class1.cs Domain/Class1.cs Infrastructure/Class1.cs
+rm -f {Prefix}.Application/Class1.cs {Prefix}.Domain/Class1.cs {Prefix}.Infrastructure/Class1.cs
 ```
 
 Create standard domain folders:
 ```bash
-mkdir -p Domain/Entities Domain/ValueObjects Domain/Events Domain/Enums
-mkdir -p Application/Interfaces Application/DTOs Application/Services
-mkdir -p Infrastructure/Data Infrastructure/Repositories
+mkdir -p {Prefix}.Domain/Entities {Prefix}.Domain/ValueObjects {Prefix}.Domain/Events {Prefix}.Domain/Enums
+mkdir -p {Prefix}.Application/Interfaces {Prefix}.Application/DTOs {Prefix}.Application/Services
+mkdir -p {Prefix}.Infrastructure/Data {Prefix}.Infrastructure/Repositories
 ```
 
-Then **overwrite** `{path}/backend/Api/Program.cs` with:
+Then **overwrite** `{path}/backend/{Prefix}.Api/Program.cs` with:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -408,21 +412,21 @@ RUN npm run build
 # Stage 2: Build backend
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
 WORKDIR /src
-COPY backend/Domain/Domain.csproj Domain/
-COPY backend/Application/Application.csproj Application/
-COPY backend/Infrastructure/Infrastructure.csproj Infrastructure/
-COPY backend/Api/Api.csproj Api/
-RUN dotnet restore Api/Api.csproj
+COPY backend/{Prefix}.Domain/{Prefix}.Domain.csproj {Prefix}.Domain/
+COPY backend/{Prefix}.Application/{Prefix}.Application.csproj {Prefix}.Application/
+COPY backend/{Prefix}.Infrastructure/{Prefix}.Infrastructure.csproj {Prefix}.Infrastructure/
+COPY backend/{Prefix}.Api/{Prefix}.Api.csproj {Prefix}.Api/
+RUN dotnet restore {Prefix}.Api/{Prefix}.Api.csproj
 COPY backend/ .
-COPY --from=frontend /app/dist Api/wwwroot/
-RUN dotnet publish Api/Api.csproj -c Release -o /app
+COPY --from=frontend /app/dist {Prefix}.Api/wwwroot/
+RUN dotnet publish {Prefix}.Api/{Prefix}.Api.csproj -c Release -o /app
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=backend /app .
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "dotnet Api.dll --urls http://+:${PORT:-8080}"]
+ENTRYPOINT ["sh", "-c", "dotnet {Prefix}.Api.dll --urls http://+:${PORT:-8080}"]
 ```
 
 Port is handled via shell-form ENTRYPOINT so Railway's `$PORT` env var is evaluated at
@@ -475,12 +479,12 @@ Run all applicable checks. Report pass/fail for each.
 
 ```bash
 cd "{path}"
-test -f backend/Api/Api.csproj && grep -q "net10.0" backend/Api/Api.csproj && echo "PASS: Api.csproj targets net10.0" || echo "FAIL: Api.csproj"
-test -f backend/Domain/Domain.csproj && echo "PASS: Domain project" || echo "FAIL: Domain project missing"
-test -f backend/Application/Application.csproj && echo "PASS: Application project" || echo "FAIL: Application project missing"
-test -f backend/Infrastructure/Infrastructure.csproj && echo "PASS: Infrastructure project" || echo "FAIL: Infrastructure project missing"
+test -f backend/{Prefix}.Api/{Prefix}.Api.csproj && grep -q "net10.0" backend/{Prefix}.Api/{Prefix}.Api.csproj && echo "PASS: Api.csproj targets net10.0" || echo "FAIL: Api.csproj"
+test -f backend/{Prefix}.Domain/{Prefix}.Domain.csproj && echo "PASS: Domain project" || echo "FAIL: Domain project missing"
+test -f backend/{Prefix}.Application/{Prefix}.Application.csproj && echo "PASS: Application project" || echo "FAIL: Application project missing"
+test -f backend/{Prefix}.Infrastructure/{Prefix}.Infrastructure.csproj && echo "PASS: Infrastructure project" || echo "FAIL: Infrastructure project missing"
 dotnet sln backend/*.sln list 2>/dev/null | grep -q "Api" && echo "PASS: solution file" || echo "FAIL: solution file"
-grep -q "/health" backend/Api/Program.cs && echo "PASS: /health endpoint" || echo "FAIL: /health endpoint"
+grep -q "/health" backend/{Prefix}.Api/Program.cs && echo "PASS: /health endpoint" || echo "FAIL: /health endpoint"
 test -f frontend/package.json && grep -q "react" frontend/package.json && grep -q "tailwindcss" frontend/package.json && echo "PASS: frontend package.json" || echo "FAIL: frontend package.json"
 test -f frontend/components.json && echo "PASS: shadcn initialized" || echo "WARN: shadcn not initialized"
 test -f Dockerfile && echo "PASS: Dockerfile" || echo "FAIL: Dockerfile"
