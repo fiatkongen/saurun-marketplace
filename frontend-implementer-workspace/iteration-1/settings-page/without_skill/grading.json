@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "All interactive elements have data-testid attributes",
+      "passed": false,
+      "evidence": "Zero data-testid attributes found in any component"
+    },
+    {
+      "text": "Images use data-asset placeholder convention (not placeholder URLs)",
+      "passed": false,
+      "evidence": "No data-asset attributes found. Avatar uses file upload but no placeholder convention"
+    },
+    {
+      "text": "Zustand state in dedicated store file with selector hooks (no bare useStore)",
+      "passed": true,
+      "evidence": "settings-store.ts exists with Zustand store. 2 exported selector hooks. No bare useStore() calls"
+    },
+    {
+      "text": "Page decomposed into multiple focused components (not monolithic)",
+      "passed": true,
+      "evidence": "8 files total: 5 TSX components (SettingsPage, ProfileTab, NotificationsTab, AppearanceTab, Toast) + 3 TS modules"
+    },
+    {
+      "text": "Uses Tailwind v4 patterns (shadow-xs, inset-ring, focus-visible:, @theme)",
+      "passed": false,
+      "evidence": "Zero Tailwind v4 specific patterns found. Uses standard Tailwind classes only"
+    },
+    {
+      "text": "No TypeScript 'any' types used",
+      "passed": true,
+      "evidence": "Zero instances of ': any', 'as any', or '<any>' found"
+    },
+    {
+      "text": "Responsive design with mobile breakpoint handling",
+      "passed": true,
+      "evidence": "11 responsive breakpoint classes found. Tabs become dropdown on mobile"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 3,
+    "total": 7,
+    "pass_rate": 0.57
+  }
+}

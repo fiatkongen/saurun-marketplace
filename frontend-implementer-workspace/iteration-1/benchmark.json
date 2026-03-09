@@ -1,0 +1,189 @@
+{
+  "metadata": {
+    "skill_name": "frontend-implementer",
+    "skill_path": "/Users/rasmushovemunk/repos/saurun-marketplace/plugins/saurun/agents/frontend-implementer.md",
+    "executor_model": "claude-opus-4-6",
+    "analyzer_model": "claude-opus-4-6",
+    "timestamp": "2026-03-05T12:00:00Z",
+    "evals_run": [1, 2, 3],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "Settings Page",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.86,
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "time_seconds": 266.7,
+        "tokens": 53732,
+        "tool_calls": 17,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "All interactive elements have data-testid attributes", "passed": true, "evidence": "23 data-testid attributes found"},
+        {"text": "Images use data-asset placeholder convention", "passed": false, "evidence": "No data-asset found (settings page has minimal image needs)"},
+        {"text": "Zustand selector hooks (no bare useStore)", "passed": true, "evidence": "14 selector hooks, useShallow for multi-field selectors"},
+        {"text": "Component decomposition (not monolithic)", "passed": true, "evidence": "9 files: 6 TSX + 3 TS"},
+        {"text": "Tailwind v4 patterns", "passed": true, "evidence": "30 v4 patterns (inset-ring, focus-visible:)"},
+        {"text": "No TypeScript any types", "passed": true, "evidence": "Zero any instances"},
+        {"text": "Responsive design", "passed": true, "evidence": "16 responsive classes, tabs to dropdown on mobile"}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "Settings Page",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.57,
+        "passed": 4,
+        "failed": 3,
+        "total": 7,
+        "time_seconds": 145.8,
+        "tokens": 25767,
+        "tool_calls": 12,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "All interactive elements have data-testid attributes", "passed": false, "evidence": "Zero data-testid found"},
+        {"text": "Images use data-asset placeholder convention", "passed": false, "evidence": "No data-asset found"},
+        {"text": "Zustand selector hooks (no bare useStore)", "passed": true, "evidence": "2 selector hooks, no bare calls"},
+        {"text": "Component decomposition (not monolithic)", "passed": true, "evidence": "8 files: 5 TSX + 3 TS"},
+        {"text": "Tailwind v4 patterns", "passed": false, "evidence": "Zero v4-specific patterns"},
+        {"text": "No TypeScript any types", "passed": true, "evidence": "Zero any instances"},
+        {"text": "Responsive design", "passed": true, "evidence": "11 responsive classes"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "Activity Dashboard",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.86,
+        "passed": 6,
+        "failed": 1,
+        "total": 7,
+        "time_seconds": 184.2,
+        "tokens": 45179,
+        "tool_calls": 21,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "All interactive elements have data-testid attributes", "passed": true, "evidence": "17 data-testid attributes found"},
+        {"text": "Images use data-asset placeholder convention", "passed": false, "evidence": "Uses hash-based avatar colors, no data-asset"},
+        {"text": "Zustand selector hooks (no bare useStore)", "passed": true, "evidence": "7 selector hooks with useFiltersSnapshot"},
+        {"text": "Component decomposition (not monolithic)", "passed": true, "evidence": "15 files: 8 TSX + 7 TS"},
+        {"text": "Tailwind v4 patterns", "passed": true, "evidence": "4 v4 patterns found"},
+        {"text": "No TypeScript any types", "passed": true, "evidence": "Zero any instances"},
+        {"text": "Responsive design", "passed": true, "evidence": "3 responsive classes, adaptive grid"}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "Activity Dashboard",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.57,
+        "passed": 4,
+        "failed": 3,
+        "total": 7,
+        "time_seconds": 195.9,
+        "tokens": 35113,
+        "tool_calls": 30,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "All interactive elements have data-testid attributes", "passed": false, "evidence": "Zero data-testid found"},
+        {"text": "Images use data-asset placeholder convention", "passed": false, "evidence": "Uses DiceBear external service"},
+        {"text": "Zustand selector hooks (no bare useStore)", "passed": true, "evidence": "4 selector hooks, no bare calls"},
+        {"text": "Component decomposition (not monolithic)", "passed": true, "evidence": "24 files: 18 TSX + 6 TS (includes 9 shadcn primitives)"},
+        {"text": "Tailwind v4 patterns", "passed": false, "evidence": "Only 2 v4 patterns (minimal)"},
+        {"text": "No TypeScript any types", "passed": true, "evidence": "Zero any instances"},
+        {"text": "Responsive design", "passed": true, "evidence": "5 responsive classes"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "Product Catalog",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 322.5,
+        "tokens": 61359,
+        "tool_calls": 28,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "All interactive elements have data-testid attributes", "passed": true, "evidence": "38 data-testid attributes found"},
+        {"text": "Images use data-asset placeholder convention", "passed": true, "evidence": "4 data-asset attributes (products, logo, empty state)"},
+        {"text": "Zustand selector hooks (no bare useStore)", "passed": true, "evidence": "8 selector hooks, useCartCount/useCartTotal derived"},
+        {"text": "Component decomposition (not monolithic)", "passed": true, "evidence": "18 files: 12 TSX + 6 TS"},
+        {"text": "Tailwind v4 patterns", "passed": true, "evidence": "9 v4 patterns, @theme inline config, dedicated catalog.css"},
+        {"text": "No TypeScript any types", "passed": true, "evidence": "Zero any instances"},
+        {"text": "Responsive design", "passed": true, "evidence": "10 responsive classes, sidebar hidden on mobile"}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "Product Catalog",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.57,
+        "passed": 4,
+        "failed": 3,
+        "total": 7,
+        "time_seconds": 177.4,
+        "tokens": 31129,
+        "tool_calls": 19,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "All interactive elements have data-testid attributes", "passed": false, "evidence": "Zero data-testid found"},
+        {"text": "Images use data-asset placeholder convention", "passed": false, "evidence": "Inline placeholder divs without data-asset"},
+        {"text": "Zustand selector hooks (no bare useStore)", "passed": true, "evidence": "4 selectors, no bare calls"},
+        {"text": "Component decomposition (not monolithic)", "passed": true, "evidence": "16 files: 10 TSX + 6 TS"},
+        {"text": "Tailwind v4 patterns", "passed": false, "evidence": "Zero v4 patterns found"},
+        {"text": "No TypeScript any types", "passed": true, "evidence": "Zero any instances"},
+        {"text": "Responsive design", "passed": true, "evidence": "7 responsive classes, mobile filter drawer"}
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 0.90, "stddev": 0.07, "min": 0.86, "max": 1.0},
+      "time_seconds": {"mean": 257.8, "stddev": 57.0, "min": 184.2, "max": 322.5},
+      "tokens": {"mean": 53423, "stddev": 6600, "min": 45179, "max": 61359}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.57, "stddev": 0.0, "min": 0.57, "max": 0.57},
+      "time_seconds": {"mean": 173.0, "stddev": 20.6, "min": 145.8, "max": 195.9},
+      "tokens": {"mean": 30670, "stddev": 3820, "min": 25767, "max": 35113}
+    },
+    "delta": {
+      "pass_rate": "+0.33",
+      "time_seconds": "+84.8",
+      "tokens": "+22753"
+    }
+  },
+  "notes": [
+    "data-testid: 100% pass with agent, 0% pass without. Strongest differentiator. Baseline Claude never adds data-testid unless explicitly asked.",
+    "data-asset placeholders: Only product catalog (with agent) passed. Settings/dashboard had fewer image opportunities. Baseline never used the convention.",
+    "Tailwind v4: Agent consistently uses v4 patterns (inset-ring, shadow-xs, @theme). Baseline sticks to generic Tailwind.",
+    "Zustand selectors and component decomposition pass in both configs. These are baseline Claude capabilities.",
+    "TypeScript strictness (no any) passes 100% in both configs. Non-discriminating assertion.",
+    "Agent costs ~74% more tokens (53k vs 31k avg) and ~49% more time (258s vs 173s avg), but achieves 90% vs 57% pass rate.",
+    "The agent version also produces distinctive design themes (Data Observatory, dot-grid textures) from the frontend-design skill."
+  ]
+}

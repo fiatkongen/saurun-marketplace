@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "All interactive elements have data-testid attributes",
+      "passed": true,
+      "evidence": "Found 38 data-testid attributes across all components following {component}-{element}-{action} convention"
+    },
+    {
+      "text": "Images use data-asset placeholder convention (not placeholder URLs)",
+      "passed": true,
+      "evidence": "Found 4 data-asset attributes for product images, brand logo, and empty state illustration"
+    },
+    {
+      "text": "Zustand state in dedicated store file with selector hooks (no bare useStore)",
+      "passed": true,
+      "evidence": "useCartStore.ts with 8 selector hooks (useCartItems, useCartActions, useCartCount, useCartTotal). Zero bare useStore() calls"
+    },
+    {
+      "text": "Page decomposed into multiple focused components (not monolithic)",
+      "passed": true,
+      "evidence": "18 files total: 12 TSX components + 6 TS modules. Well-separated concerns"
+    },
+    {
+      "text": "Uses Tailwind v4 patterns (shadow-xs, inset-ring, focus-visible:, @theme)",
+      "passed": true,
+      "evidence": "9 Tailwind v4 patterns found including @theme inline config, shadow-xs, focus-visible: states. Dedicated catalog.css with v4 theme"
+    },
+    {
+      "text": "No TypeScript 'any' types used",
+      "passed": true,
+      "evidence": "Zero instances of ': any', 'as any', or '<any>' found"
+    },
+    {
+      "text": "Responsive design with mobile breakpoint handling",
+      "passed": true,
+      "evidence": "10 responsive breakpoint classes. Grid adapts, sidebar hidden on mobile"
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  }
+}

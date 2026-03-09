@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "All interactive elements have data-testid attributes",
+      "passed": false,
+      "evidence": "Zero data-testid attributes found in any component"
+    },
+    {
+      "text": "Images use data-asset placeholder convention (not placeholder URLs)",
+      "passed": false,
+      "evidence": "No data-asset attributes found. Uses DiceBear external avatar service instead of placeholder convention"
+    },
+    {
+      "text": "Zustand state in dedicated store file with selector hooks (no bare useStore)",
+      "passed": true,
+      "evidence": "store.ts with Zustand. 4 exported selector hooks. No bare useStore() calls"
+    },
+    {
+      "text": "Page decomposed into multiple focused components (not monolithic)",
+      "passed": true,
+      "evidence": "24 files total: 18 TSX components + 6 TS modules. Includes 9 shadcn/ui primitives"
+    },
+    {
+      "text": "Uses Tailwind v4 patterns (shadow-xs, inset-ring, focus-visible:, @theme)",
+      "passed": false,
+      "evidence": "Only 2 Tailwind v4 patterns found (minimal). Primarily uses standard Tailwind classes"
+    },
+    {
+      "text": "No TypeScript 'any' types used",
+      "passed": true,
+      "evidence": "Zero instances of ': any', 'as any', or '<any>' found"
+    },
+    {
+      "text": "Responsive design with mobile breakpoint handling",
+      "passed": true,
+      "evidence": "5 responsive breakpoint classes. Grid adapts from 1 to 4 columns"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 3,
+    "total": 7,
+    "pass_rate": 0.57
+  }
+}

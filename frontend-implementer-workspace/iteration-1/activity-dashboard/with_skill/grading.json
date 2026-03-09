@@ -1,0 +1,45 @@
+{
+  "expectations": [
+    {
+      "text": "All interactive elements have data-testid attributes",
+      "passed": true,
+      "evidence": "Found 17 data-testid attributes: stat-card-{id}, activity-item-{id}, filter-type-select, filter-date-from/to, filter-clear, filter-type-option-{type}"
+    },
+    {
+      "text": "Images use data-asset placeholder convention (not placeholder URLs)",
+      "passed": false,
+      "evidence": "No data-asset attributes found. Uses deterministic avatar colors from name hash instead of placeholder images"
+    },
+    {
+      "text": "Zustand state in dedicated store file with selector hooks (no bare useStore)",
+      "passed": true,
+      "evidence": "useDashboardFilterStore.ts with 7 selector hooks (useDateRange, useSelectedTypes, useFilterActions, useFiltersSnapshot). Zero bare useStore() calls"
+    },
+    {
+      "text": "Page decomposed into multiple focused components (not monolithic)",
+      "passed": true,
+      "evidence": "15 files total: 8 TSX components + 7 TS modules (types, api, store, queries, utils)"
+    },
+    {
+      "text": "Uses Tailwind v4 patterns (shadow-xs, inset-ring, focus-visible:, @theme)",
+      "passed": true,
+      "evidence": "4 Tailwind v4 patterns found including focus-visible: states"
+    },
+    {
+      "text": "No TypeScript 'any' types used",
+      "passed": true,
+      "evidence": "Zero instances of ': any', 'as any', or '<any>' found"
+    },
+    {
+      "text": "Responsive design with mobile breakpoint handling",
+      "passed": true,
+      "evidence": "3 responsive breakpoint classes. Stat cards grid adapts across breakpoints"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 1,
+    "total": 7,
+    "pass_rate": 0.86
+  }
+}

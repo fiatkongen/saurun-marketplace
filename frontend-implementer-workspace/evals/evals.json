@@ -1,0 +1,26 @@
+{
+  "skill_name": "frontend-implementer",
+  "evals": [
+    {
+      "id": 1,
+      "name": "settings-page",
+      "prompt": "Build a settings page with three tabs: Profile (name, email, avatar upload, bio textarea), Notifications (toggle switches for email/push/sms with category grouping), and Appearance (theme toggle dark/light/system, font size slider, accent color picker). Use Zustand for local form state, show a sticky save bar when changes are pending, and add toast notifications on save. The page should be responsive — tabs become a dropdown on mobile.",
+      "expected_output": "A complete Settings page with 3 tabbed sections, Zustand store, responsive layout, save bar, and toast notifications",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "activity-dashboard",
+      "prompt": "Create a dashboard page showing: a row of 4 stat cards (total users, revenue, active sessions, conversion rate) with trend indicators (up/down arrows + percentage), a recent activity feed with infinite scroll showing user actions (login, purchase, signup) with relative timestamps and user avatars, and a filter bar at the top with date range picker and activity type multi-select. Wire up TanStack Query for the data fetching with loading skeletons. The stat cards should have a subtle hover animation.",
+      "expected_output": "A dashboard page with stat cards, activity feed with infinite scroll, filter bar, TanStack Query integration, and loading skeletons",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "product-catalog",
+      "prompt": "Implement a product catalog page with: a search bar with debounced input, a sidebar with collapsible filter groups (price range slider, category checkboxes, rating stars filter, in-stock toggle), a grid/list view toggle, product cards showing image placeholder, title, price, rating stars, and add-to-cart button, and pagination at the bottom. Store the filter/view state in the URL query params so it's shareable. Use Zustand for the cart with an item count badge in the header.",
+      "expected_output": "A product catalog page with search, sidebar filters, view toggle, product cards, pagination, URL-synced filters, and Zustand cart store",
+      "files": []
+    }
+  ]
+}

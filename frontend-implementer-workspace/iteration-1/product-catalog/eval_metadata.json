@@ -1,0 +1,6 @@
+{
+  "eval_id": 3,
+  "eval_name": "product-catalog",
+  "prompt": "Implement a product catalog page with: a search bar with debounced input, a sidebar with collapsible filter groups (price range slider, category checkboxes, rating stars filter, in-stock toggle), a grid/list view toggle, product cards showing image placeholder, title, price, rating stars, and add-to-cart button, and pagination at the bottom. Store the filter/view state in the URL query params so it's shareable. Use Zustand for the cart with an item count badge in the header.",
+  "assertions": []
+}

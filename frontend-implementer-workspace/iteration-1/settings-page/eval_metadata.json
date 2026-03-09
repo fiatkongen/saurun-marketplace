@@ -1,0 +1,6 @@
+{
+  "eval_id": 1,
+  "eval_name": "settings-page",
+  "prompt": "Build a settings page with three tabs: Profile (name, email, avatar upload, bio textarea), Notifications (toggle switches for email/push/sms with category grouping), and Appearance (theme toggle dark/light/system, font size slider, accent color picker). Use Zustand for local form state, show a sticky save bar when changes are pending, and add toast notifications on save. The page should be responsive — tabs become a dropdown on mobile.",
+  "assertions": []
+}

@@ -1,0 +1,6 @@
+{
+  "eval_id": 2,
+  "eval_name": "activity-dashboard",
+  "prompt": "Create a dashboard page showing: a row of 4 stat cards (total users, revenue, active sessions, conversion rate) with trend indicators (up/down arrows + percentage), a recent activity feed with infinite scroll showing user actions (login, purchase, signup) with relative timestamps and user avatars, and a filter bar at the top with date range picker and activity type multi-select. Wire up TanStack Query for the data fetching with loading skeletons. The stat cards should have a subtle hover animation.",
+  "assertions": []
+}
