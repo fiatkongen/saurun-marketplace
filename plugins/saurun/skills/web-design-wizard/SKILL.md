@@ -4,6 +4,7 @@ description: Use when user wants to explore, compare, or A/B test multiple desig
 context: fork
 allowed-tools: Task, Read, Write, Edit, Bash, AskUserQuestion, Skill, Glob
 user-invocable: true
+disable-model-invocation: true
 ---
 
 # Web Design Wizard

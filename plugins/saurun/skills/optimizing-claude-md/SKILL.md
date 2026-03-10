@@ -1,6 +1,7 @@
 ---
 name: optimizing-claude-md
 description: Use when CLAUDE.md is bloated or ineffective. Use when Claude ignores instructions, file exceeds 150 lines, response formatting rules aren't working, or user asks to optimize/restructure their Claude Code configuration.
+disable-model-invocation: true
 ---
 
 # Optimizing CLAUDE.md

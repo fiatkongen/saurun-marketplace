@@ -1,6 +1,7 @@
 ---
 name: dotnet-tdd
 description: Use when implementing ASP.NET Core + EF Core features or bugfixes with xUnit + NSubstitute tests, before writing implementation code.
+disable-model-invocation: true
 ---
 
 # .NET TDD — Enforcement Protocol

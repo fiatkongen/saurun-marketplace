@@ -1,6 +1,7 @@
 ---
 name: react-enforcement
 description: Use when building React frontends with Zustand, TanStack Query, Tailwind v4, or shadcn/ui. Mandatory constraints for component architecture, state management, styling, and pre-commit verification.
+disable-model-invocation: true
 ---
 
 # React Frontend — Enforcement Protocol

@@ -1,6 +1,7 @@
 ---
 name: dotnet-tactical-ddd
 description: Use when building .NET backend APIs with business logic, domain rules, invariants to enforce, or projects expanding beyond simple CRUD. Symptoms - anemic models with public setters, domain logic in controllers, AutoMapper bypassing validation, primitives instead of value objects
+disable-model-invocation: true
 ---
 
 # .NET Tactical DDD — Enforcement Protocol

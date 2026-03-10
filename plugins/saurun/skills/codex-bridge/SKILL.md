@@ -4,6 +4,7 @@ description: Use when user wants to ask Codex, get GPT's opinion, get a second o
 allowed-tools: Bash(node:*), Bash(codex:*), Read, Write
 user-invocable: true
 model: haiku
+disable-model-invocation: true
 ---
 
 # Codex Bridge

@@ -1,6 +1,7 @@
 ---
 name: react-tailwind-v4-components
 description: Use when building React components with Tailwind CSS v4, shadcn/ui, or Radix primitives. Use when writing className strings, cva variants, or CSS variable values in Tailwind.
+disable-model-invocation: true
 ---
 
 # React Components with Tailwind v4 + shadcn/ui

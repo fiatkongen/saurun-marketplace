@@ -1,6 +1,7 @@
 ---
 name: react-frontend-patterns
 description: Use when architecting or implementing React frontends with Zustand, TanStack Query, or component hierarchies. Symptoms - unclear where state lives, stores causing re-renders, no API caching strategy, inconsistent error handling.
+disable-model-invocation: true
 ---
 
 # React Frontend Patterns

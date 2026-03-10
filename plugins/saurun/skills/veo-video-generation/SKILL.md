@@ -4,6 +4,7 @@ description: Use when generating videos with Google Veo 3.1, writing video promp
 user-invocable: true
 argument-hint: "[prompt text or --help for options]"
 allowed-tools: "Bash(*), Read, Write, Glob, Grep"
+disable-model-invocation: true
 ---
 
 # Veo 3.1 Video Generation

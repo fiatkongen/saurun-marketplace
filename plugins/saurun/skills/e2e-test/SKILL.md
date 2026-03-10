@@ -8,6 +8,7 @@ description: >
 
 user-invocable: true
 argument-hint: "[spec-file-path] (optional, defaults to latest spec)"
+disable-model-invocation: true
 ---
 
 # E2E Testing Skill

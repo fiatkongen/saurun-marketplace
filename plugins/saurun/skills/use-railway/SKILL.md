@@ -10,6 +10,7 @@ description: >
 user-invocable: true
 allowed-tools: Bash, Read
 argument-hint: <project-name> <github-repo> [--no-volume] [KEY=value ...]
+disable-model-invocation: true
 ---
 
 # use-railway — Railway Setup Protocol

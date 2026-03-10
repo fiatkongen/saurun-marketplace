@@ -10,6 +10,7 @@ user-invocable: true
 argument-hint: path/to/plan.md
 allowed-tools: Read, Bash, Glob, Grep
 model: opus
+disable-model-invocation: true
 ---
 
 # Implementation Verifier — Enforcement Protocol
