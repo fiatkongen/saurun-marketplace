@@ -11,7 +11,7 @@ description: >
 user-invocable: true
 allowed-tools: Bash, Write, Read, Glob, Grep, Skill(use-railway)
 argument-hint: ~/repos/my-project ~/specs/my-spec.md
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Scaffold: .NET 10 + React 19 Deploy-Ready Project

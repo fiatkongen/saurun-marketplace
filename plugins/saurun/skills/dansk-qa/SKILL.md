@@ -1,7 +1,7 @@
 ---
 name: dansk-qa
 description: Use when reviewing Danish copy for anglicisms, technical jargon, defensive tone, vague formulations, English words, and overly formal language. Scans uncommitted files by default or specific files with --file flag.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 > ⚠️ **Spelling:** It's `saurun:` (with U), not "sauron"

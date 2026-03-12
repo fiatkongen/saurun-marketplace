@@ -7,7 +7,7 @@ description: >
 allowed-tools: Read, Glob, Grep, Edit, Task, AskUserQuestion
 user-invocable: true
 argument-hint: <plan-file-path>
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 > **Spelling:** It's `saurun:` (with U), not "sauron"

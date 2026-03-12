@@ -7,7 +7,7 @@ description: >
 context: fork
 allowed-tools: Task, Read, Write, Edit, Bash(node:*), AskUserQuestion, Glob
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Content Refiner

@@ -3,7 +3,7 @@ name: catchup
 description: Catchup — Resume Work After Time Away
 user-invocable: true
 argument-hint: "[days] - number of days to look back (default: 7)"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Catchup — Resume Work After Time Away
